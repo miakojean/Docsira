@@ -1,13 +1,21 @@
 <template>
   <button class="main-button">
-    <span>
-        commencer
+    <span v-if="!isLoading">
+      commencer
     </span>
+    <span class="loading loading-spinner loading-md" v-else></span>
   </button>
 </template>
 
 <script>
 export default {
+
+  props:{
+    isLoading:{
+      type:Boolean,
+      default: false
+    }
+  }
 
 }
 </script>
@@ -17,10 +25,10 @@ export default {
 .main-button{
   padding: 0.8rem;
   width: 100%;
-  max-width: 200px;
-  border-radius: 0.5rem;
+  max-width: 400px;
+  border-radius: 1.5rem;
   border: none;
-  background: #3a8dd1;
+  background: #0c88ee;
   color: #fff;
   font-size: 1rem;
   cursor: pointer;

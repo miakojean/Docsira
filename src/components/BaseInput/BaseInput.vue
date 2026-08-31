@@ -152,7 +152,7 @@ export default {
   --error-color: #ef4444;
   --text-color: #1f2937;
   --label-color: #374151;
-  --border-color: #d1d5db;
+  --border-color: #ebebeb;
   --focus-ring: rgba(59, 130, 246, 0.25);
   --bg-disabled: #f3f4f6;
   
@@ -200,7 +200,7 @@ export default {
 /* Gestion du focus */
 .form-input:focus {
   outline: none;
-  border-color: var(--primary-color);
+  /*border-color: var(--primary-color);*/
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 

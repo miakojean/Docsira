@@ -1,21 +1,23 @@
 <template>
   <main class="container">
-    <BaseInput 
+    <form action="" class="form-container w-full flex flex-col items-center justify-center gap-2">
+        <BaseInput 
         label="Entrer email/username" 
         placeholder="example@email.com/JohnDoe"
         v-model="credentials.username"
         :errorMessage="errorMessage.usernameError"
-    />
-    <BaseInput 
-        label="Mot de passe" 
-        type="password" 
-        placeholder="mot de passe"
-        v-model="credentials.password"
-        :errorMessage="errorMessage.passwordError"
-    />
+        />
+        <BaseInput 
+            label="Mot de passe" 
+            type="password" 
+            placeholder="mot de passe"
+            v-model="credentials.password"
+            :errorMessage="errorMessage.passwordError"
+        />
 
-    <p>{{ succesMessage }}</p>
-    <mainButton @click="login"/>
+        <p>{{ succesMessage }}</p>
+        <mainButton @click="login"/>
+    </form>
   </main>
 </template>
 
@@ -44,14 +46,14 @@ function isValid(){
     let isValid = true;
 
     if (credentials.value.username ==""){
-        isValid = false
         errorMessage.value.usernameError="Entrer le nom d'utilisateur"
+        isValid = false
         return isValid;
     }
 
     if (credentials.value.password == ""){
-        isValid = false
         errorMessage.value.passwordError="Entrer mot de passe"
+        isValid = false
         return isValid;
     }
 
@@ -62,12 +64,9 @@ const succesMessage = ref("");
 
 function login(){
 
-    errorMessage.value.passwordError = "";
-    errorMessage.value.usernameError = "";
+    if (!isValid()) return;
 
-    isValid();
-
-    succesMessage.value = "Félcitatins vousy êtes parvenus";
+    succesMessage.value = "Félcitations vousy êtes parvenus";
 
     return succesMessage.value;
   

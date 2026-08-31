@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:ital,wght@0,100..900;1,100..900&display=swap');
+@import "tailwindcss";
+@plugin "daisyui";
 
 *{
   margin: 0;
@@ -34,6 +36,7 @@
   justify-content: center;
   align-items: center;
   height: 100vh;
+  width: 100%;
   gap: 1rem;
 }
 
@@ -41,18 +44,5 @@
   :root {
     color: #f6f6f6;
     background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
   }
 }
