@@ -15,9 +15,9 @@
         ref="inputRef"
         :type="computedType"
         class="form-input"
-        :class="{ 
-          'pl-icon': $slots.prepend, 
-          'pr-icon': $slots.append || showPasswordToggle 
+        :class="{
+          'pl-icon': $slots.prepend,
+          'pr-icon': $slots.append || showPasswordToggle
         }"
         :value="modelValue"
         :disabled="disabled"
@@ -30,9 +30,9 @@
       />
 
       <!-- Bouton d'affichage du mot de passe -->
-      <button 
-        v-if="showPasswordToggle" 
-        type="button" 
+      <button
+        v-if="showPasswordToggle"
+        type="button"
         class="input-icon input-icon-right toggle-password-btn"
         @click="togglePasswordVisibility"
         title="Afficher/Masquer le mot de passe"
@@ -116,7 +116,7 @@ export default {
   setup(props, { emit }) {
     const generatedId = useId();
     const inputId = computed(() => props.id || `input-${generatedId}`);
-    
+
     const isPasswordVisible = ref(false);
 
     // Calcule le type d'input dynamiquement
@@ -155,12 +155,12 @@ export default {
   --border-color: #ebebeb;
   --focus-ring: rgba(59, 130, 246, 0.25);
   --bg-disabled: #f3f4f6;
-  
+
   display: flex;
   flex-direction: column;
   font-family: sans-serif;
   width: 100%;
-  max-width: 400px;
+  max-width: 350px;
 
 }
 

@@ -40,6 +40,20 @@
   gap: 1rem;
 }
 
+/* Form UI */
+
+.form-ui {
+
+    padding: 1.5rem 1.2rem;
+    max-width: 400px;
+    border-radius: 0.5rem;
+    border: 1px solid #d6d6d6;
+}
+
+svg{
+    font-size: 12px;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;

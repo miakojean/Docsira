@@ -1,21 +1,25 @@
 <template>
-  <button class="main-button">
-    <span v-if="!isLoading">
-      commencer
-    </span>
-    <span class="loading loading-spinner loading-md" v-else></span>
-  </button>
+    <button class="main-button">
+        <span v-if="!isLoading">
+            commencer
+        </span>
+        <span class="loading loading-spinner loading-md" v-else></span>
+    </button>
 </template>
 
 <script>
 export default {
 
-  props:{
-    isLoading:{
-      type:Boolean,
-      default: false
+    props:{
+        isLoading:{
+            type:Boolean,
+            default: false
+        },
+        label: {
+            type: String,
+            default:'Commencer'
+        }
     }
-  }
 
 }
 </script>
@@ -25,10 +29,10 @@ export default {
 .main-button{
   padding: 0.8rem;
   width: 100%;
-  max-width: 400px;
-  border-radius: 1.5rem;
+  max-width: 350px;
+  border-radius: 0.5rem;
   border: none;
-  background: #0c88ee;
+  background: #222222;
   color: #fff;
   font-size: 1rem;
   cursor: pointer;
@@ -36,7 +40,7 @@ export default {
 }
 
 .main-button:hover{
-    background: #0c88ee;
+    background: #0f0e0e;
     color: #fff;
     transition: 0.1s ease-in;
     border: none;
