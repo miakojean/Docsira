@@ -1,5 +1,5 @@
 <template>
-  <main class="container">
+  <main class="page-container">
     <h4>
       Bienvenu dans Docsira
     </h4>
@@ -32,7 +32,6 @@ function start(){
     font-size: 2rem;
     font-weight: 500;
     line-height: 1.5;
-    max-width: 500px;
     text-align: center;
   }
 

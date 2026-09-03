@@ -10,16 +10,17 @@
   font-optical-sizing: auto;
 }
 
+html,
+body,
+#app {
+  min-height: 100%;
+  width: 100%;
+}
+
 :root {
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
 }
 
 .logo.vite:hover {
@@ -30,12 +31,12 @@
   filter: drop-shadow(0 0 2em #249b73);
 }
 
-.container {
+.page-container {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
   width: 100%;
   gap: 1rem;
 }
@@ -44,14 +45,14 @@
 
 .form-ui {
 
-    padding: 1.5rem 1.2rem;
-    max-width: 400px;
-    border-radius: 0.5rem;
-    border: 1px solid #d6d6d6;
+  padding: 1.5rem 1.2rem;
+  max-width: 400px;
+  border-radius: 0.5rem;
+  border: 1px solid #d6d6d6;
 }
 
 svg{
-    font-size: 12px;
+  font-size: 12px;
 }
 
 @media (prefers-color-scheme: dark) {
