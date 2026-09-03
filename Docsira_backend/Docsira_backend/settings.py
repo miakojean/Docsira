@@ -25,7 +25,16 @@ SECRET_KEY = 'django-insecure-nqx033s95u%n)17^41zpn_p21(#79s4(umhject5nv93%i-zb0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:1420",
+    "http://127.0.0.1:1420"
+]
 
 
 # Application definition
@@ -44,6 +53,21 @@ INSTALLED_APPS = [
     'corsheaders',
     'account'
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication', # Optional, useful for browser API access
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated', # Default to require authentication
+    ),
+    'DEFAULT_FILTER_BACKENDS': [  # CORRECTION: Déplacé du mauvais endroit
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -121,3 +145,5 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+AUTH_USER_MODEL = 'account.CustomUser'

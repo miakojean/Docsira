@@ -1,5 +1,5 @@
 <template>
-    <button class="main-button">
+    <button class="main-button" type="button" >
         <span v-if="!isLoading">
             {{ label }}
         </span>
@@ -17,7 +17,7 @@ export default {
         },
         label: {
             type: String,
-            default:'Commencer'
+            default:'Sortir'
         }
     }
 
@@ -32,7 +32,7 @@ export default {
   max-width: 350px;
   border-radius: 0.5rem;
   border: none;
-  background: #222222;
+  background: #f70776;
   color: #fff;
   font-size: 1rem;
   cursor: pointer;
@@ -40,7 +40,7 @@ export default {
 }
 
 .main-button:hover{
-    background: #0f0e0e;
+    background: #c3195d;
     color: #fff;
     transition: 0.1s ease-in;
     border: none;

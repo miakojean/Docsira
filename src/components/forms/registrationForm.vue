@@ -3,7 +3,7 @@
         class=" form-ui w-full flex flex-col items-center justify-center gap-4"
         @submit.prevent="login"
     >
-        <h3 class="">Se connecter</h3>
+        <h3 class="">Ouvrir un compte</h3>
 
         <BaseInput
             label="Entrer email/username"
@@ -21,25 +21,15 @@
             :errorMessage="errorMessage.passwordError"
         />
 
-        <mainButton type="submit" label="Recevoir mon code"/>
-
-        <div class="password-frame w-full flex justify-center items-center gap-2" v-if="!usePassword" @click="setPassword" >
-            <h4 class="">
-                Se connecter avec mot de passe
-            </h4>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
-            </svg>
-        </div>
-        <h4 @click="setPassword" v-else >Obtenir un code</h4>
+        <mainButton type="submit" label="Commencer"/>
 
         <p>{{succesMessage}}</p>
 
         <div class="divider-form"></div>
 
-        <p>Pas de compte? <RouterLink to='/register'>Créez-en un ici</RouterLink> </p>
+        <p>Déjà un compte? <RouterLink to='/login'>se connecter ici</RouterLink> </p>
 
-        <exitButton label="Sortir" @click="exit" type="button" v-if="!" />
+        <exitButton label="Sortir" @click="exit" type="button"/>
 
         <div class="credits-policy flex justify-center items-center">
             <p>
@@ -59,7 +49,7 @@ import BaseInput from '../BaseInput/BaseInput.vue';
 import mainButton from '../buttons/mainButton.vue';
 import exitButton from '../buttons/exitButton.vue';
 
-import { useAuthStore } from '../../stores/authStore';
+import api from '../../services/api';
 import { useRouter } from 'vue-router';
 
 export default {
@@ -73,8 +63,6 @@ export default {
 
         // State
         //
-
-      const authStore = useAuthStore();
 
         const router = useRouter();
 
@@ -124,16 +112,18 @@ export default {
 
             //if (!isValid()) return;
 
-            const response = await authStore.Registration();
+            const response = await api('http://test.tauri.app/data.json', 'GET');
 
             emit('handleLogin', credentials.value);
 
+            console.log(response.status);
+            console.log(response.statusText);
 
             return response;
-        }
+      }
 
         async function exit() {
-            await getCurrentWindow().close();
+          await getCurrentWindow().close();
         }
 
         return {
@@ -143,7 +133,7 @@ export default {
             usePassword,
             setPassword,
             succesMessage,
-            login,
+          login,
             exit
         }
     }

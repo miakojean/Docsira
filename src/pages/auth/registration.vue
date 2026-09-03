@@ -1,16 +1,16 @@
 <template>
     <main class="page-container">
-        <loginForm />
+        <registrationForm />
     </main>
 </template>
 
 <script setup lang="ts">
-import loginForm from '../components/forms/loginForm.vue';
+import registrationForm from '../../components/forms/registrationForm.vue';
 
 </script>
 
 <style scoped>
 
-    
+
 
 </style>
