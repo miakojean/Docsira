@@ -39,7 +39,7 @@
 
         <p>Pas de compte? <RouterLink to='/register'>Créez-en un ici</RouterLink> </p>
 
-        <exitButton label="Sortir" @click="exit" type="button" v-if="!" />
+        <exitButton label="Sortir" @click="exit" type="button"/>
 
         <div class="credits-policy flex justify-center items-center">
             <p>

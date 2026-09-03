@@ -205,6 +205,10 @@ export default {
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+input::placeholder {
+    color: #C7C5C5;
+}
+
 /* Gestion des icônes */
 .input-icon {
   position: absolute;

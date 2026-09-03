@@ -6,14 +6,20 @@
         <h3 class="">Ouvrir un compte</h3>
 
         <BaseInput
-            label="Entrer email/username"
-            placeholder="example@email.com/JohnDoe"
+            label="Entrer nom d'entreprise"
+            placeholder="ex:Caladriusllc"
             v-model="credentials.username"
             :errorMessage="errorMessage.usernameError"
         />
 
         <BaseInput
-            v-if="usePassword"
+            label="Entrer email"
+            placeholder="example@email.com"
+            v-model="credentials.email"
+            :errorMessage="errorMessage.emailError"
+        />
+
+        <BaseInput
             label="Entrer mot de passe"
             placeholder="Entrer votre mot de passe"
             type="password"
@@ -45,12 +51,14 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+import { useAuthStore, type Customer } from '../../stores/authStore';
+
 import BaseInput from '../BaseInput/BaseInput.vue';
 import mainButton from '../buttons/mainButton.vue';
 import exitButton from '../buttons/exitButton.vue';
 
-import api from '../../services/api';
-import { useRouter } from 'vue-router';
 
 export default {
     components: {
@@ -63,17 +71,20 @@ export default {
 
         // State
         //
+        const authStore = useAuthStore();
 
         const router = useRouter();
 
-        const credentials = ref({
+        const credentials = ref<Pick<Customer, "username" | "password" | "email">>({
             username: "",
-            password: ""
+            password: "",
+            email: ""
         })
 
         const errorMessage = ref({
             usernameError:"",
-            passwordError:""
+            passwordError:"",
+            emailError: "",
         })
 
         const succesMessage = ref("");
@@ -92,13 +103,19 @@ export default {
             // Réinitialiser les messages d'erreur (optionnel)
             errorMessage.value.usernameError = "";
             errorMessage.value.passwordError = "";
+            errorMessage.value.emailError = "";
 
-            if (credentials.value.username === "" && !usePassword.value) {
+            if (credentials.value.username.trim() === "") {
                 errorMessage.value.usernameError = "Entrer le nom d'utilisateur";
                 valid = false;
             }
 
-            if (credentials.value.password === "" && usePassword.value) {
+            if (credentials.value.email.trim() === "") {
+                errorMessage.value.emailError = "Entrer une email valide";
+                valid = false;
+            }
+
+            if (credentials.value.password.trim() === "") {
                 errorMessage.value.passwordError = "Entrer mot de passe";
                 valid = false;
             }
@@ -110,30 +127,28 @@ export default {
 
         async function login(){
 
-            //if (!isValid()) return;
+            if (!isValid()) return;
 
-            const response = await api('http://test.tauri.app/data.json', 'GET');
+            const response = await authStore.Login(credentials.value);
 
             emit('handleLogin', credentials.value);
 
-            console.log(response.status);
-            console.log(response.statusText);
-
             return response;
-      }
+        }
 
         async function exit() {
-          await getCurrentWindow().close();
+            await getCurrentWindow().close();
         }
 
         return {
+            authStore,
             router,
             credentials,
             errorMessage,
             usePassword,
             setPassword,
             succesMessage,
-          login,
+            login,
             exit
         }
     }
