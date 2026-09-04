@@ -131,7 +131,7 @@ export default {
 
             const response = await authStore.Registration(credentials.value);
 
-            emit('handleLogin', credentials.value);
+            router.push('/login')
 
             return response;
         }

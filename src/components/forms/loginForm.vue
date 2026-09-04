@@ -21,7 +21,7 @@
             :errorMessage="errorMessage.passwordError"
         />
 
-        <mainButton type="submit" label="Recevoir mon code"/>
+        <mainButton type="submit" label="Se connecter"/>
 
         <div class="password-frame w-full flex justify-center items-center gap-2" v-if="!usePassword" @click="setPassword" >
             <h4 class="">

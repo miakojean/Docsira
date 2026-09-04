@@ -11,8 +11,23 @@
     "core:window:allow-close",
     {
       "identifier": "http:default",
-      "allow": [{ "url": "https://*.tauri.app" }, { "url": "http://localhost:8000/*" }, {"url": "http://localhost:1420/*"}],
-      "deny": [{ "url": "https://private.tauri.app" }]
-    }
+      "allow": [
+        {
+          "url": "https://*.tauri.app"
+        },
+        {
+          "url": "http://localhost:8000/*"
+        },
+        {
+          "url": "http://localhost:1420/*"
+        }
+      ],
+      "deny": [
+        {
+          "url": "https://private.tauri.app"
+        }
+      ]
+    },
+    "store:default"
   ]
 }
