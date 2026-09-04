@@ -27,7 +27,7 @@
             :errorMessage="errorMessage.passwordError"
         />
 
-        <mainButton type="submit" label="Commencer"/>
+        <mainButton type="submit" label="Commencer" :isLoading="authStore.isLoading"/>
 
         <p>{{succesMessage}}</p>
 
@@ -63,7 +63,7 @@ import exitButton from '../buttons/exitButton.vue';
 export default {
     components: {
         BaseInput,
-    mainButton,
+        mainButton,
         exitButton
     },
     emits:['handleLogin'],
@@ -129,7 +129,7 @@ export default {
 
             if (!isValid()) return;
 
-            const response = await authStore.Login(credentials.value);
+            const response = await authStore.Registration(credentials.value);
 
             emit('handleLogin', credentials.value);
 

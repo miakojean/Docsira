@@ -1,14 +1,17 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
+import uuid
 
 class CustomUser(AbstractUser):
     # Les types de comptes principaux
+
     class AccountType(models.TextChoices):
         FIRM = "firm", _("Firm")
         INDIVIDUAL = "individual", _("Individual")
         COLLABORATOR = "collaborator", _("Collaborator") # Optionnel : pour différencier les comptes invités
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     account_type = models.CharField(
         max_length=20,
         choices=AccountType.choices,
@@ -21,6 +24,7 @@ class CustomUser(AbstractUser):
 
 
 class Collaborator(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     # 1. Le compte principal (Firme ou Individu) qui a ajouté le collaborateur
     main_account = models.ForeignKey(
         CustomUser,
