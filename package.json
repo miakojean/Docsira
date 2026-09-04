@@ -15,6 +15,7 @@
     "@tauri-apps/plugin-http": "~2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-store": "~2",
+    "@tiptap/extension-heading": "^3.31.3",
     "@tiptap/pm": "^3.31.2",
     "@tiptap/starter-kit": "^3.31.2",
     "@tiptap/vue-3": "^3.31.2",

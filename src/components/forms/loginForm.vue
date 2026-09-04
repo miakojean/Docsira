@@ -21,7 +21,7 @@
             :errorMessage="errorMessage.passwordError"
         />
 
-        <mainButton type="submit" label="Se connecter"/>
+        <mainButton type="submit" label="Se connecter" :isLoading="authStore.isLoading" />
 
         <div class="password-frame w-full flex justify-center items-center gap-2" v-if="!usePassword" @click="setPassword" >
             <h4 class="">
@@ -59,7 +59,7 @@ import BaseInput from '../BaseInput/BaseInput.vue';
 import mainButton from '../buttons/mainButton.vue';
 import exitButton from '../buttons/exitButton.vue';
 
-import { useAuthStore } from '../../stores/authStore';
+import { Customer, useAuthStore } from '../../stores/authStore';
 import { useRouter } from 'vue-router';
 
 export default {
@@ -78,9 +78,10 @@ export default {
 
         const router = useRouter();
 
-        const credentials = ref({
+        const credentials = ref<Pick<Customer, "username"|"email"|"password">>({
             username: "",
-            password: ""
+            password: "",
+            email:""
         })
 
         const errorMessage = ref({
@@ -99,6 +100,7 @@ export default {
         }
 
         function isValid() :boolean {
+
             let valid = true;
 
             // Réinitialiser les messages d'erreur (optionnel)
@@ -122,12 +124,11 @@ export default {
 
         async function login(){
 
-            //if (!isValid()) return;
+            if (!isValid()) return;
 
-            const response = await authStore.Registration();
+            const response = await authStore.Login(credentials.value);
 
-            emit('handleLogin', credentials.value);
-
+            router.push('/editor');
 
             return response;
         }
@@ -137,6 +138,7 @@ export default {
         }
 
         return {
+            authStore,
             router,
             credentials,
             errorMessage,
