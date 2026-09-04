@@ -72,7 +72,6 @@ export default {
     setup(props, { emit }) {
 
         // State
-        //
 
       const authStore = useAuthStore();
 
@@ -128,7 +127,7 @@ export default {
 
             const response = await authStore.Login(credentials.value);
 
-            router.push('/editor');
+            router.push('/dashboard');
 
             return response;
         }

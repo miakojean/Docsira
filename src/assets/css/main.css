@@ -17,10 +17,13 @@ body,
   width: 100%;
 }
 
-:root {
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
+:root{
+  --primary-color: #005792;
+  --primary-color-ligth:#325aaf;
+  --primary-color-dark: #005380;
+  --secondary-color: #7ac17a;
+  --adn-gray-color: #555555;
+  --adn-white-color: #f3f3f3;
 }
 
 .logo.vite:hover {
@@ -53,6 +56,36 @@ body,
 
 svg{
   font-size: 12px;
+}
+
+.main-layout{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.main-section{
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  justify-content: normal;
+  align-items: center;
+  min-height: 100vh;
+  overflow-y: auto;
+  width: 100%;
+  background: #e9ebee;
+  padding-top: 2rem;
+}
+
+.main-layout h3 {
+  max-width: 300px;
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: #141212;
+  text-align: center;
 }
 
 @media (prefers-color-scheme: dark) {
