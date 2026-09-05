@@ -39,7 +39,9 @@
 
         <p>Pas de compte? <RouterLink to='/register'>Créez-en un ici</RouterLink> </p>
 
-        <exitButton label="Sortir" @click="exit" type="button"/>
+        <exitButton label="Sortir" @click="exit" type="button" v-if="!credentials.username && !credentials.password"/>
+
+        <errorMessage :label="authStore.message.errorMessage" v-if="!authStore.message.errorMessage" />
 
         <div class="credits-policy flex justify-center items-center">
             <p>
@@ -58,6 +60,7 @@ import { ref } from 'vue';
 import BaseInput from '../BaseInput/BaseInput.vue';
 import mainButton from '../buttons/mainButton.vue';
 import exitButton from '../buttons/exitButton.vue';
+import errorMessage from '../tools/errorMessage.vue';
 
 import { Customer, useAuthStore } from '../../stores/authStore';
 import { useRouter } from 'vue-router';
@@ -65,11 +68,12 @@ import { useRouter } from 'vue-router';
 export default {
     components: {
         BaseInput,
-    mainButton,
-        exitButton
+        mainButton,
+        exitButton,
+        errorMessage
     },
     emits:['handleLogin'],
-    setup(props, { emit }) {
+    setup() {
 
         // State
 
@@ -116,7 +120,7 @@ export default {
                 valid = false;
             }
 
-              return valid;
+            return valid;
         }
 
         // Actions
@@ -126,8 +130,6 @@ export default {
             if (!isValid()) return;
 
             const response = await authStore.Login(credentials.value);
-
-            router.push('/dashboard');
 
             return response;
         }

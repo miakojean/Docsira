@@ -1,5 +1,11 @@
 import { fetch } from "@tauri-apps/plugin-http";
 
+export interface ApiResponse {
+  data: any;
+  error: any;
+  status: number;
+}
+
 // Définition de l'URL de base de ton backend Django
 const BASE_URL = "http://localhost:8000";
 
