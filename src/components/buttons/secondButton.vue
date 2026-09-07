@@ -32,8 +32,8 @@ export default {
   max-width: 350px;
   border-radius: 0.5rem;
   border: none;
-  background: #222222;
-  color: #fff;
+  background: #fff;
+  color:  #0f0e0e;
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
@@ -41,11 +41,10 @@ export default {
 }
 
 .main-button:hover{
-    background: #0f0e0e;
-    color: #fff;
+    background: #fff;
+    color:  #0f0e0e;
     transition: 0.1s ease-in;
     border: none;
-    transform: translateY(-2px);
 }
 
 </style>

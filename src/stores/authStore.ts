@@ -60,6 +60,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function Login(payload: Extract<Customer, "username" | "password" | "email">) {
     isLoading.value = true;
+    message.value.errorMessage = "";
     try {
       // Assure-toi que cette route correspond exactement à celle de ton fichier urls.py Django
       const response = await api('/account/login/', 'POST', payload);
@@ -68,7 +69,7 @@ export const useAuthStore = defineStore('auth', () => {
         console.log("Connexion réussie");
         isAuthenticated.value = true;
         message.value.succesMessage = "Connexion réussie";
-        console.log(message.value.succesMessage)
+        router.push('/dashboard');
       } else {
         message.value.errorMessage = "Mot de passe ou nom d'utilisateur incorrect";
         console.error(message.value.errorMessage)

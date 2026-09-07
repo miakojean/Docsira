@@ -23,6 +23,8 @@
 
         <mainButton type="submit" label="Se connecter" :isLoading="authStore.isLoading" />
 
+        <errorMessage :label="authStore.message.errorMessage" v-if="authStore.message.errorMessage" />
+
         <div class="password-frame w-full flex justify-center items-center gap-2" v-if="!usePassword" @click="setPassword" >
             <h4 class="">
                 Se connecter avec mot de passe
@@ -40,8 +42,6 @@
         <p>Pas de compte? <RouterLink to='/register'>Créez-en un ici</RouterLink> </p>
 
         <exitButton label="Sortir" @click="exit" type="button" v-if="!credentials.username && !credentials.password"/>
-
-        <errorMessage :label="authStore.message.errorMessage" v-if="!authStore.message.errorMessage" />
 
         <div class="credits-policy flex justify-center items-center">
             <p>

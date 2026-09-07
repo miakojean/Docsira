@@ -6,19 +6,19 @@
     <!-- Contenu principal -->
     <main class="main-content">
       <navbar />
-      <dashboarSection class="dashboard-section" />
+      <mySpaceSection/>
     </main>
   </div>
 </template>
 
 <script>
 import navbar from '../../components/navbar/navbar.vue'
-import dashboarSection from '../../components/sections/dashboard-section/dashboardSection.vue'
 import sidebar from '../../components/navbar/sidebar.vue'
+import mySpaceSection from '../../components/sections/dashboard-section/mySpaceSection.vue'
 
 export default {
   components: {
-    dashboarSection,
+    mySpaceSection,
     sidebar,
     navbar
   }

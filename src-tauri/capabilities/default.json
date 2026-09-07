@@ -28,6 +28,16 @@
         }
       ]
     },
-    "store:default"
+    "store:default",
+    "fs:default",
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        {
+          "path": "$APPDATA/*"
+        }
+      ]
+    },
+    "dialog:default"
   ]
 }

@@ -213,7 +213,7 @@ export default {
 .card {
     width: 100%;
     max-width: 310px;
-    padding: 1.5rem;
+    padding: 2rem 1rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
