@@ -5,8 +5,8 @@
 
     <!-- Contenu principal -->
     <main class="main-content">
-      <navbar />
-      <dashboarSection class="dashboard-section" />
+        <navbar/>
+        <dashboarSection class="dashboard-section" />
     </main>
   </div>
 </template>
@@ -15,12 +15,14 @@
 import navbar from '../../components/navbar/navbar.vue'
 import dashboarSection from '../../components/sections/dashboard-section/dashboardSection.vue'
 import sidebar from '../../components/navbar/sidebar.vue'
+import footerSection from '../../components/layout/footerSection.vue';
 
 export default {
   components: {
     dashboarSection,
     sidebar,
-    navbar
+    navbar,
+    footerSection
   }
 }
 </script>
@@ -29,9 +31,10 @@ export default {
 /* === LAYOUT PRINCIPAL === */
 .main-layout {
   display: flex;
-  height: 100vh;                 /* Hauteur pleine de l'écran */
-  overflow: hidden;              /* Empêche le débordement global */
-  background: #f9fafb;           /* Couleur de fond (optionnelle) */
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #f9fafb;
 }
 
 /* === SIDEBAR === */
@@ -40,16 +43,14 @@ export default {
 
 /* === CONTENU PRINCIPAL === */
 .main-content {
-  flex: 1;                       /* Prend tout l'espace restant */
+  flex: 1;
   width: 100%;
-  min-height: 100vh;
+  min-width: 0;
+  min-height: 0;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;        /* Navbar en haut, section en dessous */
-  overflow-y: auto;              /* Scroll si le contenu dépasse */
+  flex-direction: column;
+  overflow: hidden;
   overflow-x: hidden;
-  padding: 0 0 0.5rem 0;  /* Espace en bas pour la sidebar mobile */
   background: #e9ebee;
 }
 
@@ -61,10 +62,7 @@ export default {
 /* Option : si tu veux un comportement différent sur grand écran */
 @media (min-width: 1024px) {
   .main-layout {
-    flex-direction: row;         /* Par défaut c'est déjà row, mais on le précise */
-  }
-  .main-content {
-    padding-bottom: 1rem;        /* Pas d'espace supplémentaire sur desktop */
+    flex-direction: row;
   }
 }
 </style>

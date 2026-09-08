@@ -81,8 +81,11 @@ onMounted(async () => {
 <style scoped>
 /* J'ai retiré tout le CSS lié au .empty-state car il est maintenant géré par l'enfant ! */
 .workspace-container {
+    flex: 1;
     width: 100%;
     padding: 1rem;
-    min-height: 100vh;
+    min-height: 0;
+    overflow-y: auto;
+    align-items: stretch;
 }
 </style>

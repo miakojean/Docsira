@@ -1,6 +1,6 @@
 <template>
     <div class="files-list-container w-full">
-        
+
         <!-- ÉTAT VIDE : Aucun fichier trouvé -->
         <div v-if="files.length === 0" class="empty-state">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-10 text-gray-300">
@@ -11,15 +11,15 @@
 
         <!-- LISTE DES FICHIERS -->
         <ul v-else class="file-list flex flex-col gap-3">
-            <li 
-                v-for="(filePath, index) in files" 
-                :key="index" 
+            <li
+                v-for="(filePath, index) in files"
+                :key="index"
                 class="file-item flex items-center justify-between"
                 @click="$emit('open', filePath)"
             >
                 <!-- Informations du fichier -->
                 <div class="file-info flex items-center gap-4 truncate">
-                    
+
                     <!-- Icône Fichier dynamique selon l'extension -->
                     <div class="icon-box" :class="getFileColorClass(filePath)">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6 file-icon">
@@ -27,7 +27,7 @@
                           <path d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z" />
                         </svg>
                     </div>
-                    
+
                     <div class="file-text truncate">
                         <h4 class="file-name truncate">{{ getFileName(filePath) }}</h4>
                         <span class="file-path truncate">{{ getFileExtension(filePath).toUpperCase() }} • Modifié récemment</span>
@@ -62,7 +62,7 @@ const emit = defineEmits(['open', 'rename', 'share', 'delete']);
 // Extraire le nom du fichier
 const getFileName = (fullPath: string): string => {
     if (!fullPath) return 'Fichier inconnu';
-    const parts = fullPath.split(/[/\\]/); 
+    const parts = fullPath.split(/[/\\]/);
     return parts.pop() || fullPath;
 };
 
@@ -87,6 +87,10 @@ const getFileColorClass = (fullPath: string): string => {
 <style scoped>
 .files-list-container {
     width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: 2px;
 }
 
 /* --- État vide --- */
@@ -107,8 +111,6 @@ const getFileColorClass = (fullPath: string): string => {
 /* --- Liste et Éléments --- */
 .file-list {
     background-color: #ffffff;
-    border-radius: 12px;
-    padding: 1rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
@@ -123,13 +125,13 @@ const getFileColorClass = (fullPath: string): string => {
 
 .file-item:hover {
     background-color: #f8fafc;
-    border-color: #e2e8f0;
+    /*border-color: #e2e8f0;*/
 }
 
 /* --- Informations du fichier --- */
 .file-info {
     flex: 1;
-    min-width: 0; 
+    min-width: 0;
 }
 
 /* Couleurs dynamiques des icônes */
@@ -182,7 +184,7 @@ const getFileColorClass = (fullPath: string): string => {
     border: none;
     color: #64748b;
     cursor: pointer;
-    padding: 0.4rem;
+    padding: 0.5rem;
     border-radius: 6px;
     transition: all 0.2s ease;
     display: flex;

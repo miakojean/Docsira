@@ -10,9 +10,9 @@
 
         <!-- Liste des dossiers -->
         <ul v-else class="folder-list flex flex-col gap-3">
-            <li 
-                v-for="(folderPath, index) in folders" 
-                :key="index" 
+            <li
+                v-for="(folderPath, index) in folders"
+                :key="index"
                 class="folder-item flex items-center justify-between"
                 @click="$emit('open', folderPath)"
             >
@@ -23,7 +23,7 @@
                           <path d="M19.5 21a3 3 0 0 0 3-3v-9a3 3 0 0 0-3-3h-7a1 1 0 0 1-.7-.29L9.4 3.3A2 2 0 0 0 8 2.75H4.5a3 3 0 0 0-3 3v12.25a3 3 0 0 0 3 3h15z" />
                         </svg>
                     </div>
-                    
+
                     <div class="folder-text truncate">
                         <!-- Extrait juste le nom du dossier -->
                         <h4 class="folder-name truncate">{{ getFolderName(folderPath) }}</h4>
@@ -33,8 +33,8 @@
                 </div>
 
                 <!-- Action pour retirer le dossier de la liste -->
-                <button 
-                    class="remove-btn" 
+                <button
+                    class="remove-btn"
                     @click.stop="$emit('remove', index)"
                     title="Retirer de la liste"
                 >
@@ -59,7 +59,7 @@ const emit = defineEmits(['remove', 'open']);
 const getFolderName = (fullPath: string): string => {
     if (!fullPath) return 'Dossier inconnu';
     // Gère les slash (Mac/Linux) et antislash (Windows)
-    const parts = fullPath.split(/[/\\]/); 
+    const parts = fullPath.split(/[/\\]/);
     return parts.pop() || fullPath;
 };
 </script>
@@ -104,7 +104,7 @@ const getFolderName = (fullPath: string): string => {
 
 .folder-item:hover {
     background-color: #f3f4f6;
-    border-color: #e5e7eb;
+    /*border-color: #e5e7eb;*/
 }
 
 /* --- Informations du dossier --- */

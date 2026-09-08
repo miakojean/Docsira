@@ -5,8 +5,8 @@
 
     <!-- Contenu principal -->
     <main class="main-content">
-      <navbar />
-      <mySpaceSection/>
+        <navbar/>
+        <mySpaceSection class="dashboard-section" />
     </main>
   </div>
 </template>
@@ -17,11 +17,11 @@ import sidebar from '../../components/navbar/sidebar.vue'
 import mySpaceSection from '../../components/sections/dashboard-section/mySpaceSection.vue'
 
 export default {
-  components: {
-    mySpaceSection,
-    sidebar,
-    navbar
-  }
+    components: {
+        mySpaceSection,
+        sidebar,
+        navbar,
+    }
 }
 </script>
 
@@ -29,42 +29,38 @@ export default {
 /* === LAYOUT PRINCIPAL === */
 .main-layout {
   display: flex;
-  height: 100vh;                 /* Hauteur pleine de l'écran */
-  overflow: hidden;              /* Empêche le débordement global */
-  background: #f9fafb;           /* Couleur de fond (optionnelle) */
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #f9fafb;
 }
-
-/* === SIDEBAR === */
-/* La sidebar est supposée avoir une largeur fixe (ex: 250px) et une hauteur 100% */
-/* Si elle est responsive, on gère avec des classes supplémentaires */
 
 /* === CONTENU PRINCIPAL === */
 .main-content {
-  flex: 1;                       /* Prend tout l'espace restant */
+  flex: 1;
   width: 100%;
-  min-height: 100vh;
+  min-width: 0;
+  min-height: 0;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;        /* Navbar en haut, section en dessous */
-  overflow-y: auto;              /* Scroll si le contenu dépasse */
+  flex-direction: column;
+  overflow: hidden;
   overflow-x: hidden;
-  padding: 0 0 0.5rem 0;  /* Espace en bas pour la sidebar mobile */
   background: #e9ebee;
 }
 
-/* La section du dashboard prend tout l'espace vertical restant */
+/* La section du dashboard prend tout l'espace vertical disponible */
 .dashboard-section {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap:1rem;
 }
 
-/* Option : si tu veux un comportement différent sur grand écran */
 @media (min-width: 1024px) {
   .main-layout {
-    flex-direction: row;         /* Par défaut c'est déjà row, mais on le précise */
-  }
-  .main-content {
-    padding-bottom: 1rem;        /* Pas d'espace supplémentaire sur desktop */
+    flex-direction: row;
   }
 }
 </style>

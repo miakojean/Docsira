@@ -72,6 +72,13 @@ export default {
 
 <style scoped>
 
+.main-section {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+}
+
 .search-icon-wrapper {
   display: flex;
   align-items: center;

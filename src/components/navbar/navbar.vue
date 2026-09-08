@@ -1,32 +1,32 @@
 <template>
-  <nav>
-    <ul class="breadcrumbs">
-      <li>
-        <router-link to="">Accueil</router-link>
-        <span v-if="breadcrumbs.length" class="separator"> > </span>
-      </li>
+    <nav>
+        <ul class="breadcrumbs">
+            <li>
+                <router-link to="">Accueil</router-link>
+                <span v-if="breadcrumbs.length" class="separator"> > </span>
+            </li>
 
-      <li v-for="(crumb, index) in breadcrumbs" :key="index">
-        <router-link
-          v-if="index < breadcrumbs.length - 1"
-          :to="crumb.path"
-        >
-          {{ crumb.label }}
-        </router-link>
+            <li v-for="(crumb, index) in breadcrumbs" :key="index">
+                <router-link
+                    v-if="index < breadcrumbs.length - 1"
+                    :to="crumb.path"
+                >
+                    {{ crumb.label }}
+                </router-link>
 
-        <span v-else class="current-page">{{ crumb.label }}</span>
+                <span v-else class="current-page">{{ crumb.label }}</span>
 
-        <span v-if="index < breadcrumbs.length - 1" class="separator"> > </span>
-      </li>
-    </ul>
+                <span v-if="index < breadcrumbs.length - 1" class="separator"> > </span>
+            </li>
+        </ul>
 
-  </nav>
+    </nav>
 </template>
 
 <script>
 import profileButton from '../buttons/profileButton.vue'
 import { useRoute } from 'vue-router'
-import { computed } from 'vue' // 💡 N'oublie pas d'importer computed
+import { computed } from 'vue'
 
 export default {
   components: { profileButton },
@@ -65,26 +65,26 @@ export default {
 </script>
 
 <style scoped>
+
 nav {
-  position: sticky;
-  top: 30px;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  padding: 1rem;
-  z-index: 30;
-  background: #e9ebee;
+    width: 100%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    z-index: 30;
+    background: #e9ebee;
 }
 
 /* =========================================
    Styles du Breadcrumb
    ========================================= */
 .breadcrumbs {
-  list-style: none;
-  display: flex;
-  align-items: center;
-  padding: 0;
-  margin: 0;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    margin: 0;
 }
 
 .breadcrumbs li {
