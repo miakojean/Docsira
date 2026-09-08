@@ -67,7 +67,7 @@ export default {
         exitButton
     },
     emits:['handleLogin'],
-    setup(props, { emit }) {
+    setup(_props, { emit: _emit }) {
 
         // State
         //

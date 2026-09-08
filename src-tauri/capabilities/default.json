@@ -31,13 +31,52 @@
     "store:default",
     "fs:default",
     {
+      "identifier": "fs:allow-read-dir",
+      "allow": [
+        { "path": "C:\\Users\\hp\\**" },
+        { "path": "C:\\Users\\hp\\Pictures\\**" },
+        { "path": "C:\\Users\\hp\\Documents\\**" },
+        { "path": "$APPDATA/*" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [
+        { "path": "C:\\Users\\hp\\**" },
+        { "path": "C:\\Users\\hp\\Pictures\\**" },
+        { "path": "C:\\Users\\hp\\Documents\\**" },
+        { "path": "$APPDATA/*" }
+      ]
+    },
+    {
       "identifier": "fs:allow-exists",
       "allow": [
+        { "path": "$APPDATA/*" },
+        { "path": "C:\\Users\\hp\\**" }
+      ]
+    },
+    "dialog:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
         {
-          "path": "$APPDATA/*"
+          "path": "/path/to/file"
+        },
+        {
+          "path": "$APPDATA/file"
         }
       ]
     },
-    "dialog:default"
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://tauri.app"
+        },
+        {
+          "url": "custom:*"
+        }
+      ]
+    }
   ]
 }

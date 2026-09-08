@@ -8,14 +8,8 @@
 </template>
 
 <script setup lang="ts">
-import {useRouter} from 'vue-router';
+import { useRouter } from 'vue-router';
 import mainButton from "../components/buttons/mainButton.vue";
-import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
-
-const greetMsg = ref("");
-const name = ref("");
-const result = ref<number>(0);
 
 const router = useRouter();
 

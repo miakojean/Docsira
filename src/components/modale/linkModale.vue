@@ -23,7 +23,7 @@
                 class="link-input"
                 readonly
                 ref="linkInputRef"
-                @focus="$event.target.select()"
+                @focus="onFocus"
               />
               <button
                 class="btn-copy"
@@ -69,6 +69,11 @@ const emit = defineEmits(['close']);
 
 const isCopied = ref(false);
 const linkInputRef = ref<HTMLInputElement | null>(null);
+
+const onFocus = (event: FocusEvent) => {
+  const target = event.target as HTMLInputElement | null;
+  target?.select();
+};
 
 // Fonction pour copier le lien
 const copyToClipboard = async () => {

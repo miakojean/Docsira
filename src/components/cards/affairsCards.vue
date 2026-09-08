@@ -153,7 +153,7 @@ export default {
 
     emits: ['goTo','open', 'rename', 'share', 'link', 'download', 'archive', 'delete'],
 
-    setup(props, { emit }) {
+    setup(props, { emit: _emit }) {
         const isOpen = ref<boolean>(false);
         const cardRef = ref<HTMLElement | null>(null);
 

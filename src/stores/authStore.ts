@@ -58,7 +58,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function Login(payload: Extract<Customer, "username" | "password" | "email">) {
+  async function Login(payload: { username?: string; email?: string; password?: string }) {
     isLoading.value = true;
     message.value.errorMessage = "";
     try {

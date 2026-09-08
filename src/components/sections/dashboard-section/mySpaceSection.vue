@@ -1,110 +1,88 @@
 <template>
-  <section class="main-section w-full">
+    <div class="workspace-container flex flex-col justify-center items-center gap-4 p-6">
+        <!-- Bouton pour ajouter un dossier -->
+        <mainButton label="Nouveau dossier à myWorkspace" @click="addFolder" />
 
-    <div 
-        class="empty-state w-full h-full flex flex-col justify-center items-center gap-4"
-        v-if="!myFolders"
-    >
-
-        <div class="empty-folder flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-8">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-            </svg>
+        <div class="mt-8">
+            <h3 class="mb-4 text-lg font-bold">Dossiers ouverts</h3>
+            
+            <!-- Intégration du composant enfant -->
+            <foldersList 
+                :folders="myOpenedFolders" 
+                @remove="removeFolder"
+                @open="openFolder"
+            />
         </div>
-
-        <h3 class="w-full">Aucun dossier dans votre workspace</h3>
-
-        <p class="font-medium">Cliquez sur les boutons pour ajouter et gérer les dossiers de travail</p>
-
-        <div class="actions-btn flex justify-center items-center gap-4 w-full">
-          <secondButton label="Ouvrir le dossier" />
-          <mainButton label="Ajouter un dossier" @click="file"/>
-        </div>
-
     </div>
-
-    <foldersList :folders="myFolders"/>
-
-  </section>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import { open } from '@tauri-apps/plugin-dialog';
 import { load } from '@tauri-apps/plugin-store';
-import { myFolders } from '../../../stores/localManagerStore';
+import {useRouter} from 'vue-router';
+
+import foldersList from '../../tools/foldersList.vue'; 
 import mainButton from '../../buttons/mainButton.vue';
-import secondButton from '../../buttons/secondButton.vue';
-import folderCards from '../../cards/folderCards.vue';
-import foldersList from '../../tools/foldersList.vue';
 
-import { useRouter } from 'vue-router';
+const router = useRouter();
 
-export default {
-    components: {
-        mainButton,
-        secondButton,
-        folderCards,
-        foldersList
-    },
-    setup() {
-        const router = useRouter();
+// 1. Déclarer la liste réactive qui stockera les chemins
+const myOpenedFolders = ref<string[]>([]);
 
-        const file = async () => {
-            // Ouvre l'explorateur de fichiers natif
-            const selectedPath = await open({
-                directory: true, // Force la sélection d'un dossier et non d'un fichier
-                multiple: false, // Empêche la sélection multiple
-                title: 'Ajouter un dossier à my workspace'
-            });
-            // Ajouter le dossier sélectionné à la liste des dossiers
-            if (selectedPath) {
+// 2. Fonction pour ajouter via Tauri
+const addFolder = async () => {
 
-                if (!myFolders.value.includes(selectedPath)){
-                    myFolders.value.push(selectedPath);
+    const store = await load('myWorkspaceStore.json', {autoSave: false});
 
-                    // Persistance dans le store tauri
-                    const store = await load('store.json');
-                    await store.set("myWorkSpaceFolder", myFolders.value)
-                    await store.save();
-                }
+    try {
+        const selectedPath = await open({
+            directory: true, 
+            multiple: false,
+            title: 'Sélectionner un dossier'
+        });
 
-                console.log('Chemin du dossier sélectionné :', selectedPath);
-
-            } else {
-                console.log('Sélection annulée par l’utilisateur');
+        if (selectedPath) {
+            // Empêcher les doublons
+            if (!myOpenedFolders.value.includes(selectedPath)) {
+                myOpenedFolders.value.push(selectedPath);
+                
+                // Enregistrer dans le store
+                await store.set('myOpenedFolders', myOpenedFolders.value);
+                await store.save();
             }
-        };
-
-        return {
-            router,
-            file
-        };
+        }
+    } catch (error) {
+        console.error("Erreur Tauri :", error);
     }
-}
+};
+
+// 3. Retirer un dossier de la liste
+const removeFolder = (index: number) => {
+    myOpenedFolders.value.splice(index, 1);
+};
+
+// 4. Action quand on clique sur la carte du dossier
+const openFolder = (fullPath: string) => {
+    // On envoie le chemin complet encodé pour pouvoir le récupérer dans la page du dossier.
+    router.push(`/dashboard/mySpace/${encodeURIComponent(fullPath)}`);
+};
+
+onMounted(async () => {
+    const store = await load('myWorkspaceStore.json', {autoSave: false});
+    const storedFolders = await store.get('myOpenedFolders') as string[] | undefined;
+
+    if (storedFolders && Array.isArray(storedFolders)) {
+        myOpenedFolders.value = storedFolders;
+    }
+})
 </script>
 
 <style scoped>
-
-/* empty state */
-.empty-folder{
-    position: relative;
-    background: #f3f3f3;
-    border-radius: 1rem;
-    padding: 2rem 1rem;
-    height: 120px;
-    width: 120px;
+/* J'ai retiré tout le CSS lié au .empty-state car il est maintenant géré par l'enfant ! */
+.workspace-container {
+    width: 100%;
+    padding: 1rem;
+    min-height: 100vh;
 }
-
-.empty-folder svg{
-    color: var(--primary-black-color);
-}
-
-.empty-state p{
-    color: #6d6d6d
-}
-
-.actions-btn {
-    max-width: 500px;
-}
-
 </style>

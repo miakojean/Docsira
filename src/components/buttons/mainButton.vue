@@ -32,7 +32,7 @@ export default {
   max-width: 350px;
   border-radius: 0.5rem;
   border: none;
-  background: #222222;
+  background: var(--primary-color);
   color: #fff;
   font-size: 1rem;
   font-weight: 500;
@@ -41,7 +41,7 @@ export default {
 }
 
 .main-button:hover{
-    background: #0f0e0e;
+    background: var(--primary-color-dark);
     color: #fff;
     transition: 0.1s ease-in;
     border: none;

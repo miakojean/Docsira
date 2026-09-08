@@ -129,7 +129,11 @@ export default {
 
             if (!isValid()) return;
 
-            const response = await authStore.Login(credentials.value);
+            const response = await authStore.Login({
+                username: credentials.value.username,
+                email: credentials.value.email,
+                password: credentials.value.password,
+            });
 
             return response;
         }
