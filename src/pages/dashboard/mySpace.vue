@@ -5,8 +5,8 @@
 
     <!-- Contenu principal -->
     <main class="main-content">
-        <navbar/>
-        <mySpaceSection class="dashboard-section" />
+      <navbar/>
+      <mySpaceSection class="dashboard-section" />
     </main>
   </div>
 </template>

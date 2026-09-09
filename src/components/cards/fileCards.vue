@@ -65,10 +65,24 @@ const fileColorClass = computed(() => {
 </script>
 
 <style scoped>
-.file-item { padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid transparent; transition: all 0.2s ease; cursor: pointer; background-color: #ffffff; display: flex; align-items: center; justify-content: space-between; }
+.file-item { 
+    padding: 0.5rem; 
+    border-radius: 8px; 
+    border: 1px solid transparent; 
+    transition: all 0.2s ease; 
+    cursor: pointer; 
+    background-color: #ffffff; 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+}
 .file-item--grid { min-width: 0; min-height: 180px; flex-direction: column; align-items: stretch; gap: 0.75rem; }
 .file-item--grid .file-info { flex-direction: column; align-items: stretch; gap: 0.65rem; }
-.file-item--grid .image-box, .file-item--grid .icon-box { width: 100%; height: 110px; flex-basis: 110px; }
+.file-item--grid .image-box, .file-item--grid .icon-box { 
+    width: 100%; 
+    height: 110px; 
+    flex-basis: 110px; 
+}
 .file-item--grid .file-preview { object-fit: contain; }
 .file-item--grid .actions-group { align-self: flex-end; }
 .file-item:hover { background-color: #f8fafc; }

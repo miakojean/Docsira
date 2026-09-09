@@ -9,11 +9,11 @@
         <navbar/>
 
         <myFolderFileSpace
-            :files="files"
-            @open="openFile"
-            @rename="renameFile"
-            @share="shareFile"
-            @delete="deleteFile"
+          :files="files"
+          @open="openFile"
+          @rename="renameFile"
+          @share="shareFile"
+          @delete="deleteFile"
         />
     </main>
   </div>
