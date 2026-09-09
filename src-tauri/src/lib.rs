@@ -1,6 +1,6 @@
-mod counter;
+mod utils;
 
-use counter::my_custom_command;
+use utils::is_online;
 
 #[tauri::command]
 fn login(username: &str, password: &str) {
@@ -15,7 +15,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![my_custom_command, login])
+        .invoke_handler(tauri::generate_handler![is_online])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

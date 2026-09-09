@@ -5,7 +5,7 @@
 
     <!-- Contenu principal -->
     <main class="main-content">
-        <dashboarSection class="dashboard-section" />
+      <dashboarSection class="dashboard-section" />
     </main>
   </div>
 </template>
@@ -15,12 +15,14 @@ import navbar from '../../components/navbar/navbar.vue'
 import dashboarSection from '../../components/sections/dashboard-section/dashboardSection.vue'
 import sidebar from '../../components/navbar/sidebar.vue'
 import footerSection from '../../components/layout/footerSection.vue';
+import isConnected from '../../components/tools/isConnected.vue'
 
 export default {
   components: {
     dashboarSection,
     sidebar,
-    footerSection
+    footerSection,
+    isConnected
   }
 }
 </script>

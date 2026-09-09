@@ -1,6 +1,6 @@
 <template>
     <form action=""
-        class=" form-ui w-full flex flex-col items-center justify-center gap-4"
+        class=" form-ui"
         @submit.prevent="login"
     >
         <h3 class="">Se connecter</h3>
@@ -159,7 +159,7 @@ export default {
 
 <style scoped>
 form h3{
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
     font-size: 1.5rem;
     font-weight: 500;
 }
