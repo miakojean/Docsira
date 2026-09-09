@@ -35,7 +35,7 @@
 
         <p>Déjà un compte? <RouterLink to='/login'>se connecter ici</RouterLink> </p>
 
-        <exitButton label="Sortir" @click="exit" type="button"/>
+        <exitButton label="Sortir" @click="exit" type="button" v-if="!credentials.username && !credentials.email && !credentials.password"/>
 
         <div class="credits-policy flex justify-center items-center">
             <p>
