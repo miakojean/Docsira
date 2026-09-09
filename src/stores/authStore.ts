@@ -83,6 +83,21 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function fetchUserProfile(){
+    isLoading.value = true;
+    try {
+      const response = await api('/account/profile/', 'GET');
+      if (response.ok) {
+        user.value = response?.data
+      }
+    } catch (err: any) {
+      message.value.errorMessage = "Erreur serveur, veuillez réessayer plus tard";
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   return {
     router,
     // State
@@ -96,6 +111,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Actions
     Registration,
-    Login
+    Login,
+    fetchUserProfile
   }
 });

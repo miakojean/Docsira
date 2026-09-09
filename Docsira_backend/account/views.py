@@ -23,6 +23,15 @@ class RegisterView(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
+class ProfileView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        serializer = CustomUserSerializer(user)
+        return Response(serializer.data, status=200)
+
 class LoginView(APIView):
 
     permission_classes = [AllowAny]
