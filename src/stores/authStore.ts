@@ -76,6 +76,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
     } catch (err: any) {
+      message.value.errorMessage = "Erreur serveur, veuillez réessayer plus tard";
       throw err;
     } finally {
       isLoading.value = false;

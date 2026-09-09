@@ -50,7 +50,6 @@ body,
 /* Form UI */
 
 .form-ui {
-  height: 600px;
   padding: 1.5rem 1.2rem;
   max-width: 400px;
   border-radius: 0.5rem;
@@ -61,6 +60,7 @@ body,
   display: flex;
   flex-direction: column;
   justify-content: normal;
+  gap: 1rem;
 }
 
 svg{

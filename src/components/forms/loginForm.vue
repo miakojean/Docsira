@@ -56,7 +56,7 @@
 <script lang="ts">
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import BaseInput from '../BaseInput/BaseInput.vue';
 import mainButton from '../buttons/mainButton.vue';
 import exitButton from '../buttons/exitButton.vue';
@@ -141,6 +141,10 @@ export default {
         async function exit() {
             await getCurrentWindow().close();
         }
+
+        onMounted(()=> {
+            authStore.message.errorMessage = "";
+        })
 
         return {
             authStore,

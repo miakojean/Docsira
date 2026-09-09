@@ -2,7 +2,7 @@
 <template>
     <isConnected
         :visible="notifPopup.isVisible"
-        :action="notifPopup.myMessage"
+        :action-text="notifPopup.myMessage"
     />
     <RouterView/>
 </template>
@@ -23,7 +23,7 @@ const notifPopup = ref({
 onMounted(() => {
     // Vérification initiale
     invoke<boolean>("is_online").then((estEnLigne:boolean) => {
-        estEnLigne ? notifPopup.value.isVisible = true : notifPopup.value.isVisible = false;
+        notifPopup.value.isVisible = !estEnLigne;
         notifPopup.value.myMessage="vous êtes hors ligne";
     });
 
