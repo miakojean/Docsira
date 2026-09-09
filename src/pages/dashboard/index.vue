@@ -5,7 +5,6 @@
 
     <!-- Contenu principal -->
     <main class="main-content">
-        <navbar/>
         <dashboarSection class="dashboard-section" />
     </main>
   </div>
@@ -21,7 +20,6 @@ export default {
   components: {
     dashboarSection,
     sidebar,
-    navbar,
     footerSection
   }
 }

@@ -41,13 +41,23 @@ export default {
       const paths = route.path.split('/').filter(p => p);
       let currentPath = '';
 
-      return paths.map((path) => {
+      return paths.map((path, index) => {
         // On reconstruit le chemin étape par étape
         currentPath += `/${path}`;
 
         // On formate le label (ex: "create-coupon" -> "Create coupon")
         // On met la 1ère lettre en majuscule et on remplace les tirets par des espaces
-        const label = path.charAt(0).toUpperCase() + path.slice(1).replace(/-/g, ' ');
+        let label = path.charAt(0).toUpperCase() + path.slice(1).replace(/-/g, ' ');
+
+        // Le paramètre folderPath contient le chemin complet du dossier.
+        if (index === paths.length - 1 && route.params.folderPath) {
+          const folderPath = decodeURIComponent(String(route.params.folderPath));
+          const folderName = folderPath.split(/[\\/]/).filter(Boolean).pop();
+
+          if (folderName) {
+            label = folderName;
+          }
+        }
 
         return {
           label: label,

@@ -1,5 +1,5 @@
 <template>
-  <section class="main-section w-full">
+  <section class="main-section w-full flex flex-col justify-center items-center gap-4">
 
     <h3>Bienvenu Jean Yves, très ravi de vous revoir.</h3>
 
