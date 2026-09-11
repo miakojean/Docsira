@@ -1,23 +1,17 @@
 <template>
     <div class="main-layout">
         <sidebar/>
+        <sideTools />
         <main class="main-content">
-            <h1>Paramètres</h1>
-            <BaseInput placeholder="Entrer votre nom"/>
-            <BaseInput placeholder="Entrer votre email" type="email"/>
-            <BaseInput placeholder="Entrer votre mot de passe" type="password"/>
-            <BaseInput placeholder="Confirmer votre mot de passe" type="password"/>
-            <mainButton/>
-            <secondButton label="Annuler"/>
+            <sectionSettings />
         </main>
     </div>
 </template>
 
 <script setup lang="ts">
 import sidebar from '../../components/navbar/sidebar.vue'
-import BaseInput from '../../components/BaseInput/BaseInput.vue';
-import mainButton from '../../components/buttons/mainButton.vue';
-import secondButton from '../../components/buttons/secondButton.vue';
+import sideTools from '../../components/navbar/sideTools.vue';
+import sectionSettings from '../../components/sections/settings/sectionSettings.vue';
 
 </script>
 
