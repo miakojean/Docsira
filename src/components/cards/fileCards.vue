@@ -76,16 +76,8 @@ const fileColorClass = computed(() => {
     align-items: center; 
     justify-content: space-between; 
 }
-.file-item--grid { min-width: 0; min-height: 180px; flex-direction: column; align-items: stretch; gap: 0.75rem; }
-.file-item--grid .file-info { flex-direction: column; align-items: stretch; gap: 0.65rem; }
-.file-item--grid .image-box, .file-item--grid .icon-box { 
-    width: 100%; 
-    height: 110px; 
-    flex-basis: 110px; 
-}
-.file-item--grid .file-preview { object-fit: contain; }
-.file-item--grid .actions-group { align-self: flex-end; }
-.file-item:hover { background-color: #f8fafc; }
+.file-item--list:hover { background-color: #f8fafc; }
+
 .file-info { flex: 1; min-width: 0; }
 .icon-box, .image-box { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 8px; flex: 0 0 40px; overflow: hidden; }
 .image-box { background-color: #f3f4f6; }
@@ -98,7 +90,176 @@ const fileColorClass = computed(() => {
 .file-name { margin: 0; font-size: 0.95rem; font-weight: 600; color: #1f2937; }
 .file-path { font-size: 0.75rem; color: #9ca3af; font-weight: 500; }
 .actions-group { opacity: 0; transition: opacity 0.2s ease; }
-.file-item:hover .actions-group { opacity: 1; }
+.file-item--list:hover .actions-group { opacity: 1; }
 .action-btn { background: transparent; border: none; color: #64748b; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
 .action-btn:hover { background-color: #e2e8f0; color: #0f172a; }
+
+/* Grid View specific styles (Animations and Glassmorphism) */
+.file-item--grid { 
+    position: relative;
+    padding: 0;
+    min-width: 0; 
+    height: 280px; 
+    flex-direction: column; 
+    align-items: stretch; 
+    gap: 0; 
+    border-radius: 20px;
+    background-color: #000000; /* fallback behind icon/image */
+    overflow: hidden;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.file-item--grid:hover {
+    background-color: #ffffff;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Reset .file-info properties for absolute positioning of children */
+.file-item--grid .file-info { 
+    position: static;
+    flex-direction: column; 
+    align-items: stretch; 
+    gap: 0;
+    overflow: visible; 
+}
+
+.file-item--grid .image-box, 
+.file-item--grid .icon-box { 
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%; 
+    height: 100%; 
+    flex-basis: auto; 
+    border-radius: 0;
+    z-index: 1;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.file-item--grid:hover .image-box, 
+.file-item--grid:hover .icon-box {
+    top: 10px;
+    left: 10px;
+    width: calc(100% - 20px);
+    height: 160px;
+    border-radius: 16px;
+}
+
+/* Dark gradient overlay for normal state */
+.file-item--grid::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0) 100%);
+    z-index: 2;
+    transition: opacity 0.4s ease;
+    border-radius: 20px;
+    pointer-events: none;
+}
+.file-item--grid:hover::after {
+    opacity: 0;
+}
+
+/* Positioning text at the bottom */
+.file-item--grid .file-text {
+    position: absolute;
+    bottom: 24px;
+    left: 20px;
+    right: 20px;
+    z-index: 3;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Move text up to make space for action buttons on hover */
+.file-item--grid:hover .file-text {
+    bottom: 74px; 
+}
+
+/* Text style changes on hover */
+.file-item--grid .file-name {
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    transition: color 0.4s ease, text-shadow 0.4s ease;
+}
+
+.file-item--grid:hover .file-name {
+    color: #111827;
+    text-shadow: none;
+}
+
+.file-item--grid .file-path {
+    color: #e5e7eb;
+    font-size: 0.8rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    transition: color 0.4s ease, text-shadow 0.4s ease;
+}
+
+.file-item--grid:hover .file-path {
+    color: #6b7280;
+    text-shadow: none;
+}
+
+/* Action buttons transition */
+.file-item--grid .actions-group {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 3;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
+    pointer-events: none; /* Disable pointer events when hidden */
+    gap: 12px !important; 
+    justify-content: center !important;
+}
+
+.file-item--grid:hover .actions-group {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto; /* Enable when visible */
+}
+
+/* Style action buttons */
+.file-item--grid .action-btn {
+    background-color: #f1f5f9;
+    color: #334155;
+    flex: 1;
+    padding: 0.6rem;
+    border-radius: 12px;
+    font-weight: 600;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.file-item--grid .action-btn:hover {
+    background-color: #000000;
+    color: #ffffff;
+}
+.file-item--grid .action-btn.text-red-500 {
+    color: #ef4444;
+}
+.file-item--grid .action-btn.text-red-500:hover {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+
+/* Icon sizing for grid */
+.file-item--grid .icon-box .file-icon {
+    width: 80px;
+    height: 80px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.9;
+}
+.file-item--grid:hover .icon-box .file-icon {
+    width: 56px;
+    height: 56px;
+    opacity: 1;
+}
 </style>
