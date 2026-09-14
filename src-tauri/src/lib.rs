@@ -2,10 +2,6 @@ mod utils;
 
 use utils::is_online;
 
-#[tauri::command]
-fn login(username: &str, password: &str) {
-    println!("Vous voulez vous connecter {} et {}", username, password);
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

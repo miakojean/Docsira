@@ -32,12 +32,11 @@ export const useAuthStore = defineStore("auth", () => {
   async function Registration(payload: Customer) {
     isLoading.value = true;
     try {
-      const response = await api("/account/register/", "POST", payload);
+      const response = await api("/account/register/", "POST", payload, {requireAuth: false});
       if (!response.ok) {
         message.value.errorMessage = "Inscription impossible";
         return false;
       }
-      router.push("/");
       return true;
     } catch (error) {
       message.value.errorMessage = "Erreur serveur, veuillez réessayer plus tard";
@@ -52,7 +51,7 @@ export const useAuthStore = defineStore("auth", () => {
     isLoading.value = true;
     message.value.errorMessage = "";
     try {
-      const response = await api("/account/login/", "POST", payload);
+      const response = await api("/account/login/", "POST", payload, {requireAuth: false});
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
         message.value.errorMessage = errorData?.error || "Identifiants incorrects";

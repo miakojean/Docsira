@@ -9,9 +9,8 @@
 
 <script setup lang="ts">
 import { RouterView} from 'vue-router';
-import { invoke } from "@tauri-apps/api/core";
 import { ref, onMounted, onUnmounted } from 'vue';
-import {watchConnection} from '../src/services/network'
+import {checkConnection, watchConnection} from '../src/services/network'
 import isConnected from '../src/components/tools/isConnected.vue'
 
 const notifPopup = ref({
@@ -22,7 +21,7 @@ const notifPopup = ref({
 
 onMounted(() => {
     // Vérification initiale
-    invoke<boolean>("is_online").then((estEnLigne:boolean) => {
+    checkConnection().then((estEnLigne:boolean) => {
         notifPopup.value.isVisible = !estEnLigne;
         notifPopup.value.myMessage="vous êtes hors ligne";
     });

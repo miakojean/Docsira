@@ -29,7 +29,7 @@
 
         <mainButton type="submit" label="Commencer" :isLoading="authStore.isLoading"/>
 
-        <p>{{succesMessage}}</p>
+        <p>{{ succesMessage }}</p>
 
         <div class="divider-form"></div>
 
@@ -51,7 +51,6 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
 
 import { useAuthStore, type Customer } from '../../stores/authStore';
 
@@ -66,14 +65,12 @@ export default {
         mainButton,
         exitButton
     },
-    emits:['handleLogin'],
-    setup(_props, { emit: _emit }) {
+    emits:['registered'],
+    setup(_props: unknown, { emit }: { emit: (event: 'registered') => void }) {
 
         // State
         //
         const authStore = useAuthStore();
-
-        const router = useRouter();
 
         const credentials = ref<Pick<Customer, "username" | "password" | "email">>({
             username: "",
@@ -131,7 +128,9 @@ export default {
 
             const response = await authStore.Registration(credentials.value);
 
-            router.push('/login')
+            if (response) {
+                emit('registered');
+            }
 
             return response;
         }
@@ -142,7 +141,6 @@ export default {
 
         return {
             authStore,
-            router,
             credentials,
             errorMessage,
             usePassword,
