@@ -48,7 +48,8 @@ class LoginView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if email:
+        if email or (username and '@' in username):
+            email = email or username
             user = CustomUser.objects.filter(email=email).first()
             if not user:
                 return Response(

@@ -9,11 +9,11 @@
         <navbar/>
 
         <myFolderFileSpace
-          :files="files"
-          @open="openFile"
-          @rename="renameFile"
-          @share="shareFile"
-          @delete="deleteFile"
+            :files="files"
+            @open="openFile"
+            @rename="renameFile"
+            @share="shareFile"
+            @delete="deleteFile"
         />
     </main>
   </div>
@@ -128,7 +128,7 @@ onMounted(() => {
     justify-content: flex-start;
     align-items: stretch;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.5rem;
     overflow: hidden;
     overflow-x: hidden;
     background: #e9ebee;

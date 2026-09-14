@@ -50,7 +50,8 @@ const view = ref<'list' | 'grid'>('list');
     scrollbar-width: 2px;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    padding: 0.5rem;
 }
 
 /* --- État vide --- */

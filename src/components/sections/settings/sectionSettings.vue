@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import type { Customer } from '../../../stores/authStore';
 import { useAuthStore } from '../../../stores/authStore';
 import BaseInput from '../../BaseInput/BaseInput.vue';
@@ -43,6 +43,10 @@ import BaseInput from '../../BaseInput/BaseInput.vue';
 const authStore = useAuthStore();
 
 const user = ref<Customer>(authStore.user);
+
+onMounted(() => {
+  authStore.fetchUserProfile();
+})
 </script>
 
 <style scoped>

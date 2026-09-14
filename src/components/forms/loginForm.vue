@@ -48,7 +48,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useAuthStore, type Customer } from '../../stores/authStore';
 
@@ -61,7 +60,6 @@ import errorMessage from '../tools/errorMessage.vue';
 const emit = defineEmits(['handleLogin']);
 
 const authStore = useAuthStore();
-const router = useRouter();
 
 const credentials = ref<Pick<Customer, "username" | "email" | "password">>({
     username: "",
@@ -74,7 +72,7 @@ const errorMessageState = ref({
     passwordError: ""
 });
 
-const usePassword = ref<boolean>(false);
+const usePassword = ref<boolean>(true);
 
 const setPassword = () => {
     usePassword.value = !usePassword.value;
@@ -101,9 +99,10 @@ const isValid = (): boolean => {
 const login = async () => {
     if (!isValid()) return;
 
+    const identifier = credentials.value.username.trim();
     await authStore.Login({
-        username: credentials.value.username,
-        email: credentials.value.email,
+        username: identifier.includes('@') ? undefined : identifier,
+        email: identifier.includes('@') ? identifier : undefined,
         password: credentials.value.password,
     });
 
