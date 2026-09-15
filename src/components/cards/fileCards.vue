@@ -4,6 +4,9 @@
             <div v-if="isImage" class="image-box">
                 <img :src="imageSource" :alt="fileName" class="file-preview" @error="imageLoadFailed = true" />
             </div>
+            <div v-else-if="hasPreview && view === 'grid'" class="preview-box">
+                <iframe :src="previewSource" class="file-preview pointer-events-none" frameborder="0" scrolling="no" tabindex="-1"></iframe>
+            </div>
             <div v-else class="icon-box" :class="fileColorClass">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6 file-icon">
                     <path d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625Z" />
@@ -48,13 +51,24 @@ const emit = defineEmits<{
 
 const imageLoadFailed = ref(false);
 const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'];
+const previewExtensions = ['pdf', 'txt', 'html', 'md', 'csv', 'json'];
+
 const fileName = computed(() => props.filePath.split(/[/\\]/).pop() || 'Fichier inconnu');
 const fileExtension = computed(() => {
     const parts = fileName.value.split('.');
     return parts.length > 1 ? parts.pop() || '' : 'Fichier';
 });
+
 const isImage = computed(() => imageExtensions.includes(fileExtension.value.toLowerCase()) && !imageLoadFailed.value);
+const isPdf = computed(() => fileExtension.value.toLowerCase() === 'pdf');
+const hasPreview = computed(() => previewExtensions.includes(fileExtension.value.toLowerCase()) && !imageLoadFailed.value);
+
 const imageSource = computed(() => convertFileSrc(props.filePath));
+const previewSource = computed(() => {
+    if (isPdf.value) return `${imageSource.value}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
+    return imageSource.value;
+});
+
 const fileColorClass = computed(() => {
     const extension = fileExtension.value.toLowerCase();
     if (extension === 'pdf') return 'is-pdf';
@@ -79,9 +93,10 @@ const fileColorClass = computed(() => {
 .file-item--list:hover { background-color: #f8fafc; }
 
 .file-info { flex: 1; min-width: 0; }
-.icon-box, .image-box { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 8px; flex: 0 0 40px; overflow: hidden; }
+.icon-box, .image-box, .preview-box { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 8px; flex: 0 0 40px; overflow: hidden; }
 .image-box { background-color: #f3f4f6; }
-.file-preview { width: 100%; height: 100%; object-fit: cover; }
+.preview-box { background-color: #ffffff; }
+.file-preview { width: 100%; height: 100%; object-fit: cover ; overflow: hidden; }
 .is-pdf { background-color: #fee2e2; color: #ef4444; }
 .is-word { background-color: #e0e7ff; color: #4f46e5; }
 .is-excel { background-color: #dcfce7; color: #16a34a; }
@@ -125,7 +140,8 @@ const fileColorClass = computed(() => {
 }
 
 .file-item--grid .image-box, 
-.file-item--grid .icon-box { 
+.file-item--grid .icon-box,
+.file-item--grid .preview-box { 
     position: absolute;
     top: 0;
     left: 0;
@@ -138,12 +154,24 @@ const fileColorClass = computed(() => {
 }
 
 .file-item--grid:hover .image-box, 
-.file-item--grid:hover .icon-box {
+.file-item--grid:hover .icon-box,
+.file-item--grid:hover .preview-box {
     top: 10px;
     left: 10px;
     width: calc(100% - 20px);
     height: 160px;
     border-radius: 16px;
+}
+
+/* Hide scrollbars inside the iframe by pushing them out of the container bounds */
+.file-item--grid .preview-box iframe.file-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% + 30px);
+    height: calc(100% + 30px);
+    max-width: none;
+    border: none;
 }
 
 /* Dark gradient overlay for normal state */
@@ -173,7 +201,7 @@ const fileColorClass = computed(() => {
 
 /* Move text up to make space for action buttons on hover */
 .file-item--grid:hover .file-text {
-    bottom: 74px; 
+    bottom: 60px;
 }
 
 /* Text style changes on hover */
