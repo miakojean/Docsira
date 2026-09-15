@@ -29,7 +29,10 @@
 
         <mainButton type="submit" label="Commencer" :isLoading="authStore.isLoading"/>
 
-        <p>{{ succesMessage }}</p>
+        <errorMessage
+            v-if="authStore.message.errorMessage"
+            :label="authStore.message.errorMessage"
+        />
 
         <div class="divider-form"></div>
 
@@ -57,13 +60,15 @@ import { useAuthStore, type Customer } from '../../stores/authStore';
 import BaseInput from '../BaseInput/BaseInput.vue';
 import mainButton from '../buttons/mainButton.vue';
 import exitButton from '../buttons/exitButton.vue';
+import errorMessage from '../tools/errorMessage.vue';
 
 
 export default {
     components: {
         BaseInput,
         mainButton,
-        exitButton
+        exitButton,
+        errorMessage
     },
     emits:['registered'],
     setup(_props: unknown, { emit }: { emit: (event: 'registered') => void }) {

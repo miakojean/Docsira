@@ -32,7 +32,7 @@
 
                 <!-- Bouton d'action -->
                 <div class="modal-footer">
-                    <mainButton/>
+                  <mainButton @click="$emit('handleEvent')"/>
                 </div>
 
             </div>
@@ -56,7 +56,7 @@ const props = withDefaults(
   }
 );
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close','handleEvent']);
 
 const closeModal = () => {
   emit('close');

@@ -91,6 +91,7 @@ const getFolderName = (fullPath: string): string => {
     border-radius: 12px;
     padding: 1rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    width: 100%;
 }
 
 .folder-item {

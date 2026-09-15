@@ -1,7 +1,7 @@
 <template>
   <section class="main-section w-full flex flex-col justify-center items-center gap-4">
 
-    <h3>Bienvenu Jean Yves, très ravi de vous revoir.</h3>
+    <h3>Bienvenu {{ authStore.user?.username }}, très ravi de vous revoir.</h3>
 
     <BaseInput placeholder="Trouver votre dossier/client">
       <template #prepend>
@@ -48,8 +48,11 @@
 import BaseInput from '../../BaseInput/BaseInput.vue'
 import folderCards from '../../cards/folderCards.vue'
 import featuresCard from '../../cards/featuresCards.vue'
+import { Customer, useAuthStore } from '../../../stores/authStore'
+import { load } from "@tauri-apps/plugin-store"
 
 import { useRouter } from 'vue-router'
+import { onMounted, ref } from 'vue'
 export default {
 
   components:{
@@ -60,9 +63,28 @@ export default {
   setup(){
 
     const router = useRouter();
+    const authStore = useAuthStore();
+
+    const user = ref<Customer>({
+      id: undefined,
+      email: "",
+      first_name: "",
+      last_name: "",
+      username: "",
+      password: "",
+    })
+
+    onMounted(async () => {
+        // Si le profil n'est pas déjà en mémoire (ex: reload de page),
+        // on le récupère via l'API grâce au token persisté.
+        if (!authStore.user.username) {
+          await authStore.fetchUserProfile();
+        }
+      });
 
     return{
       router,
+      authStore,
     }
 
   }

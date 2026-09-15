@@ -28,14 +28,16 @@ async function refreshAuthToken(): Promise<string | null> {
       const response = await fetch(`${BASE_URL}/account/token/refresh/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        body: JSON.stringify({ refresh: refreshToken }),
       });
 
       if (!response.ok) return null;
 
       const result = await response.json();
-      const newToken = result.access_token as string;
+      const newToken = result.access as string | undefined;
       const newRefreshToken = result.refresh_token as string | undefined;
+
+      if (!newToken) return null;
 
       await store.set("auth_token", newToken);
       if (newRefreshToken) await store.set("refresh_token", newRefreshToken);
