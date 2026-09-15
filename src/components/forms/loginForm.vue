@@ -121,9 +121,22 @@ onMounted(() => {
 
 <style scoped>
 /* Ton CSS existant */
-form h3{ margin-bottom: 1rem; font-size: 1.5rem; font-weight: 500; }
-form h4{ font-size: 16px; font-weight: 500; cursor: pointer; }
-.divider-form { width: 100%; height: 1px; border: 1px solid #f7f3f3; margin: 0 1rem; }
+form h3{
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+form h4{
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+}
+.divider-form {
+    width: 100%;
+    height: 1px;
+    border: 1px solid #f7f3f3;
+    margin: 0 1rem;
+}
 p { color: #969292; }
 a { color: #222222; font-weight: 500; }
 .credits-policy { padding: 1rem; font-size: 12px; color: #969292; display: flex; justify-content: center; align-items: center; }

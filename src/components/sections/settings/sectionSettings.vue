@@ -1,27 +1,17 @@
 <template>
     <section class="main-section w-full flex flex-col justify-center items-center gap-4">
 
-        <form class="main-form">
+        <form class="main-form" @submit.prevent="editProfile">
 
             <div class="form-header w-full">
                 <h3>Paramètres généraux</h3>
             </div>
 
-            <div class="form-body w-full grid grid-cols-3 gap-2">
+            <div class="form-body w-full grid grid-cols-3 gap-4">
 
                 <BaseInput
                     label="Nom d'entreprise"
                     v-model="user.username"
-                />
-
-                <BaseInput
-                    label="Nom de famille"
-                    v-model="user.last_name"
-                />
-
-                <BaseInput
-                    label="Prenoms"
-                    v-model="user.first_name"
                 />
 
                 <BaseInput
@@ -30,8 +20,18 @@
                 />
 
                 <BaseInput
-                    label="Nom d'entreprise"
-                    v-model="user.username"
+                    label="Type de compte"
+                    v-model="user.account_type"
+                />
+
+                <BaseInput
+                    label="Nom du responsable"
+                    v-model="user.last_name"
+                />
+
+                <BaseInput
+                    label="Prenoms du responsable"
+                    v-model="user.first_name"
                 />
 
             </div>
@@ -59,6 +59,18 @@ const authStore = useAuthStore();
 const user = ref<Customer>(authStore.user);
 
 const isDisabled = ref<boolean>(false);
+
+async function editProfile() {
+  try {
+    isDisabled.value = true;
+    await authStore.editProfile(user.value);
+  } catch (error) {
+
+    console.error(error);
+  } finally {
+    isDisabled.value = false;
+  }
+}
 
 onMounted(() => {
   authStore.fetchUserProfile();

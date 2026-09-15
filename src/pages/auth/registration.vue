@@ -4,6 +4,7 @@
         <succesModale
             :isOpen="isSuccessModalOpen"
             @close="closeSuccessModal"
+            @handleEvent="closeSuccessModal"
         />
     </main>
 </template>

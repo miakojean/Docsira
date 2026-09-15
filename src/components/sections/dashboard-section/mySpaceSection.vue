@@ -1,14 +1,14 @@
 <template>
     <div class="workspace-container flex flex-col justify-center items-center gap-4 p-6">
         <!-- Bouton pour ajouter un dossier -->
-        <mainButton label="Nouveau dossier à myWorkspace" @click="addFolder" />
+
 
         <div class="mt-8">
             <h3 class="mb-4 text-lg font-bold">Dossiers ouverts</h3>
-            
+
             <!-- Intégration du composant enfant -->
-            <foldersList 
-                :folders="myOpenedFolders" 
+            <foldersList
+                :folders="myOpenedFolders"
                 @remove="removeFolder"
                 @open="openFolder"
             />
@@ -22,7 +22,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { load } from '@tauri-apps/plugin-store';
 import {useRouter} from 'vue-router';
 
-import foldersList from '../../tools/foldersList.vue'; 
+import foldersList from '../../tools/foldersList.vue';
 import mainButton from '../../buttons/mainButton.vue';
 
 const router = useRouter();
@@ -37,7 +37,7 @@ const addFolder = async () => {
 
     try {
         const selectedPath = await open({
-            directory: true, 
+            directory: true,
             multiple: false,
             title: 'Sélectionner un dossier'
         });
@@ -46,7 +46,7 @@ const addFolder = async () => {
             // Empêcher les doublons
             if (!myOpenedFolders.value.includes(selectedPath)) {
                 myOpenedFolders.value.push(selectedPath);
-                
+
                 // Enregistrer dans le store
                 await store.set('myOpenedFolders', myOpenedFolders.value);
                 await store.save();
