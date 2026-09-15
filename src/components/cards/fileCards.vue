@@ -201,7 +201,7 @@ const fileColorClass = computed(() => {
 
 /* Move text up to make space for action buttons on hover */
 .file-item--grid:hover .file-text {
-    bottom: 60px;
+    bottom: 55px;
 }
 
 /* Text style changes on hover */

@@ -90,7 +90,7 @@ const view = ref<'list' | 'grid'>('list');
 
 .file-item {
     padding: 0.75rem 1rem;
-    border-radius: 8px;
+    border-radius: 20px;
     border: 1px solid transparent;
     transition: all 0.2s ease;
     cursor: pointer;
