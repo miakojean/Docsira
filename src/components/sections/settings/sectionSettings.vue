@@ -1,34 +1,47 @@
 <template>
     <section class="main-section w-full flex flex-col justify-center items-center gap-4">
 
-        <h3>Paramètres généraux</h3>
-
         <form class="main-form">
 
-            <BaseInput
-                label="Nom d'entreprise"
-                v-model="user.username"
-            />
+            <div class="form-header w-full">
+                <h3>Paramètres généraux</h3>
+            </div>
 
-            <BaseInput
-                label="Nom de famille"
-                v-model="user.last_name"
-            />
+            <div class="form-body w-full grid grid-cols-3 gap-2">
 
-            <BaseInput
-                label="Prenoms"
-                v-model="user.first_name"
-            />
+                <BaseInput
+                    label="Nom d'entreprise"
+                    v-model="user.username"
+                />
 
-            <BaseInput
-                label="Email"
-                v-model="user.email"
-            />
+                <BaseInput
+                    label="Nom de famille"
+                    v-model="user.last_name"
+                />
 
-            <BaseInput
-                label="Nom d'entreprise"
-                v-model="user.username"
-            />
+                <BaseInput
+                    label="Prenoms"
+                    v-model="user.first_name"
+                />
+
+                <BaseInput
+                    label="Email"
+                    v-model="user.email"
+                />
+
+                <BaseInput
+                    label="Nom d'entreprise"
+                    v-model="user.username"
+                />
+
+            </div>
+
+            <div class="form-footer w-full flex justify-end">
+                <formButton
+                    :disabled="isDisabled"
+                    label="Enregistrer"
+                />
+            </div>
 
         </form>
     </section>
@@ -39,10 +52,13 @@ import { ref, onMounted } from 'vue';
 import type { Customer } from '../../../stores/authStore';
 import { useAuthStore } from '../../../stores/authStore';
 import BaseInput from '../../BaseInput/BaseInput.vue';
+import formButton from '../../buttons/formButton.vue';
 
 const authStore = useAuthStore();
 
 const user = ref<Customer>(authStore.user);
+
+const isDisabled = ref<boolean>(false);
 
 onMounted(() => {
   authStore.fetchUserProfile();
@@ -52,11 +68,17 @@ onMounted(() => {
 <style scoped>
 .main-form{
     width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     gap: 1rem;
-    padding: 1rem;
     background: #fff;
+}
 
+.main-section h3{
+    width: 100%;
+    text-align: left;
 }
 </style>

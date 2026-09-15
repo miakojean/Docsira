@@ -62,6 +62,7 @@ export const useAuthStore = defineStore("auth", () => {
       if (data.access) {
         const store = await load("authStore.json", { autoSave: true });
         await store.set("auth_token", data.access);
+        await store.set("refresh_token", data.refresh);
       }
       isAuthenticated.value = true;
       message.value.succesMessage = "Connexion réussie";
@@ -72,6 +73,26 @@ export const useAuthStore = defineStore("auth", () => {
       message.value.errorMessage = "Erreur serveur, veuillez réessayer plus tard";
       console.error(error);
       return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function editProfile(payload: Customer) {
+    isLoading.value = true;
+    message.value.errorMessage = "";
+    try {
+      const response = await api('/account/me/', 'PUT', payload, { requireAuth: true })
+
+      if (response.ok) {
+        message.value.succesMessage = "Profile mis à jour";
+        user.value = await response.json();
+      } else {
+        message.value.errorMessage = "Erreur serveur";
+      }
+    } catch (error) {
+      message.value.errorMessage = "Erreur serveur";
+      console.error(error);
     } finally {
       isLoading.value = false;
     }
@@ -99,6 +120,7 @@ export const useAuthStore = defineStore("auth", () => {
     getIsAuthenticated,
     Registration,
     Login,
+    editProfile,
     fetchUserProfile,
   };
 });
