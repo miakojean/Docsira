@@ -9,11 +9,11 @@
         <navbar/>
 
         <myFolderFileSpace
-            :files="files"
-            @open="openFile"
-            @rename="renameFile"
-            @share="shareFile"
-            @delete="deleteFile"
+          :files="files"
+          @open="openFile"
+          @rename="renameFile"
+          @share="shareFile"
+          @delete="deleteFile"
         />
     </main>
   </div>
@@ -119,20 +119,20 @@ onMounted(() => {
 }
 
 .main-content {
-    flex: 1;
-    width: 100%;
-    min-width: 0;
-    min-height: 0;
-    height: 100%;
-    display: flex;
-    justify-content: flex-start;
-    align-items: stretch;
-    flex-direction: column;
-    gap: 0.5rem;
-    overflow: hidden;
-    overflow-x: hidden;
-    background: #e9ebee;
-    scrollbar-width: thin;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow: hidden;
+  overflow-x: hidden;
+  background: #e9ebee;
+  scrollbar-width: thin;
 }
 
 .dashboard-section {

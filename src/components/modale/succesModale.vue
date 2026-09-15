@@ -23,10 +23,9 @@
 
                 <!-- Textes -->
                 <div class="modal-body">
-                    <h3 class="modal-title">Inscription réussie</h3>
+                    <h3 class="modal-title">{{ title }}</h3>
                     <p class="modal-description">
-                    Votre compte Docsira a été créé avec succès.<br>
-                    Vous pouvez maintenant vous connecter.
+                      {{ subtitle }}
                     </p>
                 </div>
 
@@ -48,11 +47,15 @@ import mainButton from '../buttons/mainButton.vue';
 const props = withDefaults(
   defineProps<{
     isOpen: boolean;
-    modaleTitle: string
+    modaleTitle: string,
+    title: string,
+    subtitle: string
   }>(),
   {
-    isOpen: true,
-    modaleTitle: 'Félicitations'
+    isOpen: false,
+    modaleTitle: 'Félicitations',
+    title:'Inscription réussie',
+    subtitle: 'Votre compte Docsira a été créé avec succès. Vous pouvez maintenant vous connecter.'
   }
 );
 

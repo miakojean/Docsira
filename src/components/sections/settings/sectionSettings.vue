@@ -38,8 +38,9 @@
 
             <div class="form-footer w-full flex justify-end">
                 <formButton
-                    :disabled="isDisabled"
+                    :disabled="authStore.isLoading"
                     label="Enregistrer"
+                    type="submit"
                 />
             </div>
 
@@ -47,34 +48,55 @@
     </section>
 </template>
 
-<script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import type { Customer } from '../../../stores/authStore';
+<script lang="ts">
+import { computed, onMounted, ref } from 'vue';
 import { useAuthStore } from '../../../stores/authStore';
 import BaseInput from '../../BaseInput/BaseInput.vue';
 import formButton from '../../buttons/formButton.vue';
 
-const authStore = useAuthStore();
+export default {
+    components: {
+        BaseInput,
+        formButton
+    },
 
-const user = ref<Customer>(authStore.user);
+    emits: ['update'],
 
-const isDisabled = ref<boolean>(false);
+    setup(_props, { emit }) {
+        const authStore = useAuthStore();
+        const user = computed({
+            get: () => authStore.user,
+            set: (value) => {
+                authStore.user = value;
+            },
+        });
 
-async function editProfile() {
-  try {
-    isDisabled.value = true;
-    await authStore.editProfile(user.value);
-  } catch (error) {
+        const isDisabled = ref<boolean>(false);
 
-    console.error(error);
-  } finally {
-    isDisabled.value = false;
-  }
-}
+        async function editProfile() {
+            try {
+                isDisabled.value = true;
+                await authStore.editProfile({ ...authStore.user, ...user.value });
+                emit('update');
+            } catch (error) {
+                console.error(error);
+            } finally {
+                isDisabled.value = false;
+            }
+        }
 
-onMounted(() => {
-  authStore.fetchUserProfile();
-})
+        onMounted(() => {
+            authStore.fetchUserProfile();
+        });
+
+        return {
+            authStore,
+            user,
+            editProfile,
+            isDisabled,
+        };
+    },
+};
 </script>
 
 <style scoped>

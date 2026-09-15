@@ -45,6 +45,7 @@
 <script lang="ts">
 import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useAuthStore } from '../../stores/authStore';
 
 
 export default {
@@ -53,13 +54,14 @@ export default {
     const isReduced = ref(false);
     const router = useRouter();
     const route = useRoute();
+    const authStore = useAuthStore();
 
     const toggleReduce = async() => {
       isReduced.value = !isReduced.value;
     };
 
-    function goToAuth(){
-      router.push('/login');
+    async function goToAuth(){
+      await authStore.Logout();
     }
 
     return {

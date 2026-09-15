@@ -32,7 +32,7 @@
       <features-card
         title="Mon espace"
         content="Consultez votre espace personnel et accédez à vos documents."
-        @click="()=> {router.push('/dashboard/customer')}"
+        @click="()=> {router.push('/dashboard/mySpace')}"
       />
       <features-card
         title="Archives"

@@ -9,8 +9,10 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'id',
             'username',
             'email',
+            'first_name',
+            'last_name',
             'account_type',
-            'password'
+            'password',
         ]
 
     def create(self, validated_data):

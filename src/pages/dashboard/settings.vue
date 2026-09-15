@@ -3,8 +3,15 @@
         <sidebar/>
         <sideTools />
         <main class="main-content">
-            <sectionSettings />
+            <sectionSettings @update="handleModal"/>
         </main>
+        <succesModale 
+            :isOpen="isModaleOpen" 
+            @close="handleModal"
+            modaleTitle="Informations mises à jour"
+            title="Informations mises à jour"
+            subtitle="Vos informations ont été mises à jour et sauvegardées. Cliquez sur le bouton pour continuer! "
+        />
     </div>
 </template>
 
@@ -12,6 +19,14 @@
 import sidebar from '../../components/navbar/sidebar.vue'
 import sideTools from '../../components/navbar/sideTools.vue';
 import sectionSettings from '../../components/sections/settings/sectionSettings.vue';
+import succesModale from '../../components/modale/succesModale.vue';
+import { ref } from 'vue';
+
+const isModaleOpen = ref(false);
+
+function handleModal(){
+    isModaleOpen.value = !isModaleOpen.value;
+}
 
 </script>
 

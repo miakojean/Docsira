@@ -25,10 +25,12 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useAuthStore } from '../../stores/authStore'
 
 // État local
 const isOpen = ref(false)
 const wrapperRef = ref(null)
+const authStore = useAuthStore()
 
 // Fonctions
 const toggleDropdown = () => {
@@ -46,11 +48,9 @@ const handleClickOutside = (event) => {
   }
 }
 
-// Déconnexion (à remplacer par ta logique)
-const logout = () => {
-  console.log('Déconnexion')
-  // Appel API, redirection, etc.
+const logout = async () => {
   closeDropdown()
+  await authStore.Logout()
 }
 
 onMounted(() => {

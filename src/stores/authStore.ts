@@ -86,19 +86,65 @@ export const useAuthStore = defineStore("auth", () => {
     isLoading.value = true;
     message.value.errorMessage = "";
     try {
-      const response = await api('/account/me/', 'PUT', payload, { requireAuth: true })
+      const response = await api('/account/me/', 'PUT', payload, { requireAuth: true });
 
       if (response.ok) {
+        const updatedUser = await response.json();
+        user.value = updatedUser;
+
         const store = await load("authStore.json", { autoSave: true });
-        await store.set("user", await response.json());
+        await store.set("user", updatedUser);
+        await store.save();
         message.value.succesMessage = "Profile mis à jour";
-      } else {
-        message.value.errorMessage = "Erreur serveur";
+        return true;
       }
+
+      message.value.errorMessage = "Erreur serveur";
+      return false;
     } catch (error) {
       message.value.errorMessage = "Erreur serveur";
       console.error(error);
+      return false;
     } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function Logout() {
+    isLoading.value = true;
+    message.value.errorMessage = "";
+
+    try {
+      const store = await load("authStore.json", { autoSave: true });
+      const refreshToken = await store.get<string>("refresh_token");
+
+      if (refreshToken) {
+        await api(
+          "/account/logout/",
+          "POST",
+          { refresh: refreshToken },
+          { requireAuth: true },
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion serveur :", error);
+    } finally {
+      const store = await load("authStore.json", { autoSave: true });
+      await store.delete("auth_token");
+      await store.delete("refresh_token");
+      await store.delete("user");
+      await store.save();
+
+      isAuthenticated.value = false;
+      user.value = {
+        id: "",
+        email: "",
+        first_name: "",
+        last_name: "",
+        username: "",
+        password: "",
+      };
+      await router.push("/login");
       isLoading.value = false;
     }
   }
@@ -131,6 +177,7 @@ export const useAuthStore = defineStore("auth", () => {
     getIsAuthenticated,
     Registration,
     Login,
+    Logout,
     editProfile,
     fetchUserProfile,
   };
