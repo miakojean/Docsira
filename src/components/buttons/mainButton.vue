@@ -18,6 +18,10 @@ export default {
         label: {
             type: String,
             default:'Commencer'
+        },
+        disabled: {
+            type: Boolean,
+            default: false
         }
     }
 

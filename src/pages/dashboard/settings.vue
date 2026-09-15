@@ -37,7 +37,7 @@ import sectionSettings from '../../components/sections/settings/sectionSettings.
     gap: 1rem;
     overflow: hidden;
     overflow-x: hidden;
-    background: #e9ebee;
+    background: #fff;
     scrollbar-width: thin;
 }
 

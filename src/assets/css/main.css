@@ -50,17 +50,28 @@ body,
 /* Form UI */
 
 .form-ui {
-  padding: 1.5rem 1.2rem;
-  max-width: 400px;
-  border-radius: 0.5rem;
-  border: 1px solid #d6d6d6;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: 1px;
-  display: flex;
-  flex-direction: column;
-  justify-content: normal;
-  gap: 1rem;
+    padding: 1.5rem 1.2rem;
+    max-width: 400px;
+    border-radius: 0.5rem;
+    border: 1px solid #d6d6d6;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: 1px;
+    display: flex;
+    flex-direction: column;
+    justify-content: normal;
+    gap: 1rem;
+}
+
+.main-section{
+    padding: 1rem;
+}
+
+.main-section h4 {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #141212;
+    text-align: left;
 }
 
 svg{
