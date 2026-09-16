@@ -168,6 +168,10 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  async function addCollaborator() {
+    isLoading.value = true;
+  }
+
   return {
     router,
     isLoading,

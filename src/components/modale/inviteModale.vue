@@ -13,21 +13,12 @@
 
                 <!-- Textes & Input -->
                 <div class="modal-body">
-                    <p class="modal-description">
-                      Saisissez l'adresse e-mail de la personne que vous souhaitez inviter dans votre équipe.
-                    </p>
-                    <input 
-                      type="email" 
-                      placeholder="Adresse e-mail" 
-                      class="email-input"
-                    />
+                    <BaseInput type="email" placeholder="Adresse e-mail" v-model="email" :errorMessage="errorMessage" />
                 </div>
 
                 <!-- Bouton d'action -->
                 <div class="modal-footer">
-                  <button class="btn-invite" @click="$emit('invite')">
-                    Envoyer l'invitation
-                  </button>
+                    <mainButton @click="handleInvite" label="Envoyer l'invitation"/>
                 </div>
 
             </div>
@@ -37,7 +28,9 @@
 </template>
 
 <script setup lang="ts">
-import { watch, onUnmounted } from 'vue';
+import { watch, onUnmounted, ref } from 'vue';
+import BaseInput from '../BaseInput/BaseInput.vue';
+import mainButton from '../buttons/mainButton.vue';
 
 const props = defineProps({
   isOpen: {
@@ -51,6 +44,19 @@ const emit = defineEmits(['close', 'invite']);
 const closeModal = () => {
   emit('close');
 };
+
+const email = ref<string>('');
+const errorMessage = ref<string>('');
+
+
+async function handleInvite() {
+    if (email.value === "") {
+        errorMessage.value = 'Veuillez saisir une adresse e-mail valide.';
+        return;
+    }
+    errorMessage.value = "";
+    emit('invite', email.value);
+}
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
