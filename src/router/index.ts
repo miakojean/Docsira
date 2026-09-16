@@ -14,6 +14,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/dashboard/mySpace', component: () => import('../pages/dashboard/mySpace.vue'), name: 'mySpace' },
   { path: '/dashboard/mySpace/:folderPath', component: () => import('../pages/dashboard/mySpaceFolder.vue') },
   { path: '/dashboard/settings', component: () => import('../pages/dashboard/settings.vue'), name: 'settings' },
+  { path: '/dashboard/settings/collaborators', component: () => import('../pages/dashboard/settings/collaborators.vue'), name: 'collaborators'}
 ]
 
 export const router = createRouter({

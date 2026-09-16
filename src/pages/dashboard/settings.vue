@@ -5,8 +5,8 @@
         <main class="main-content">
             <sectionSettings @update="handleModal"/>
         </main>
-        <succesModale 
-            :isOpen="isModaleOpen" 
+        <succesModale
+            :isOpen="isModaleOpen"
             @close="handleModal"
             modaleTitle="Informations mises à jour"
             title="Informations mises à jour"
@@ -22,7 +22,7 @@ import sectionSettings from '../../components/sections/settings/sectionSettings.
 import succesModale from '../../components/modale/succesModale.vue';
 import { ref } from 'vue';
 
-const isModaleOpen = ref(false);
+const isModaleOpen = ref<boolean>(false);
 
 function handleModal(){
     isModaleOpen.value = !isModaleOpen.value;
