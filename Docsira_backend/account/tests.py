@@ -1,8 +1,10 @@
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .models import Collaborator
 from .serializers import CustomUserSerializer
 
 
@@ -66,3 +68,37 @@ class LogoutViewTests(TestCase):
         )
 
         self.assertEqual(refresh_response.status_code, 401)
+
+
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    DEFAULT_FROM_EMAIL="no-reply@docsira.test",
+)
+class CollaborateurViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="alice",
+            email="alice@example.com",
+            password="Secret123!",
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_creating_collaborator_sends_activation_code(self):
+        response = self.client.post(
+            "/account/collaborators/",
+            {"email": "bob@example.com", "role": "editor"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["bob@example.com"])
+        self.assertRegex(mail.outbox[0].body, r"[A-Za-z0-9]{6}")
+        self.assertTrue(
+            Collaborator.objects.filter(
+                main_account=self.user,
+                user__email="bob@example.com",
+                role="editor",
+            ).exists()
+        )

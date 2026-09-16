@@ -1,5 +1,6 @@
 from .models import CustomUser, Collaborator
 from .serializers import CustomUserSerializer, CollaboratorSerializer
+from .utils import generate_activation_code, send_activation_email
 from django.contrib.auth import authenticate
 
 from rest_framework.views import APIView
@@ -140,11 +141,13 @@ class CollaborateurView(APIView):
 
             # 3. Création du lien de collaboration
             try:
+                activation_code = generate_activation_code(user)
                 collaborator = Collaborator.objects.create(
                     main_account=request.user,
                     user=user,
                     role=role
                 )
+                send_activation_email(user, activation_code)
                 
                 # 4. On utilise le sérialiseur pour formater la réponse finale
                 response_serializer = CollaboratorSerializer(collaborator)
