@@ -31,7 +31,7 @@
 
                 <!-- Bouton d'action -->
                 <div class="modal-footer">
-                  <mainButton @click="$emit('handleEvent')"/>
+                  <mainButton @click="$emit('handleEvent')" :label="actionText"/>
                 </div>
 
             </div>
@@ -49,13 +49,15 @@ const props = withDefaults(
     isOpen: boolean;
     modaleTitle: string,
     title: string,
-    subtitle: string
+    subtitle: string,
+    actionText: string
   }>(),
   {
     isOpen: false,
     modaleTitle: 'Félicitations',
     title:'Inscription réussie',
-    subtitle: 'Votre compte Docsira a été créé avec succès. Vous pouvez maintenant vous connecter.'
+    subtitle: 'Votre compte Docsira a été créé avec succès. Vous pouvez maintenant vous connecter.',
+    actionText: 'Continuer'
   }
 );
 

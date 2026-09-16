@@ -110,3 +110,9 @@ class LoginView(APIView):
                 {'error': 'Identifiants incorrects.'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+
+# ====================== Collaborateurs =================================
+
+class CollaborateurView(APIView):
+
+    permission_classes = [IsAuthenticated]
