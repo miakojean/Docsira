@@ -1,5 +1,5 @@
-from .models import CustomUser
-from .serializers import CustomUserSerializer
+from .models import CustomUser, Collaborator
+from .serializers import CustomUserSerializer, CollaboratorSerializer
 from django.contrib.auth import authenticate
 
 from rest_framework.views import APIView
@@ -116,3 +116,45 @@ class LoginView(APIView):
 class CollaborateurView(APIView):
 
     permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # 1. On passe les données au sérialiseur
+        serializer = CollaboratorSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            email = serializer.validated_data.get('email')
+            role = serializer.validated_data.get('role', Collaborator.Roles.VIEWER)
+            
+            # 2. Logique de création ou récupération de l'utilisateur
+            user, created = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={
+                    'username': email.split('@')[0], 
+                    'account_type': CustomUser.AccountType.COLLABORATOR
+                }
+            )
+            
+            if created:
+                user.set_unusable_password()
+                user.save()
+
+            # 3. Création du lien de collaboration
+            try:
+                collaborator = Collaborator.objects.create(
+                    main_account=request.user,
+                    user=user,
+                    role=role
+                )
+                
+                # 4. On utilise le sérialiseur pour formater la réponse finale
+                response_serializer = CollaboratorSerializer(collaborator)
+                return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+                
+            except Exception:
+                return Response(
+                    {"error": "Ce collaborateur est déjà lié à ce compte."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+        # Si l'email n'est pas valide ou manquant
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
