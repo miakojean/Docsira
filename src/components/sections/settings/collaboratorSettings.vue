@@ -26,7 +26,23 @@
             <emptyCards @add="handleAdd"/>
         </div>
 
-        <inviteModale :isOpen="isOpen" @close="()=> {isOpen = false}" @invite="handleInvite"/>
+        <inviteModale
+            :isOpen="isOpen"
+            :backendError="authStore.message.errorMessage"
+            :isLoading="authStore.isLoading"
+            @close="()=> {isOpen = false}"
+            @invite="(email:string) => { handleInvite(email)  }"
+        />
+
+        <SuccesModale
+            modaleTitle="Confirmation effectuée"
+            :isOpen="isSuccess"
+            :title="authStore.message.succesMessage"
+            subtitle="Une invitation de collaboration a été envoyée dans le mail du collaborateur"
+            actionText="continuer"
+            @close="() => { isSuccess = false }"
+
+        />
     </div>
 </template>
 
@@ -37,25 +53,30 @@ import PendingCollaboratorCard from '../../cards/PendingCollaboratorCard.vue';
 import inviteModale from '../../modale/inviteModale.vue';
 import { ref } from 'vue';
 import { useAuthStore } from '../../../stores/authStore';
+import SuccesModale from '../../modale/succesModale.vue';
+
+const authStore = useAuthStore();
 
 const isOpen = ref<boolean>(false);
-const pendingInvites = ref<string[]>([]);
-const authStore = useAuthStore();
+const isSuccess = ref<boolean>(false);
 
 function handleAdd() {
     isOpen.value = true;
 }
 
 async function handleInvite(email: string) {
-    await authStore.addCollaborator(email);
-    isOpen.value = false;
-    if (!pendingInvites.value.includes(email)) {
-        pendingInvites.value.push(email);
+    try{
+        const response = await authStore.addCollaborator(email);
+        if(response){
+          isOpen.value = false;
+          isSuccess.value = true;
+        }
+        else {
+          isSuccess.value = false;
+        }
+    } catch (error: any) {
+      isSuccess.value = false;
     }
-}
-
-async function handleResend(email: string) {
-    await authStore.addCollaborator(email);
 }
 </script>
 

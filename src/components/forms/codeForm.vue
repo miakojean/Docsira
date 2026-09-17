@@ -2,7 +2,7 @@
   <form class="form-ui otp-form" @submit.prevent="submitOtp">
     <h3>Vérification de sécurité</h3>
     <p class="subtitle">
-      Nous vous avons envoyé un code à 6 chiffres. Veuillez l'entrer ci-dessous.
+      Nous vous avons envoyé un code à 6 caractères. Veuillez l'entrer ci-dessous.
     </p>
 
     <!-- Conteneur des 6 cases OTP -->
@@ -12,7 +12,7 @@
             :key="index"
             ref="otpInputs"
             type="text"
-            inputmode="numeric"
+            inputmode="text"
             maxlength="1"
             v-model="otp[index]"
             @input="handleInput(index, $event)"

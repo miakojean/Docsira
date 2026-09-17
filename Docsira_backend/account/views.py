@@ -161,3 +161,16 @@ class CollaborateurView(APIView):
                 
         # Si l'email n'est pas valide ou manquant
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):
+
+        collaborators = Collaborator.objects.filter(main_account = request.user)
+        try:
+            serializer = CollaboratorSerializer(collaborators, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception:
+            return Response(
+                {"error": "Aucun collaborateur trouvé"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
