@@ -168,8 +168,21 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  async function addCollaborator() {
+  async function addCollaborator(email:string) {
     isLoading.value = true;
+    try {
+      const response = await api("/", 'POST', { email }, { requireAuth: true });
+      if (response.ok) {
+        message.value.succesMessage = "Invitation de collaborateur effectuée";
+      } else {
+        message.value.errorMessage = "Erreur lors de l'invitation";
+      }
+    } catch (error) {
+      message.value.errorMessage = "Erreur serveur";
+      console.error(error);
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   return {
@@ -184,5 +197,6 @@ export const useAuthStore = defineStore("auth", () => {
     Logout,
     editProfile,
     fetchUserProfile,
+    addCollaborator
   };
 });
