@@ -49,15 +49,17 @@
 import { ref } from 'vue';
 import CollaboratorCard from '../../cards/CollaboratorCard.vue';
 import inviteModale from '../../modale/inviteModale.vue';
+import { useAuthStore } from '../../../stores/authStore';
 
+const authStore = useAuthStore();
 const isInviteModalOpen = ref(false);
 
 const toggleInviteModal = () => {
   isInviteModalOpen.value = !isInviteModalOpen.value;
 };
 
-const handleInvite = () => {
-  // Logique d'invitation (statique pour l'instant)
+const handleInvite = async (email: string) => {
+  await authStore.addCollaborator(email);
   toggleInviteModal();
 };
 
