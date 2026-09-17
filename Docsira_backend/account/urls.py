@@ -1,5 +1,12 @@
 from django.urls import path
-from .views import RegisterView, LoginView, LogoutView, ProfileView, CollaborateurView
+from .views import (
+    RegisterView, 
+    LoginView, 
+    LogoutView, 
+    ProfileView, 
+    CollaborateurView,
+    CollaboratorCodeView
+)
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -9,7 +16,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     # Manage Collaborators endpoints
     path('collaborators/', CollaborateurView.as_view(), name='collaborators'),
-    
+    path('collaboratos/code/', CollaboratorCodeView.as_view(), name="Collaborator_code"),
     # JWT token refresh endpoint
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh')
 ]

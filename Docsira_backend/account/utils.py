@@ -11,6 +11,17 @@ def generate_activation_code(user):
     alphabet = string.ascii_letters + string.digits
     short_token = ''.join(secrets.choice(alphabet) for _ in range(6))
 
+    expires_at = timezone.now() + timedelta(hours=1)
+
+    from .models import ActivationCode
+
+    ActivationCode.objects.filter(user=user).delete()
+    ActivationCode.objects.create(
+        user=user,
+        code=short_token,
+        expires_at=expires_at
+    )
+
     return short_token
 
 def send_activation_email(user, activation_code):

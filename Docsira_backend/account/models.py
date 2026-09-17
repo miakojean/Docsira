@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
+from datetime import timedelta
 import uuid
 
 class CustomUser(AbstractUser):
@@ -12,6 +14,7 @@ class CustomUser(AbstractUser):
         COLLABORATOR = "collaborator", _("Collaborator") # Optionnel : pour différencier les comptes invités
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+
     account_type = models.CharField(
         max_length=20,
         choices=AccountType.choices,
@@ -24,7 +27,9 @@ class CustomUser(AbstractUser):
 
 
 class Collaborator(models.Model):
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+
     # 1. Le compte principal (Firme ou Individu) qui a ajouté le collaborateur
     main_account = models.ForeignKey(
         CustomUser,
@@ -65,3 +70,27 @@ class Collaborator(models.Model):
 
     def __str__(self):
         return f"{self.user.username} ({self.get_role_display()}) chez {self.main_account.username}"
+
+class ActivationCode(models.Model):
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='activation_codes')
+    code = models.CharField(max_length=6, unique=True)
+    is_used = models.BooleanField(default=False)
+    # Timestamp pour savoir quand le code a été généré
+    created_at = models.DateField(auto_now_add=True)
+    updated_at = models.DateField(auto_now=True)
+    expires_at = models.DateTimeField()
+
+    @classmethod
+    def create_code(cls, user, expiration_hours=24):
+        code = cls(
+            user = user,
+            expires_at = timezone.now() + timedelta(hours=expiration_hours)
+        )
+        code.save()
+        return code
+
+    def __str__(self):
+        return f"Activation code for {self.user.username}"
