@@ -168,12 +168,32 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  const collaborators = ref<any[]>([]);
+
+  async function fetchCollaborators() {
+    isLoading.value = true;
+    try {
+      const response = await api("/account/collaborators/", "GET", undefined, { requireAuth: true });
+      if (response.ok) {
+        collaborators.value = await response.json();
+      } else {
+        console.error("Failed to fetch collaborators");
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   async function addCollaborator(email:string) {
     isLoading.value = true;
     try {
       const response = await api("/account/collaborators/", 'POST', { email }, { requireAuth: true });
       if (response.ok) {
         message.value.succesMessage = "Invitation de collaboration envoyée";
+        // Update collaborators list after successful add
+        await fetchCollaborators();
         return true;
       } else {
         message.value.errorMessage = "Erreur lors de l'invitation: ce collaborateur a déjà été invité";
@@ -194,12 +214,15 @@ export const useAuthStore = defineStore("auth", () => {
     user,
     isAuthenticated,
     message,
+    collaborators,
     getIsAuthenticated,
     Registration,
     Login,
     Logout,
     editProfile,
     fetchUserProfile,
-    addCollaborator
+    addCollaborator,
+    fetchCollaborators
   };
 });
+

@@ -3,14 +3,6 @@
         <headerNav title="Mes collaborateurs"/>
         
         <div v-if="pendingInvites.length > 0" class="content-container">
-            <div class="actions-bar">
-                <button class="add-btn" @click="handleAdd">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="btn-icon">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
-                    </svg>
-                    Inviter un autre collaborateur
-                </button>
-            </div>
             
             <div class="cards-grid">
                 <PendingCollaboratorCard 
@@ -51,7 +43,7 @@ import headerNav from '../../navbar/headerNav.vue';
 import emptyCards from '../../cards/emptyCards.vue';
 import PendingCollaboratorCard from '../../cards/PendingCollaboratorCard.vue';
 import inviteModale from '../../modale/inviteModale.vue';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../../../stores/authStore';
 import SuccesModale from '../../modale/succesModale.vue';
 
@@ -59,6 +51,19 @@ const authStore = useAuthStore();
 
 const isOpen = ref<boolean>(false);
 const isSuccess = ref<boolean>(false);
+const pendingInvites = ref<string[]>([]);
+
+onMounted(async () => {
+    await authStore.fetchCollaborators();
+    pendingInvites.value = authStore.collaborators
+        .filter((c: any) => c.status === 'pending')
+        .map((c: any) => c.user.email);
+});
+
+function handleResend(email: string) {
+    // Add logic here to resend the invite if needed
+    console.log("Resend invite to:", email);
+}
 
 function handleAdd() {
     isOpen.value = true;
@@ -68,6 +73,10 @@ async function handleInvite(email: string) {
     try{
         const response = await authStore.addCollaborator(email);
         if(response){
+          // Ajouter l'email aux invitations en attente pour afficher la carte
+          if (!pendingInvites.value.includes(email)) {
+              pendingInvites.value.push(email);
+          }
           isOpen.value = false;
           isSuccess.value = true;
         }

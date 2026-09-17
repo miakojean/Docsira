@@ -27,6 +27,8 @@ class CollaboratorSerializer(serializers.ModelSerializer):
 
     # 2. ÉCRITURE : On ajoute un champ virtuel pour capter l'email envoyé par ton front-end Vue.js
     email = serializers.EmailField(write_only=True)
+    
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = Collaborator
@@ -35,8 +37,14 @@ class CollaboratorSerializer(serializers.ModelSerializer):
             'main_account',
             'role',
             'user',
-            'email', # Champ virtuel utilisé uniquement à la création
+            'email',
+            'status',
             'created_at'
         ]
         # Le main_account sera injecté automatiquement par la vue, pas par le frontend
         read_only_fields = ['main_account']
+        
+    def get_status(self, obj):
+        if obj.user.has_usable_password():
+            return 'accepted'
+        return 'pending'
