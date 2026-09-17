@@ -171,15 +171,18 @@ export const useAuthStore = defineStore("auth", () => {
   async function addCollaborator(email:string) {
     isLoading.value = true;
     try {
-      const response = await api("/", 'POST', { email }, { requireAuth: true });
+      const response = await api("/account/collaborators/", 'POST', { email }, { requireAuth: true });
       if (response.ok) {
-        message.value.succesMessage = "Invitation de collaborateur effectuée";
+        message.value.succesMessage = "Invitation de collaboration envoyée";
+        return true;
       } else {
-        message.value.errorMessage = "Erreur lors de l'invitation";
+        message.value.errorMessage = "Erreur lors de l'invitation: ce collaborateur a déjà été invité";
+        return false;
       }
     } catch (error) {
       message.value.errorMessage = "Erreur serveur";
       console.error(error);
+      return false;
     } finally {
       isLoading.value = false;
     }

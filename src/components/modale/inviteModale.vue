@@ -13,12 +13,25 @@
 
                 <!-- Textes & Input -->
                 <div class="modal-body">
-                    <BaseInput type="email" placeholder="Adresse e-mail" v-model="email" :errorMessage="errorMessage" />
+                    <BaseInput
+                        type="email"
+                        placeholder="Adresse e-mail"
+                        v-model="email"
+                        :errorMessage="errorMessage"
+                    />
+                </div>
+
+                <div class="error-content" v-if="backendError">
+                    <p>{{backendError}}</p>
                 </div>
 
                 <!-- Bouton d'action -->
                 <div class="modal-footer">
-                    <mainButton @click="handleInvite" label="Envoyer l'invitation"/>
+                    <mainButton
+                        @click="handleInvite"
+                        label="Envoyer l'invitation"
+                        :disabled="isLoading"
+                    />
                 </div>
 
             </div>
@@ -28,15 +41,27 @@
 </template>
 
 <script setup lang="ts">
-import { watch, onUnmounted, ref } from 'vue';
+import { watch, onUnmounted, ref, onMounted } from 'vue';
 import BaseInput from '../BaseInput/BaseInput.vue';
 import mainButton from '../buttons/mainButton.vue';
 
 const props = defineProps({
-  isOpen: {
-    type: Boolean,
-    default: false
-  }
+    isOpen: {
+        type: Boolean,
+        default: false
+    },
+    errorMessage: {
+        type: String,
+        default: ''
+    },
+    backendError: {
+        type: String,
+        default: ''
+    },
+    isLoading: {
+        type: Boolean,
+        default: false
+    }
 });
 
 const emit = defineEmits(['close', 'invite']);
@@ -58,12 +83,16 @@ async function handleInvite() {
     emit('invite', email.value);
 }
 
+onMounted(() => {
+  errorMessage.value = '';
+})
+
 watch(() => props.isOpen, (newVal) => {
-  if (newVal) {
-    document.body.style.overflow = 'hidden';
-  } else {
-    document.body.style.overflow = '';
-  }
+    if (newVal) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = '';
+    }
 });
 
 onUnmounted(() => {
@@ -180,6 +209,12 @@ onUnmounted(() => {
 
 .btn-invite:active {
   transform: scale(0.98);
+}
+
+.error-content {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
 }
 </style>
 
