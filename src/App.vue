@@ -3,6 +3,7 @@
     <isConnected
         :visible="notifPopup.isVisible"
         :action-text="notifPopup.myMessage"
+        :is-online="notifPopup.isOnline"
     />
     <RouterView/>
 </template>
@@ -16,30 +17,26 @@ import isConnected from '../src/components/tools/isConnected.vue'
 const notifPopup = ref({
     isVisible: false,
     myMessage: "",
+    isOnline: false,
     duration: 8000
 });
 
 onMounted(() => {
     // Vérification initiale
     checkConnection().then((estEnLigne:boolean) => {
-        notifPopup.value.isVisible = !estEnLigne;
-        notifPopup.value.myMessage="vous êtes hors ligne";
+        if (!estEnLigne) {
+            notifPopup.value.isVisible = true;
+            notifPopup.value.myMessage = "Vous n'êtes pas connecté à internet";
+        }
     });
 
-    // Surveillance des changements toutes les 5 secondes
     const intervalId = watchConnection((estEnLigne) => {
-        estEnLigne ? notifPopup.value.isVisible = true : notifPopup.value.isVisible = false;
-        notifPopup.value.myMessage="vous êtes hors ligne";
-    });
-
-    watchConnection((estEnLigne) => {
+        notifPopup.value.isVisible = true;
+        notifPopup.value.isOnline = estEnLigne;
         if (estEnLigne) {
-          notifPopup.value.isVisible = false;
-          //notifPopup.value.myMessage="vous êtes hors ligne";
-
+          notifPopup.value.myMessage = "Vous êtes connecté à internet";
         } else {
-          notifPopup.value.isVisible = true;
-          notifPopup.value.myMessage="vous êtes hors ligne";
+          notifPopup.value.myMessage = "Vous n'êtes pas connecté à internet";
         }
     });
 
