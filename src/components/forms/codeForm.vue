@@ -8,7 +8,7 @@
     <!-- Conteneur des 6 cases OTP -->
     <div class="otp-container" @paste="handlePaste">
         <input
-            v-for="(digit, index) in otp"
+            v-for="(_, index) in otp"
             :key="index"
             ref="otpInputs"
             type="text"
@@ -61,8 +61,8 @@ const otpInputs = ref<HTMLInputElement[]>([]);
 const handleInput = (index: number, event: Event) => {
   const input = event.target as HTMLInputElement;
 
-  // Force uniquement les chiffres (sécurité UI)
-  otp.value[index] = input.value.replace(/[^0-9]/g, '');
+  // Accepte les chiffres et les lettres
+  otp.value[index] = input.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
 
   // Passe au champ suivant si un chiffre est entré
   if (otp.value[index] !== '' && index < 5) {
@@ -88,8 +88,8 @@ const handlePaste = (event: ClipboardEvent) => {
   const pasteData = event.clipboardData?.getData('text');
 
   if (pasteData) {
-    // Garde uniquement les chiffres et coupe à 6 caractères max
-    const cleanData = pasteData.replace(/[^0-9]/g, '').slice(0, 6);
+    // Garde uniquement les lettres et chiffres et coupe à 6 caractères max
+    const cleanData = pasteData.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
 
     // Répartit les chiffres dans le tableau
     for (let i = 0; i < cleanData.length; i++) {

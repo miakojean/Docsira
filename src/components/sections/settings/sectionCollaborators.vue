@@ -39,6 +39,8 @@
     <!-- Modale d'invitation -->
     <inviteModale 
       :isOpen="isInviteModalOpen" 
+      :isLoading="authStore.isLoading"
+      :backendError="authStore.message.errorMessage"
       @close="toggleInviteModal" 
       @invite="handleInvite" 
     />
@@ -59,8 +61,10 @@ const toggleInviteModal = () => {
 };
 
 const handleInvite = async (email: string) => {
-  await authStore.addCollaborator(email);
-  toggleInviteModal();
+  const response = await authStore.addCollaborator(email);
+  if (response) {
+    toggleInviteModal();
+  }
 };
 
 const collaborators = ref([

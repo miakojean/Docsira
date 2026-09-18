@@ -9,6 +9,7 @@
                     v-for="(email, index) in pendingInvites" 
                     :key="index" 
                     :email="email"
+                    :isLoading="resendingEmail === email"
                     @resend="handleResend" 
                 />
             </div>
@@ -52,6 +53,7 @@ const authStore = useAuthStore();
 const isOpen = ref<boolean>(false);
 const isSuccess = ref<boolean>(false);
 const pendingInvites = ref<string[]>([]);
+const resendingEmail = ref<string | null>(null);
 
 onMounted(async () => {
     await authStore.fetchCollaborators();
@@ -60,9 +62,14 @@ onMounted(async () => {
         .map((c: any) => c.user.email);
 });
 
-function handleResend(email: string) {
-    // Add logic here to resend the invite if needed
-    console.log("Resend invite to:", email);
+async function handleResend(email: string) {
+    resendingEmail.value = email;
+    try {
+        await authStore.addCollaborator(email);
+        isSuccess.value = true;
+    } finally {
+        resendingEmail.value = null;
+    }
 }
 
 function handleAdd() {
