@@ -32,10 +32,10 @@
 
 <script setup lang="ts">
 const props = defineProps({
-  email: {
-    type: String,
-    required: true,
-  },
+    email: {
+        type: String,
+        required: true,
+    },
 });
 
 const emit = defineEmits(['resend']);

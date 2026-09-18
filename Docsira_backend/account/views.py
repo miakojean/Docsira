@@ -1,7 +1,8 @@
-from .models import CustomUser, Collaborator, ActivationCode
-from .serializers import CustomUserSerializer, CollaboratorSerializer, ActivationCodeSerializer
-from .utils import generate_activation_code, send_activation_email
+from .models import CustomUser, Collaborator, CollaboratorInvitation, ActivationCode
+from .serializers import CustomUserSerializer, CollaboratorSerializer, CollaboratorInvitationSerializer, ActivationCodeSerializer
+from .utils import generate_temporary_password, send_invitation_email
 from django.contrib.auth import authenticate
+from django.db import IntegrityError, transaction
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -96,6 +97,20 @@ class LoginView(APIView):
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
+            with transaction.atomic():
+                invitations = CollaboratorInvitation.objects.select_for_update().filter(
+                    user=user,
+                    accepted_at__isnull=True,
+                )
+                for invitation in invitations:
+                    Collaborator.objects.get_or_create(
+                        main_account=invitation.main_account,
+                        user=user,
+                        defaults={'role': invitation.role},
+                    )
+                    invitation.accepted_at = timezone.now()
+                    invitation.save(update_fields=['accepted_at'])
+
             refresh = RefreshToken.for_user(user)
             return Response({
                 'refresh': str(refresh),
@@ -119,43 +134,63 @@ class CollaborateurView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        # 1. On passe les données au sérialiseur
         serializer = CollaboratorSerializer(data=request.data)
 
         if serializer.is_valid():
             email = serializer.validated_data.get('email')
             role = serializer.validated_data.get('role', Collaborator.Roles.VIEWER)
 
-            # 2. Logique de création ou récupération de l'utilisateur
-            user, created = CustomUser.objects.get_or_create(
-                email=email,
-                defaults={
-                    'username': email.split('@')[0],
-                    'account_type': CustomUser.AccountType.COLLABORATOR
-                }
-            )
-
-            if created:
-                user.set_unusable_password()
-                user.save()
-
-            # 3. Création du lien de collaboration
             try:
-                activation_code = generate_activation_code(user)
-                collaborator = Collaborator.objects.create(
-                    main_account=request.user,
-                    user=user,
-                    role=role
-                )
-                send_activation_email(user, activation_code)
+                with transaction.atomic():
+                    user = CustomUser.objects.filter(email__iexact=email).first()
+                    invitation = None
+                    if user:
+                        invitation = CollaboratorInvitation.objects.filter(
+                            main_account=request.user,
+                            user=user,
+                        ).first()
+                    if invitation and invitation.accepted_at is not None:
+                        return Response(
+                            {'error': 'Ce collaborateur est déjà lié à ce compte.'},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    if user and not invitation and user.has_usable_password():
+                        return Response(
+                            {'error': 'Cette adresse possède déjà un compte. Utilisez son mot de passe.'},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
 
-                # 4. On utilise le sérialiseur pour formater la réponse finale
-                response_serializer = CollaboratorSerializer(collaborator)
+                    if not user:
+                        username = email.split('@')[0]
+                        suffix = 1
+                        base_username = username
+                        while CustomUser.objects.filter(username=username).exists():
+                            username = f'{base_username}{suffix}'
+                            suffix += 1
+                        user = CustomUser.objects.create(
+                            email=email,
+                            username=username,
+                            account_type=CustomUser.AccountType.COLLABORATOR,
+                        )
+
+                    temporary_password = generate_temporary_password()
+                    user.set_password(temporary_password)
+                    user.save(update_fields=['password'])
+                    invitation, created = CollaboratorInvitation.objects.get_or_create(
+                        main_account=request.user,
+                        user=user,
+                        defaults={'role': role},
+                    )
+                    if not created:
+                        invitation.role = role
+                        invitation.save(update_fields=['role'])
+                    send_invitation_email(user, temporary_password)
+
+                response_serializer = CollaboratorInvitationSerializer(invitation)
                 return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-
-            except Exception:
+            except IntegrityError:
                 return Response(
-                    {"error": "Ce collaborateur est déjà lié à ce compte."},
+                    {"error": "Ce collaborateur est déjà invité pour ce compte."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 

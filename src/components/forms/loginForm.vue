@@ -48,6 +48,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router'; // 1. Import du router
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useAuthStore, type Customer } from '../../stores/authStore';
 
@@ -56,10 +57,9 @@ import mainButton from '../buttons/mainButton.vue';
 import exitButton from '../buttons/exitButton.vue';
 import errorMessage from '../tools/errorMessage.vue';
 
-// Déclaration des emits avec setup
 const emit = defineEmits(['handleLogin']);
-
 const authStore = useAuthStore();
+const router = useRouter(); // 2. Initialisation du router
 
 const credentials = ref<Pick<Customer, "username" | "email" | "password">>({
     username: "",
@@ -84,7 +84,7 @@ const isValid = (): boolean => {
     errorMessageState.value.passwordError = "";
 
     if (credentials.value.username === "" && !usePassword.value) {
-        errorMessageState.value.usernameError = "Entrer le nom d'utilisateur";
+        errorMessageState.value.usernameError = "Entrer le nom d'utilisateur ou l'email";
         valid = false;
     }
 
@@ -100,13 +100,27 @@ const login = async () => {
     if (!isValid()) return;
 
     const identifier = credentials.value.username.trim();
-    await authStore.Login({
-        username: identifier.includes('@') ? undefined : identifier,
-        email: identifier.includes('@') ? identifier : undefined,
-        password: credentials.value.password,
-    });
 
-    emit('handleLogin', credentials.value);
+    // FLUX 1 : Connexion classique avec Mot de passe
+    if (usePassword.value) {
+        await authStore.Login({
+            username: identifier.includes('@') ? undefined : identifier,
+            email: identifier.includes('@') ? identifier : undefined,
+            password: credentials.value.password,
+        });
+        emit('handleLogin', credentials.value);
+    }
+    // FLUX 2 : Authentification par code (Redirection)
+    else {
+        // Optionnel : Tu pourras appeler ici ton action store pour générer et envoyer le mail
+        // await authStore.requestOtp(identifier);
+
+        // Redirection vers ta page de code avec l'email en paramètre
+        router.push({
+            name: 'authCode',
+            query: { user: identifier }
+        });
+    }
 };
 
 const exit = async () => {

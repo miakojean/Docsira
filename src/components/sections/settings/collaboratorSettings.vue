@@ -1,15 +1,15 @@
 <template>
     <div class="main-section gap-2">
         <headerNav title="Mes collaborateurs"/>
-        
-        <div v-if="pendingInvites.length > 0" class="content-container">
-            
+
+        <div v-if="collaborators.length > 0" class="content-container">
+
             <div class="cards-grid">
-                <PendingCollaboratorCard 
-                    v-for="(email, index) in pendingInvites" 
-                    :key="index" 
-                    :email="email"
-                    @resend="handleResend" 
+                <PendingCollaboratorCard
+                    v-for="(collaborator, index) in collaborators"
+                    :key="index"
+                    :email="collaborator.email"
+                    @resend="handleResend"
                 />
             </div>
         </div>
@@ -51,13 +51,11 @@ const authStore = useAuthStore();
 
 const isOpen = ref<boolean>(false);
 const isSuccess = ref<boolean>(false);
-const pendingInvites = ref<string[]>([]);
+const collaborators = ref<string[]>([]);
 
 onMounted(async () => {
     await authStore.fetchCollaborators();
-    pendingInvites.value = authStore.collaborators
-        .filter((c: any) => c.status === 'pending')
-        .map((c: any) => c.user.email);
+    collaborators.value = authStore.collaborators
 });
 
 function handleResend(email: string) {
@@ -74,8 +72,8 @@ async function handleInvite(email: string) {
         const response = await authStore.addCollaborator(email);
         if(response){
           // Ajouter l'email aux invitations en attente pour afficher la carte
-          if (!pendingInvites.value.includes(email)) {
-              pendingInvites.value.push(email);
+          if (!collaborators.value.includes(email)) {
+              collaborators.value.push(email);
           }
           isOpen.value = false;
           isSuccess.value = true;

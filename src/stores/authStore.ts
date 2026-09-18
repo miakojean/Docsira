@@ -176,6 +176,7 @@ export const useAuthStore = defineStore("auth", () => {
       const response = await api("/account/collaborators/", "GET", undefined, { requireAuth: true });
       if (response.ok) {
         collaborators.value = await response.json();
+        console.log("your collaborator", collaborators.value);
       } else {
         console.error("Failed to fetch collaborators");
       }
@@ -225,4 +226,3 @@ export const useAuthStore = defineStore("auth", () => {
     fetchCollaborators
   };
 });
-
