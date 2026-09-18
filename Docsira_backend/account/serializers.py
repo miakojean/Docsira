@@ -1,8 +1,15 @@
 from rest_framework import serializers
 from .models import CustomUser, Collaborator, ActivationCode
 
-class CustomUserSerializer(serializers.ModelSerializer):
+# 1. NOUVEAU : Un sérialiseur allégé pour l'affichage imbriqué
+class SimpleUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        # On ne renvoie que les données strictement nécessaires au frontend
+        fields = ['id', 'username', 'email']
 
+# 2. CORRECTION : Sécurisation du sérialiseur principal
+class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = [
@@ -14,20 +21,20 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'account_type',
             'password',
         ]
+        # On rend le mot de passe invisible en lecture !
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
 
     def create(self, validated_data):
-
-        user = CustomUser.objects.create_user(**validated_data,)
+        user = CustomUser.objects.create_user(**validated_data)
         return user
 
+# 3. MISE À JOUR : Utilisation du sérialiseur allégé
 class CollaboratorSerializer(serializers.ModelSerializer):
-    # 1. LECTURE : On utilise le CustomUserSerializer pour afficher les infos complètes
-    # (On utilise 'user' car c'est le nom exact du champ dans ton modèle Collaborator)
-    user = CustomUserSerializer(read_only=True)
-
-    # 2. ÉCRITURE : On ajoute un champ virtuel pour capter l'email envoyé par ton front-end Vue.js
+    # On remplace CustomUserSerializer par SimpleUserSerializer
+    user = SimpleUserSerializer(read_only=True)
     email = serializers.EmailField(write_only=True)
-    
     status = serializers.SerializerMethodField()
 
     class Meta:
@@ -41,17 +48,16 @@ class CollaboratorSerializer(serializers.ModelSerializer):
             'status',
             'created_at'
         ]
-        # Le main_account sera injecté automatiquement par la vue, pas par le frontend
         read_only_fields = ['main_account']
-        
+
     def get_status(self, obj):
         if obj.user.has_usable_password():
             return 'accepted'
         return 'pending'
 
 class ActivationCodeSerializer(serializers.ModelSerializer):
-
-    user = CustomUserSerializer(read_only=True)
+    # On remplace CustomUserSerializer par SimpleUserSerializer ici aussi
+    user = SimpleUserSerializer(read_only=True)
 
     class Meta:
         model = ActivationCode
@@ -64,5 +70,4 @@ class ActivationCodeSerializer(serializers.ModelSerializer):
             'updated_at',
             'expires_at'
         ]
-
-        read_only_fields = ['id', 'user']
+        read_only_fields = ['id']
