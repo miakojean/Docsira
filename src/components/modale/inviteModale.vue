@@ -31,6 +31,7 @@
                         @click="handleInvite"
                         label="Envoyer l'invitation"
                         :disabled="isLoading"
+                        :isLoading="isLoading"
                     />
                 </div>
 

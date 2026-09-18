@@ -1,5 +1,5 @@
-from .models import CustomUser, Collaborator
-from .serializers import CustomUserSerializer, CollaboratorSerializer
+from .models import CustomUser, Collaborator, ActivationCode
+from .serializers import CustomUserSerializer, CollaboratorSerializer, ActivationCodeSerializer
 from .utils import generate_activation_code, send_activation_email
 from django.contrib.auth import authenticate
 
@@ -173,4 +173,22 @@ class CollaborateurView(APIView):
                 {"error": "Aucun collaborateur trouvé"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+class CollaboratorCodeView(APIView):
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+
+        try:
+            code = ActivationCode.objects.filter(main_account=request.user)
+            if code:
+                serializer = ActivationCodeSerializer(code)
+                return Response({serializer.data}, status=status.HTTP_200_OK)
+            else:
+                return Response({"Message": "Erreur rencontrée lors de la vérification"}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception:
+            return Response({"Erreur": "Erreur serveur"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+

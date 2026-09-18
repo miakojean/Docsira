@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, Collaborator
+from .models import CustomUser, Collaborator, ActivationCode
 
 class CustomUserSerializer(serializers.ModelSerializer):
 
@@ -48,3 +48,21 @@ class CollaboratorSerializer(serializers.ModelSerializer):
         if obj.user.has_usable_password():
             return 'accepted'
         return 'pending'
+
+class ActivationCodeSerializer(serializers.ModelSerializer):
+
+    user = CustomUserSerializer(read_only=True)
+
+    class Meta:
+        model = ActivationCode
+        fields = [
+            'id',
+            'user',
+            'code',
+            'is_used',
+            'created_at',
+            'updated_at',
+            'expires_at'
+        ]
+
+        read_only_fields = ['id', 'user']
