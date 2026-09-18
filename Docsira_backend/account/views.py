@@ -121,20 +121,20 @@ class CollaborateurView(APIView):
     def post(self, request):
         # 1. On passe les données au sérialiseur
         serializer = CollaboratorSerializer(data=request.data)
-        
+
         if serializer.is_valid():
             email = serializer.validated_data.get('email')
             role = serializer.validated_data.get('role', Collaborator.Roles.VIEWER)
-            
+
             # 2. Logique de création ou récupération de l'utilisateur
             user, created = CustomUser.objects.get_or_create(
                 email=email,
                 defaults={
-                    'username': email.split('@')[0], 
+                    'username': email.split('@')[0],
                     'account_type': CustomUser.AccountType.COLLABORATOR
                 }
             )
-            
+
             if created:
                 user.set_unusable_password()
                 user.save()
@@ -148,17 +148,17 @@ class CollaborateurView(APIView):
                     role=role
                 )
                 send_activation_email(user, activation_code)
-                
+
                 # 4. On utilise le sérialiseur pour formater la réponse finale
                 response_serializer = CollaboratorSerializer(collaborator)
                 return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-                
+
             except Exception:
                 return Response(
-                    {"error": "Ce collaborateur est déjà lié à ce compte."}, 
+                    {"error": "Ce collaborateur est déjà lié à ce compte."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-                
+
         # Si l'email n'est pas valide ou manquant
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -175,20 +175,55 @@ class CollaborateurView(APIView):
             )
 
 class CollaboratorCodeView(APIView):
-
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny] # Permet à un utilisateur non connecté de valider son code
 
     def get(self, request):
+        activation_codes = ActivationCode.objects.filter(user=request.user)
+        serializer = ActivationCodeSerializer(activation_codes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        try:
-            code = ActivationCode.objects.filter(main_account=request.user)
-            if code:
-                serializer = ActivationCodeSerializer(code)
-                return Response({serializer.data}, status=status.HTTP_200_OK)
-            else:
-                return Response({"Message": "Erreur rencontrée lors de la vérification"}, status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request):
+        # 1. Récupérer le code envoyé par le frontend (ton composant Vue.js)
+        code_saisi = request.data.get('code')
 
-        except Exception:
-            return Response({"Erreur": "Erreur serveur"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if not code_saisi:
+            return Response(
+                {"error": "Veuillez fournir un code d'activation."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
+        # 2. Chercher ce code dans la base de données
+        activation = ActivationCode.objects.filter(code=code_saisi).first()
 
+        # 3. Vérifier que le code existe bien
+        if not activation:
+            return Response(
+                {"error": "Code invalide ou inexistant."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 4. Vérifier que le code n'a pas déjà été utilisé
+        if activation.is_used:
+            return Response(
+                {"error": "Ce code a déjà été utilisé."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 5. Vérifier que le code n'est pas expiré (en comparant avec expires_at)[cite: 1]
+        if timezone.now() > activation.expires_at:
+            return Response(
+                {"error": "Ce code a expiré. Veuillez demander un nouveau code."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 6. Le code est valide ! On le marque comme utilisé.
+        activation.is_used = True
+        activation.save()
+
+        # 7. (Optionnel) Tu peux renvoyer l'ID de l'utilisateur ou un jeton temporaire
+        # pour permettre à ton frontend de l'identifier lors de la création de son mot de passe.
+        return Response({
+            "message": "Code validé avec succès.",
+            "user_id": activation.user.id,
+            "email": activation.user.email
+        }, status=status.HTTP_200_OK)
