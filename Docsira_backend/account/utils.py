@@ -24,13 +24,18 @@ def generate_activation_code(user):
 
     return short_token
 
-def send_activation_email(user, activation_code):
+def generate_temporary_password():
+    alphabet = string.ascii_letters + string.digits + '-_'
+    return ''.join(secrets.choice(alphabet) for _ in range(14))
 
-    subject = 'Activation de votre compte Docsira'
+
+def send_invitation_email(user, temporary_password):
+
+    subject = 'Vos identifiants Docsira'
 
     context = {
         'user': user,
-        'activation_code': activation_code,
+        'temporary_password': temporary_password,
     }
 
     html_content = render_to_string('activation_code.html', context)
