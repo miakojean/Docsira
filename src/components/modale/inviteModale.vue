@@ -28,9 +28,9 @@
                 <!-- Bouton d'action -->
                 <div class="modal-footer">
                     <mainButton
-                        @click="handleInvite"
-                        label="Envoyer l'invitation"
-                        :disabled="isLoading"
+                      @click="handleInvite"
+                      label="Envoyer l'invitation"
+                      :isLoading="isLoading"
                     />
                 </div>
 
@@ -47,20 +47,20 @@ import mainButton from '../buttons/mainButton.vue';
 
 const props = defineProps({
     isOpen: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false
     },
     errorMessage: {
-        type: String,
-        default: ''
+      type: String,
+      default: ''
     },
     backendError: {
-        type: String,
-        default: ''
+      type: String,
+      default: ''
     },
     isLoading: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false
     }
 });
 
@@ -88,11 +88,11 @@ onMounted(() => {
 })
 
 watch(() => props.isOpen, (newVal) => {
-    if (newVal) {
-        document.body.style.overflow = 'hidden';
-    } else {
-        document.body.style.overflow = '';
-    }
+  if (newVal) {
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = '';
+  }
 });
 
 onUnmounted(() => {

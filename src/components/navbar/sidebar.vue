@@ -116,7 +116,9 @@
 </template>
 
 <script lang="ts">
+// @ts-ignore Vue is provided by the application's bundler.
 import { ref } from 'vue';
+// @ts-ignore vue-router is provided by the application's bundler.
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/authStore';
 
