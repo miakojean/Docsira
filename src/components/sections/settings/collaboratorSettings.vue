@@ -10,12 +10,17 @@
                         v-if="collaborator.status === 'accepted'"
                         :name="collaborator.user.username || collaborator.user.email"
                         :email="collaborator.user.email"
+                        :typeLabel="String(collaborator.id).startsWith('main_') ? 'Entreprise' : 'Collaborateur'"
+                        :canDelete="isOwner"
+                        @delete="handleDelete"
                     />
                     <PendingCollaboratorCard
                         v-else
                         :email="collaborator.user.email"
                         :isLoading="resendingEmail === collaborator.user.email"
+                        :canDelete="isOwner"
                         @resend="handleResend"
+                        @delete="handleDelete"
                     />
                 </template>
             </div>
@@ -37,11 +42,19 @@
             modaleTitle="Confirmation effectuée"
             :isOpen="isSuccess"
             :title="authStore.message.succesMessage"
-            subtitle="Une invitation de collaboration a été envoyée dans le mail du collaborateur"
+            :subtitle="successSubtitle"
             actionText="continuer"
             @close="() => { isSuccess = false }"
             @handleEvent="() => { isSuccess = false }"
+        />
 
+        <deleteModale
+            :isOpen="isDeleteModalOpen"
+            title="Retirer le collaborateur"
+            :description="`Êtes-vous sûr de vouloir retirer le collaborateur <strong>${collaboratorToDelete}</strong> ?`"
+            subtext="Attention, cette action supprimera tous ses accès à vos dossiers et fichiers partagés."
+            @close="() => { isDeleteModalOpen = false }"
+            @delete="confirmDeletion"
         />
     </div>
 </template>
@@ -52,15 +65,23 @@ import emptyCards from '../../cards/emptyCards.vue';
 import PendingCollaboratorCard from '../../cards/PendingCollaboratorCard.vue';
 import CollaboratorCard from '../../cards/CollaboratorCard.vue';
 import inviteModale from '../../modale/inviteModale.vue';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '../../../stores/authStore';
 import SuccesModale from '../../modale/succesModale.vue';
+import deleteModale from '../../modale/deleteModale.vue';
 
 const authStore = useAuthStore();
-
-const isOpen = ref<boolean>(false);
-const isSuccess = ref<boolean>(false);
+const isOpen = ref(false);
+const isSuccess = ref(false);
+const successSubtitle = ref("Une invitation de collaboration a été envoyée dans le mail du collaborateur");
 const resendingEmail = ref<string | null>(null);
+
+const isDeleteModalOpen = ref(false);
+const collaboratorToDelete = ref<string | null>(null);
+
+const isOwner = computed(() => {
+    return !authStore.collaborators.some(c => String(c.id).startsWith('main_'));
+});
 
 onMounted(async () => {
     await authStore.fetchCollaborators();
@@ -71,6 +92,7 @@ async function handleResend(email: string) {
     try {
         const response = await authStore.addCollaborator(email);
         if (response) {
+            successSubtitle.value = "L'invitation a été renvoyée avec succès.";
             isSuccess.value = true;
         }
     } finally {
@@ -82,10 +104,31 @@ function handleAdd() {
     isOpen.value = true;
 }
 
+async function handleDelete(email: string) {
+    collaboratorToDelete.value = email;
+    isDeleteModalOpen.value = true;
+}
+
+async function confirmDeletion() {
+    if (collaboratorToDelete.value) {
+        const success = await authStore.removeCollaborator(collaboratorToDelete.value);
+        isDeleteModalOpen.value = false;
+        
+        if (success) {
+            successSubtitle.value = "Le collaborateur a été retiré avec succès et n'a plus accès à vos données.";
+            isSuccess.value = true;
+        } else {
+            alert(authStore.message.errorMessage || "Une erreur s'est produite lors de la suppression.");
+        }
+        collaboratorToDelete.value = null;
+    }
+}
+
 async function handleInvite(email: string) {
     try{
         const response = await authStore.addCollaborator(email);
         if(response){
+          successSubtitle.value = "Une invitation de collaboration a été envoyée dans le mail du collaborateur";
           isOpen.value = false;
           isSuccess.value = true;
         }
