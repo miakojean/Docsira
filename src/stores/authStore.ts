@@ -110,6 +110,22 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  async function ChangePassword(payload:object){
+    isLoading.value = true;
+    try {
+      const response = await api('/account/change-password/', 'POST', {payload}, {requireAuth:true});
+      if(response.ok){
+        message.value.succesMessage = "Mot de passe changé avec succès"
+      } else{
+        message.value.errorMessage = "Une erreur est survenue lors de la modification"
+      }
+    } catch{
+      message.value.errorMessage = "Un soucis côté serveur est survenu"
+    } finally{
+      isLoading.value = false;
+    }
+  }
+
   async function Logout() {
     isLoading.value = true;
     message.value.errorMessage = "";
@@ -223,6 +239,7 @@ export const useAuthStore = defineStore("auth", () => {
     editProfile,
     fetchUserProfile,
     addCollaborator,
-    fetchCollaborators
+    fetchCollaborators,
+    ChangePassword
   };
 });

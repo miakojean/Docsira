@@ -7,7 +7,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/login', component: () => import('../pages/auth/login.vue') },
   { path: '/register', component: () => import('../pages/auth/registration.vue'), name: 'register' },
   { path: '/editor', component: () => import('../pages/editorPage.vue'), name: 'editor' },
-  { path: '/auth-code', component: ()=> import('../pages/auth/code.vue'), name: 'authCode'},
+  { path: '/auth-code', component: () => import('../pages/auth/code.vue'), name: 'authCode' },
 
   // Dashboard
   { path: '/dashboard', component: () => import('../pages/dashboard/index.vue'), name: 'dashboard' },

@@ -2,6 +2,8 @@ from .models import CustomUser, Collaborator, CollaboratorInvitation, Activation
 from .serializers import CustomUserSerializer, CollaboratorSerializer, CollaboratorInvitationSerializer, ActivationCodeSerializer
 from .utils import generate_temporary_password, send_invitation_email, get_invitations_data, get_owner_data
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 
 from rest_framework.views import APIView
@@ -42,6 +44,50 @@ class ProfileView(APIView):
             serializer.save()
             return Response(serializer.data, status=200)
         return Response(serializer.errors, status=400)
+
+
+class ChangePasswordView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+
+        if not old_password or not new_password or not confirm_password:
+            return Response(
+                {'error': 'Les anciens et nouveaux mots de passe sont requis.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not request.user.check_password(old_password):
+            return Response(
+                {'error': 'L\'ancien mot de passe est incorrect.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if new_password != confirm_password:
+            return Response(
+                {'error': 'Les nouveaux mots de passe ne correspondent pas.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_password(new_password, request.user)
+        except ValidationError as error:
+            return Response(
+                {'error': error.messages},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        request.user.set_password(new_password)
+        request.user.save(update_fields=['password'])
+
+        return Response(
+            {'message': 'Mot de passe modifié avec succès.'},
+            status=status.HTTP_200_OK,
+        )
 
 
 class LogoutView(APIView):

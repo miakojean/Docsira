@@ -69,6 +69,47 @@ class LogoutViewTests(TestCase):
         self.assertEqual(refresh_response.status_code, 401)
 
 
+class ChangePasswordViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="alice",
+            email="alice@example.com",
+            password="OldSecret123!",
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_changes_authenticated_user_password(self):
+        response = self.client.post(
+            "/account/change-password/",
+            {
+                "old_password": "OldSecret123!",
+                "new_password": "NewSecret123!",
+                "confirm_password": "NewSecret123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("NewSecret123!"))
+
+    def test_rejects_incorrect_old_password(self):
+        response = self.client.post(
+            "/account/change-password/",
+            {
+                "old_password": "WrongSecret123!",
+                "new_password": "NewSecret123!",
+                "confirm_password": "NewSecret123!",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("OldSecret123!"))
+
+
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
     DEFAULT_FROM_EMAIL="no-reply@docsira.test",

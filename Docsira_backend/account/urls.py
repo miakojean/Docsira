@@ -4,6 +4,7 @@ from .views import (
     LoginView, 
     LogoutView, 
     ProfileView, 
+    ChangePasswordView,
     CollaborateurView,
     CollaboratorCodeView
 )
@@ -14,6 +15,7 @@ urlpatterns = [
     path('me/', ProfileView.as_view(), name='profile'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    path('change-password/', ChangePasswordView.as_view(), name='change_password'),
     # Manage Collaborators endpoints
     path('collaborators/', CollaborateurView.as_view(), name='collaborators'),
     path('collaboratos/code/', CollaboratorCodeView.as_view(), name="Collaborator_code"),
