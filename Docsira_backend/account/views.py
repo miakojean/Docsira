@@ -198,39 +198,79 @@ class CollaborateurView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):
-        collab_data = []
+        user = request.user
         
-        # 1. Accepted collaborators
-        collaborators = Collaborator.objects.filter(main_account=request.user).select_related('user')
-        for c in collaborators:
-            collab_data.append({
-                'id': f'collab_{c.id}',
-                'email': c.user.email,
-                'username': c.user.username,
-                'role': c.role,
-                'status': 'accepted',
-                'created_at': c.created_at
-            })
+        # 1. Cas : L'utilisateur connecté est un INVITÉ (Collaborateur)
+        # On vérifie s'il possède le profil lié via OneToOneField
+        if hasattr(user, 'collaborator_profile'):
+            main_account = user.collaborator_profile.main_account
             
-        # 2. Pending invitations
-        invitations = CollaboratorInvitation.objects.filter(
-            main_account=request.user, 
-            accepted_at__isnull=True
-        ).select_related('user')
-        for i in invitations:
-            collab_data.append({
-                'id': f'inv_{i.id}',
-                'email': i.user.email,
-                'username': i.user.username,
-                'role': i.role,
-                'status': 'pending',
-                'created_at': i.created_at
-            })
+            # On récupère tous les collaborateurs de ce compte principal, en s'excluant soi-même
+            peers = Collaborator.objects.filter(
+                main_account=main_account
+            ).exclude(user=user).select_related('user')
+            
+            # On sérialise la liste des collègues
+            serializer = CollaboratorSerializer(peers, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
+        # 2. Cas : L'utilisateur connecté est le COMPTE PRINCIPAL
+        else:
+            # On récupère directement tous les collaborateurs liés à ce compte
+            collaborators = Collaborator.objects.filter(
+                main_account=user
+            ).select_related('user')
+            
+            # Le sérialiseur s'occupe de tout (statut, email, informations imbriquées)
+            serializer = CollaboratorSerializer(collaborators, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # Sort by creation date
-        collab_data.sort(key=lambda x: x['created_at'], reverse=True)
+    def delete(self, request):
+        # On peut récupérer l'email depuis le corps de la requête (data) ou l'URL (query_params)
+        email = request.data.get('email') or request.query_params.get('email')
 
-        return Response(collab_data, status=status.HTTP_200_OK)
+        if not email:
+            return Response(
+                {"error": "L'email du collaborateur est requis pour la suppression."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # 1. On cherche l'utilisateur à supprimer
+            user_to_delete = CustomUser.objects.get(email__iexact=email)
+
+            # 2. Sécurité : On vérifie si request.user est bien le "main_account" de ce collaborateur
+            is_collaborator = Collaborator.objects.filter(
+                main_account=request.user, 
+                user=user_to_delete
+            ).exists()
+
+            is_invited = CollaboratorInvitation.objects.filter(
+                main_account=request.user, 
+                user=user_to_delete
+            ).exists()
+
+            # Si l'utilisateur n'est ni un collaborateur actif ni un invité de ce compte principal
+            if not is_collaborator and not is_invited:
+                return Response(
+                    {"error": "Vous n'avez pas l'autorisation de supprimer ce compte."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # 3. Tout est bon, on supprime le CustomUser. 
+            # Grâce au on_delete=models.CASCADE, cela supprimera aussi le Collaborator et les Invitations.
+            user_to_delete.delete()
+
+            return Response(
+                {"message": "Le collaborateur a été supprimé avec succès."},
+                status=status.HTTP_200_OK # ou status.HTTP_204_NO_CONTENT
+            )
+
+        except CustomUser.DoesNotExist:
+            return Response(
+                {"error": "Utilisateur introuvable."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 class CollaboratorCodeView(APIView):
 
