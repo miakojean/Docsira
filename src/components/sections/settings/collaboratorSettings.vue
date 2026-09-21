@@ -1,6 +1,6 @@
 <template>
     <div class="main-section gap-2">
-        <headerNav title="Mes collaborateurs"/>
+        <headerNav title="Mes collaborateurs" @handleEvent="handleAdd"/>
 
         <div v-if="authStore.collaborators.length > 0" class="content-container">
 
@@ -39,6 +39,7 @@
             subtitle="Une invitation de collaboration a été envoyée dans le mail du collaborateur"
             actionText="continuer"
             @close="() => { isSuccess = false }"
+            @handleEvent="() => { isSuccess = false }"
 
         />
     </div>
