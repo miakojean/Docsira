@@ -37,6 +37,10 @@ const props = defineProps({
         type: String,
         required: true,
     },
+    isLoading: {
+        type: Boolean,
+        default: false,
+    }
 });
 
 const emit = defineEmits(['resend']);

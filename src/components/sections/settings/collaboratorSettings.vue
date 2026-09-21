@@ -14,6 +14,7 @@
                     <PendingCollaboratorCard
                         v-else
                         :email="collaborator.email"
+                        :isLoading="resendingEmail === collaborator.email"
                         @resend="handleResend"
                     />
                 </template>
@@ -59,14 +60,22 @@ const authStore = useAuthStore();
 
 const isOpen = ref<boolean>(false);
 const isSuccess = ref<boolean>(false);
+const resendingEmail = ref<string | null>(null);
 
 onMounted(async () => {
     await authStore.fetchCollaborators();
 });
 
-function handleResend(email: string) {
-    // Add logic here to resend the invite if needed
-    console.log("Resend invite to:", email);
+async function handleResend(email: string) {
+    resendingEmail.value = email;
+    try {
+        const response = await authStore.addCollaborator(email);
+        if (response) {
+            isSuccess.value = true;
+        }
+    } finally {
+        resendingEmail.value = null;
+    }
 }
 
 function handleAdd() {
