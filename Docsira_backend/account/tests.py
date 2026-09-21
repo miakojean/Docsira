@@ -4,7 +4,7 @@ from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Collaborator
+from .models import Collaborator, CollaboratorInvitation
 from .serializers import CustomUserSerializer
 
 
@@ -13,7 +13,6 @@ class CustomUserSerializerTests(TestCase):
         self.user = get_user_model().objects.create_user(
             username="alice",
             email="alice@example.com",
-            password="Secret123!",
             first_name="Alice",
             last_name="Dupont",
             account_type="firm",
@@ -84,7 +83,7 @@ class CollaborateurViewTests(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
 
-    def test_creating_collaborator_sends_activation_code(self):
+    def test_invitation_sends_credentials_without_creating_collaborator(self):
         response = self.client.post(
             "/account/collaborators/",
             {"email": "bob@example.com", "role": "editor"},
@@ -94,11 +93,28 @@ class CollaborateurViewTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["bob@example.com"])
-        self.assertRegex(mail.outbox[0].body, r"[A-Za-z0-9]{6}")
-        self.assertTrue(
-            Collaborator.objects.filter(
-                main_account=self.user,
-                user__email="bob@example.com",
-                role="editor",
-            ).exists()
+        self.assertIn("bob@example.com", mail.outbox[0].body)
+        self.assertIn("Mot de passe", mail.outbox[0].body)
+        self.assertFalse(Collaborator.objects.filter(main_account=self.user).exists())
+        self.assertTrue(CollaboratorInvitation.objects.filter(main_account=self.user, role="editor").exists())
+
+    def test_first_login_accepts_invitation_as_collaborator(self):
+        invitation_response = self.client.post(
+            "/account/collaborators/",
+            {"email": "bob@example.com", "role": "editor"},
+            format="json",
         )
+        invitation = CollaboratorInvitation.objects.get(id=invitation_response.data["id"])
+        password = mail.outbox[0].body.split("Mot de passe :</strong> ", 1)[1].split("<", 1)[0]
+
+        self.client.force_authenticate(user=None)
+        response = self.client.post(
+            "/account/login/",
+            {"email": invitation.user.email, "password": password},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Collaborator.objects.filter(main_account=self.user, user=invitation.user, role="editor").exists())
+        invitation.refresh_from_db()
+        self.assertIsNotNone(invitation.accepted_at)

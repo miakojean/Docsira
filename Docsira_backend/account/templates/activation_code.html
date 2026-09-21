@@ -2,7 +2,7 @@
 <html lang="und" dir="auto" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 
 <head>
-  <title>Votre code d'activation Docsira</title>
+  <title>Vos identifiants Docsira</title>
   <!--[if !mso]><!-->
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <!--<![endif]-->
@@ -159,19 +159,17 @@
                               </tr>
                               <tr>
                                 <td align="left" style="font-size:0px;padding:10px 25px;padding-bottom:10px;word-break:break-word;">
-                                  <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#4b5563;">Pour activer votre compte et accéder à vos dossiers partagés, veuillez utiliser le code de vérification ci-dessous :</div>
+                                  <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:left;color:#4b5563;">Utilisez les identifiants ci-dessous pour vous connecter à Docsira. Votre accès collaborateur sera activé automatiquement lors de votre première connexion.</div>
                                 </td>
                               </tr>
-                              <!-- Bloc OTP -->
                               <tr>
-                                <td align="center" class="otp-container" style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; text-align: center; margin: 20px 0; font-size: 0px; padding: 10px 25px; word-break: break-word;" bgcolor="#f9fafb">
-                                  <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;font-weight:400;line-height:24px;text-align:center;color:#374151;"><span class="otp-code" style="font-size: 36px; font-weight: 700; letter-spacing: 12px; color: #111827; margin: 0;">{{ activation_code }}</span></div>
+                                <td align="left" style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px 25px; word-break: break-word;" bgcolor="#f9fafb">
+                                  <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:16px;line-height:28px;text-align:left;color:#374151;"><strong>Email :</strong> {{ user.email }}<br><strong>Nom d'utilisateur :</strong> {{ user.username }}<br><strong>Mot de passe :</strong> {{ temporary_password }}</div>
                                 </td>
                               </tr>
-                              <!-- Avertissement de sécurité -->
                               <tr>
                                 <td align="center" style="font-size:0px;padding:10px 25px;padding-top:0;word-break:break-word;">
-                                  <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:13px;font-weight:400;line-height:24px;text-align:center;color:#6b7280;">Ce code expirera dans <strong>15 minutes</strong>. Ne le partagez avec personne.</div>
+                                  <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;font-size:13px;font-weight:400;line-height:24px;text-align:center;color:#6b7280;">Pour votre sécurité, modifiez ce mot de passe après votre première connexion.</div>
                                 </td>
                               </tr>
                               <!-- Bouton d'action -->

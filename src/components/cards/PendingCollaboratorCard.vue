@@ -33,14 +33,10 @@
 
 <script setup lang="ts">
 const props = defineProps({
-  email: {
-    type: String,
-    required: true,
-  },
-  isLoading: {
-    type: Boolean,
-    default: false,
-  }
+    email: {
+        type: String,
+        required: true,
+    },
 });
 
 const emit = defineEmits(['resend']);

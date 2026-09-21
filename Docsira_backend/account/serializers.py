@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, Collaborator, ActivationCode
+from .models import CustomUser, Collaborator, CollaboratorInvitation, ActivationCode
 
 # 1. NOUVEAU : Un sérialiseur allégé pour l'affichage imbriqué
 class SimpleUserSerializer(serializers.ModelSerializer):
@@ -54,6 +54,15 @@ class CollaboratorSerializer(serializers.ModelSerializer):
         if obj.user.has_usable_password():
             return 'accepted'
         return 'pending'
+
+
+class CollaboratorInvitationSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source='user.email', read_only=True)
+
+    class Meta:
+        model = CollaboratorInvitation
+        fields = ['id', 'main_account', 'email', 'role', 'created_at']
+        read_only_fields = fields
 
 class ActivationCodeSerializer(serializers.ModelSerializer):
     # On remplace CustomUserSerializer par SimpleUserSerializer ici aussi

@@ -71,6 +71,43 @@ class Collaborator(models.Model):
     def __str__(self):
         return f"{self.user.username} ({self.get_role_display()}) chez {self.main_account.username}"
 
+
+class CollaboratorInvitation(models.Model):
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+
+    main_account = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='collaborator_invitations',
+        verbose_name=_("Compte Principal")
+    )
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='received_collaborator_invitations',
+        verbose_name=_("Utilisateur invité")
+    )
+    role = models.CharField(
+        max_length=20,
+        choices=Collaborator.Roles.choices,
+        default=Collaborator.Roles.VIEWER,
+        verbose_name=_("Responsabilité")
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('main_account', 'user'),
+                name='unique_collaborator_invitation'
+            )
+        ]
+
+    def __str__(self):
+        return f"Invitation pour {self.user.email} chez {self.main_account.username}"
+
 class ActivationCode(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)

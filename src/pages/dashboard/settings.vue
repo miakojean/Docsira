@@ -50,7 +50,7 @@ function handleModal(){
     align-items: stretch;
     flex-direction: column;
     gap: 1rem;
-    overflow: hidden;
+    overflow: auto;
     overflow-x: hidden;
     background: #fff;
     scrollbar-width: thin;

@@ -29,13 +29,6 @@
 
         <mainButton type="submit" label="Commencer" :isLoading="authStore.isLoading"/>
 
-        <div class="have-link flex justify-center items-center gap-4" @click="() => router.push('/auth-code')">
-            <p>J'ai un code</p>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-            </svg>
-        </div>
-
         <errorMessage
             v-if="authStore.message.errorMessage"
             :label="authStore.message.errorMessage"
@@ -43,7 +36,7 @@
 
         <div class="divider-form"></div>
 
-        <p>Déjà un compte? <RouterLink to='/login'>se connecter ici</RouterLink> </p>
+        <p>Déjà un compte? <RouterLink to='/login'> <span class="link-to-login">se connecter ici</span></RouterLink> </p>
 
         <exitButton label="Sortir" @click="exit" type="button" v-if="!credentials.username && !credentials.email && !credentials.password"/>
 
@@ -224,19 +217,15 @@ a{
     font-size: 12px;
 }
 
-.have-link {
-    cursor: pointer;
-    font-weight: 500;
+.link-to-login{
+    text-decoration: underline;
     color: var(--primary-color);
-}
-
-.have-link svg{
-    transition: ease-out 0.4s;
-}
-
-.have-link:hover svg{
     cursor: pointer;
-    transform: translateX(4px);
-    transition: ease-in 0.4s;
+    font-weight: 600;
+}
+
+.link-to-login:hover{
+    color: var(--secondary-color);
+    text-decoration: underline;
 }
 </style>

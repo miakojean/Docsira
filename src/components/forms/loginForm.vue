@@ -28,13 +28,11 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
             </svg>
         </div>
-        <h4 @click="setPassword" v-else>Obtenir un code</h4>
-
         <p v-if="authStore.message.succesMessage">{{ authStore.message.succesMessage }}</p>
 
         <div class="divider-form"></div>
 
-        <p>Pas de compte? <RouterLink to='/register'>Créez-en un ici</RouterLink> </p>
+        <p>Pas de compte? <span class="link-to-register"><RouterLink to='/register'>Créez-en un ici</RouterLink></span></p>
 
         <exitButton label="Sortir" @click="exit" type="button" v-if="!credentials.username && !credentials.password"/>
 
@@ -48,6 +46,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router'; // 1. Import du router
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useAuthStore, type Customer } from '../../stores/authStore';
 
@@ -56,10 +55,9 @@ import mainButton from '../buttons/mainButton.vue';
 import exitButton from '../buttons/exitButton.vue';
 import errorMessage from '../tools/errorMessage.vue';
 
-// Déclaration des emits avec setup
 const emit = defineEmits(['handleLogin']);
-
 const authStore = useAuthStore();
+const router = useRouter(); // 2. Initialisation du router
 
 const credentials = ref<Pick<Customer, "username" | "email" | "password">>({
     username: "",
@@ -84,7 +82,7 @@ const isValid = (): boolean => {
     errorMessageState.value.passwordError = "";
 
     if (credentials.value.username === "" && !usePassword.value) {
-        errorMessageState.value.usernameError = "Entrer le nom d'utilisateur";
+        errorMessageState.value.usernameError = "Entrer le nom d'utilisateur ou l'email";
         valid = false;
     }
 
@@ -100,13 +98,27 @@ const login = async () => {
     if (!isValid()) return;
 
     const identifier = credentials.value.username.trim();
-    await authStore.Login({
-        username: identifier.includes('@') ? undefined : identifier,
-        email: identifier.includes('@') ? identifier : undefined,
-        password: credentials.value.password,
-    });
 
-    emit('handleLogin', credentials.value);
+    // FLUX 1 : Connexion classique avec Mot de passe
+    if (usePassword.value) {
+        await authStore.Login({
+            username: identifier.includes('@') ? undefined : identifier,
+            email: identifier.includes('@') ? identifier : undefined,
+            password: credentials.value.password,
+        });
+        emit('handleLogin', credentials.value);
+    }
+    // FLUX 2 : Authentification par code (Redirection)
+    else {
+        // Optionnel : Tu pourras appeler ici ton action store pour générer et envoyer le mail
+        // await authStore.requestOtp(identifier);
+
+        // Redirection vers ta page de code avec l'email en paramètre
+        router.push({
+            name: 'authCode',
+            query: { user: identifier }
+        });
+    }
 };
 
 const exit = async () => {
@@ -126,11 +138,18 @@ form h3{
     font-size: 1.5rem;
     font-weight: 500;
 }
-form h4{
-    font-size: 16px;
-    font-weight: 500;
+
+.link-to-register{
+    color: var(--primary-color);
     cursor: pointer;
+    font-weight: 600;
 }
+
+.link-to-register:hover {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
 .divider-form {
     width: 100%;
     height: 1px;
@@ -142,6 +161,4 @@ a { color: #222222; font-weight: 500; }
 .credits-policy { padding: 1rem; font-size: 12px; color: #969292; display: flex; justify-content: center; align-items: center; }
 .credits-policy p{ text-align: center; }
 .credits-policy span { color: #222222; font-weight: 500; }
-.password-frame h4{ width: 100; }
-.password-frame svg{ font-size: 12px; }
 </style>

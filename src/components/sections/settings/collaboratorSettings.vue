@@ -1,17 +1,22 @@
 <template>
     <div class="main-section gap-2">
-        <headerNav title="Mes collaborateurs"/>
-        
-        <div v-if="pendingInvites.length > 0" class="content-container">
-            
+        <headerNav title="Mes collaborateurs" @handleEvent="handleAdd"/>
+
+        <div v-if="authStore.collaborators.length > 0" class="content-container">
+
             <div class="cards-grid">
-                <PendingCollaboratorCard 
-                    v-for="(email, index) in pendingInvites" 
-                    :key="index" 
-                    :email="email"
-                    :isLoading="resendingEmail === email"
-                    @resend="handleResend" 
-                />
+                <template v-for="(collaborator, index) in authStore.collaborators" :key="collaborator.id || index">
+                    <CollaboratorCard
+                        v-if="collaborator.status === 'accepted'"
+                        :name="collaborator.username || collaborator.email"
+                        :email="collaborator.email"
+                    />
+                    <PendingCollaboratorCard
+                        v-else
+                        :email="collaborator.email"
+                        @resend="handleResend"
+                    />
+                </template>
             </div>
         </div>
 
@@ -34,6 +39,7 @@
             subtitle="Une invitation de collaboration a été envoyée dans le mail du collaborateur"
             actionText="continuer"
             @close="() => { isSuccess = false }"
+            @handleEvent="() => { isSuccess = false }"
 
         />
     </div>
@@ -43,6 +49,7 @@
 import headerNav from '../../navbar/headerNav.vue';
 import emptyCards from '../../cards/emptyCards.vue';
 import PendingCollaboratorCard from '../../cards/PendingCollaboratorCard.vue';
+import CollaboratorCard from '../../cards/CollaboratorCard.vue';
 import inviteModale from '../../modale/inviteModale.vue';
 import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../../../stores/authStore';
@@ -52,24 +59,14 @@ const authStore = useAuthStore();
 
 const isOpen = ref<boolean>(false);
 const isSuccess = ref<boolean>(false);
-const pendingInvites = ref<string[]>([]);
-const resendingEmail = ref<string | null>(null);
 
 onMounted(async () => {
     await authStore.fetchCollaborators();
-    pendingInvites.value = authStore.collaborators
-        .filter((c: any) => c.status === 'pending')
-        .map((c: any) => c.user.email);
 });
 
-async function handleResend(email: string) {
-    resendingEmail.value = email;
-    try {
-        await authStore.addCollaborator(email);
-        isSuccess.value = true;
-    } finally {
-        resendingEmail.value = null;
-    }
+function handleResend(email: string) {
+    // Add logic here to resend the invite if needed
+    console.log("Resend invite to:", email);
 }
 
 function handleAdd() {
@@ -80,10 +77,6 @@ async function handleInvite(email: string) {
     try{
         const response = await authStore.addCollaborator(email);
         if(response){
-          // Ajouter l'email aux invitations en attente pour afficher la carte
-          if (!pendingInvites.value.includes(email)) {
-              pendingInvites.value.push(email);
-          }
           isOpen.value = false;
           isSuccess.value = true;
         }

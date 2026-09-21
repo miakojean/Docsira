@@ -5,7 +5,7 @@
       <div class="header-left">
         <h1 class="page-title">Collaborateurs</h1>
       </div>
-      
+
       <!-- Section droite avec Recherche et Bouton -->
       <div class="header-right">
         <!-- Barre de recherche -->
@@ -28,21 +28,19 @@
 
     <!-- Grid -->
     <div class="cards-grid">
-      <CollaboratorCard 
+      <CollaboratorCard
         v-for="(collab, index) in collaborators"
         :key="index"
-        :name="collab.name" 
+        :name="collab.name"
         :email="collab.email"
       />
     </div>
 
     <!-- Modale d'invitation -->
-    <inviteModale 
-      :isOpen="isInviteModalOpen" 
-      :isLoading="authStore.isLoading"
-      :backendError="authStore.message.errorMessage"
-      @close="toggleInviteModal" 
-      @invite="handleInvite" 
+    <inviteModale
+      :isOpen="isInviteModalOpen"
+      @close="toggleInviteModal"
+      @invite="handleInvite"
     />
   </div>
 </template>
