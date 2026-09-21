@@ -59,8 +59,10 @@ const toggleInviteModal = () => {
 };
 
 const handleInvite = async (email: string) => {
-    await authStore.addCollaborator(email);
+  const response = await authStore.addCollaborator(email);
+  if (response) {
     toggleInviteModal();
+  }
 };
 
 const collaborators = ref([

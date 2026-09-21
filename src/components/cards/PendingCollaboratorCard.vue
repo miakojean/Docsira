@@ -24,8 +24,9 @@
     <!-- Divider -->
     <div class="divider"></div>
 
-    <button class="resend-btn" @click="$emit('resend', email)">
-        Renvoyer l'invitation
+    <button class="resend-btn" @click="$emit('resend', email)" :disabled="isLoading">
+        <span v-if="!isLoading">Renvoyer l'invitation</span>
+        <span class="loading loading-spinner loading-md" v-else></span>
     </button>
   </div>
 </template>

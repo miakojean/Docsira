@@ -2,15 +2,21 @@
     <div class="main-section gap-2">
         <headerNav title="Mes collaborateurs" @handleEvent="handleAdd"/>
 
-        <div v-if="collaborators.length > 0" class="content-container">
+        <div v-if="authStore.collaborators.length > 0" class="content-container">
 
             <div class="cards-grid">
-                <PendingCollaboratorCard
-                    v-for="(collaborator, index) in collaborators"
-                    :key="index"
-                    :email="collaborator.email"
-                    @resend="handleResend"
-                />
+                <template v-for="(collaborator, index) in authStore.collaborators" :key="collaborator.id || index">
+                    <CollaboratorCard
+                        v-if="collaborator.status === 'accepted'"
+                        :name="collaborator.username || collaborator.email"
+                        :email="collaborator.email"
+                    />
+                    <PendingCollaboratorCard
+                        v-else
+                        :email="collaborator.email"
+                        @resend="handleResend"
+                    />
+                </template>
             </div>
         </div>
 
@@ -43,6 +49,7 @@
 import headerNav from '../../navbar/headerNav.vue';
 import emptyCards from '../../cards/emptyCards.vue';
 import PendingCollaboratorCard from '../../cards/PendingCollaboratorCard.vue';
+import CollaboratorCard from '../../cards/CollaboratorCard.vue';
 import inviteModale from '../../modale/inviteModale.vue';
 import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../../../stores/authStore';
@@ -52,11 +59,9 @@ const authStore = useAuthStore();
 
 const isOpen = ref<boolean>(false);
 const isSuccess = ref<boolean>(false);
-const collaborators = ref<string[]>([]);
 
 onMounted(async () => {
     await authStore.fetchCollaborators();
-    collaborators.value = authStore.collaborators
 });
 
 function handleResend(email: string) {
@@ -72,10 +77,6 @@ async function handleInvite(email: string) {
     try{
         const response = await authStore.addCollaborator(email);
         if(response){
-          // Ajouter l'email aux invitations en attente pour afficher la carte
-          if (!collaborators.value.includes(email)) {
-              collaborators.value.push(email);
-          }
           isOpen.value = false;
           isSuccess.value = true;
         }

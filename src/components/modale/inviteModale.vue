@@ -28,9 +28,10 @@
                 <!-- Bouton d'action -->
                 <div class="modal-footer">
                     <mainButton
-                      @click="handleInvite"
-                      label="Envoyer l'invitation"
-                      :isLoading="isLoading"
+                        @click="handleInvite"
+                        label="Envoyer l'invitation"
+                        :disabled="isLoading"
+                        :isLoading="isLoading"
                     />
                 </div>
 

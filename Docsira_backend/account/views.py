@@ -198,16 +198,39 @@ class CollaborateurView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):
+        collab_data = []
+        
+        # 1. Accepted collaborators
+        collaborators = Collaborator.objects.filter(main_account=request.user).select_related('user')
+        for c in collaborators:
+            collab_data.append({
+                'id': f'collab_{c.id}',
+                'email': c.user.email,
+                'username': c.user.username,
+                'role': c.role,
+                'status': 'accepted',
+                'created_at': c.created_at
+            })
+            
+        # 2. Pending invitations
+        invitations = CollaboratorInvitation.objects.filter(
+            main_account=request.user, 
+            accepted_at__isnull=True
+        ).select_related('user')
+        for i in invitations:
+            collab_data.append({
+                'id': f'inv_{i.id}',
+                'email': i.user.email,
+                'username': i.user.username,
+                'role': i.role,
+                'status': 'pending',
+                'created_at': i.created_at
+            })
 
-        collaborators = Collaborator.objects.filter(main_account = request.user)
-        try:
-            serializer = CollaboratorSerializer(collaborators, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Exception:
-            return Response(
-                {"error": "Aucun collaborateur trouvé"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Sort by creation date
+        collab_data.sort(key=lambda x: x['created_at'], reverse=True)
+
+        return Response(collab_data, status=status.HTTP_200_OK)
 
 class CollaboratorCodeView(APIView):
 
