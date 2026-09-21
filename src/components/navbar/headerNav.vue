@@ -3,12 +3,16 @@
         <div class="header__nav">
             <h3>{{title}}</h3>
         </div>
-        <BaseInput/>
+        <div class="tools-frame flex items-center justify-center gap-4">
+            <BaseResearchInput />
+            <toolsButton @handleEvent="$emit('handleEvent')"/>
+        </div>
     </nav>
 </template>
 
 <script>
-import BaseInput from '../BaseInput/BaseInput.vue';
+import BaseResearchInput from '../BaseInput/BaseResearchInput.vue';
+import toolsButton from '../buttons/toolsButton.vue';
 export default {
 
     name: "headerNav",
@@ -19,8 +23,10 @@ export default {
         }
     },
     components:{
-        BaseInput
+        BaseResearchInput,
+        toolsButton
     },
+    emits:['handleEvent'],
     setup() {
 
     }

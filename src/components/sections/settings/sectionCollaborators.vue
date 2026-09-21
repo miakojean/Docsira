@@ -29,10 +29,10 @@
     <!-- Grid -->
     <div class="cards-grid">
       <CollaboratorCard
-            v-for="(collab, index) in collaborators"
-            :key="index"
-            :name="collab.name"
-            :email="collab.email"
+        v-for="(collab, index) in collaborators"
+        :key="index"
+        :name="collab.name"
+        :email="collab.email"
       />
     </div>
 
