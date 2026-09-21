@@ -49,6 +49,51 @@
         <form class="main-form" @submit.prevent="editProfile">
 
             <div class="form-header w-full">
+                <h3>Paramètres généraux</h3>
+            </div>
+
+            <div class="form-body w-full grid grid-cols-3 gap-4">
+
+                <BaseInput
+                    label="Nom d'entreprise"
+                    v-model="user.username"
+                />
+
+                <BaseInput
+                    label="Email"
+                    v-model="user.email"
+                />
+
+                <BaseInput
+                    label="Type de compte"
+                    v-model="user.account_type"
+                />
+
+                <BaseInput
+                    label="Nom du responsable"
+                    v-model="user.last_name"
+                />
+
+                <BaseInput
+                    label="Prenoms du responsable"
+                    v-model="user.first_name"
+                />
+
+            </div>
+
+            <div class="form-footer w-full flex justify-end">
+                <formButton
+                    :disabled="authStore.isLoading"
+                    label="Enregistrer"
+                    type="submit"
+                />
+            </div>
+
+        </form>
+
+        <form class="main-form" @submit.prevent="editProfile">
+
+            <div class="form-header w-full">
                 <h4>Paramètres de compte collaborateur</h4>
             </div>
 

@@ -61,7 +61,13 @@ class CollaboratorInvitationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CollaboratorInvitation
-        fields = ['id', 'main_account', 'email', 'role', 'created_at']
+        fields = [
+            'id', 
+            'main_account', 
+            'email', 
+            'role', 
+            'created_at'
+        ]
         read_only_fields = fields
 
 class ActivationCodeSerializer(serializers.ModelSerializer):
