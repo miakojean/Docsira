@@ -1,6 +1,6 @@
 from .models import CustomUser, Collaborator, CollaboratorInvitation, ActivationCode
 from .serializers import CustomUserSerializer, CollaboratorSerializer, CollaboratorInvitationSerializer, ActivationCodeSerializer
-from .utils import generate_temporary_password, send_invitation_email
+from .utils import generate_temporary_password, send_invitation_email, get_invitations_data, get_owner_data
 from django.contrib.auth import authenticate
 from django.db import IntegrityError, transaction
 
@@ -200,30 +200,39 @@ class CollaborateurView(APIView):
     def get(self, request):
         user = request.user
         
+        collab_data = []
+
         # 1. Cas : L'utilisateur connecté est un INVITÉ (Collaborateur)
-        # On vérifie s'il possède le profil lié via OneToOneField
         if hasattr(user, 'collaborator_profile'):
             main_account = user.collaborator_profile.main_account
             
-            # On récupère tous les collaborateurs de ce compte principal, en s'excluant soi-même
+            # Collaborateurs acceptés
             peers = Collaborator.objects.filter(
                 main_account=main_account
             ).exclude(user=user).select_related('user')
+            collab_data = CollaboratorSerializer(peers, many=True).data
             
-            # On sérialise la liste des collègues
-            serializer = CollaboratorSerializer(peers, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            # Ajouter le compte principal (le propriétaire)
+            collab_data.append(get_owner_data(main_account))
+            
+            # Invitations en attente
+            collab_data.extend(get_invitations_data(main_account))
             
         # 2. Cas : L'utilisateur connecté est le COMPTE PRINCIPAL
         else:
-            # On récupère directement tous les collaborateurs liés à ce compte
+            # Collaborateurs acceptés
             collaborators = Collaborator.objects.filter(
                 main_account=user
             ).select_related('user')
+            collab_data = CollaboratorSerializer(collaborators, many=True).data
             
-            # Le sérialiseur s'occupe de tout (statut, email, informations imbriquées)
-            serializer = CollaboratorSerializer(collaborators, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            # Invitations en attente
+            collab_data.extend(get_invitations_data(user))
+            
+        # Trier par date de création (décroissant)
+        collab_data.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+
+        return Response(collab_data, status=status.HTTP_200_OK)
 
     def delete(self, request):
         # On peut récupérer l'email depuis le corps de la requête (data) ou l'URL (query_params)

@@ -8,13 +8,13 @@
                 <template v-for="(collaborator, index) in authStore.collaborators" :key="collaborator.id || index">
                     <CollaboratorCard
                         v-if="collaborator.status === 'accepted'"
-                        :name="collaborator.username || collaborator.email"
-                        :email="collaborator.email"
+                        :name="collaborator.user.username || collaborator.user.email"
+                        :email="collaborator.user.email"
                     />
                     <PendingCollaboratorCard
                         v-else
-                        :email="collaborator.email"
-                        :isLoading="resendingEmail === collaborator.email"
+                        :email="collaborator.user.email"
+                        :isLoading="resendingEmail === collaborator.user.email"
                         @resend="handleResend"
                     />
                 </template>
