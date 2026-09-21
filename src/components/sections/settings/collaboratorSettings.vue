@@ -8,12 +8,13 @@
                 <template v-for="(collaborator, index) in authStore.collaborators" :key="collaborator.id || index">
                     <CollaboratorCard
                         v-if="collaborator.status === 'accepted'"
-                        :name="collaborator.username || collaborator.email"
-                        :email="collaborator.email"
+                        :name="collaborator.user.username || collaborator.user.email"
+                        :email="collaborator.user.email"
                     />
                     <PendingCollaboratorCard
                         v-else
-                        :email="collaborator.email"
+                        :email="collaborator.user.email"
+                        :isLoading="resendingEmail === collaborator.user.email"
                         @resend="handleResend"
                     />
                 </template>
@@ -59,14 +60,22 @@ const authStore = useAuthStore();
 
 const isOpen = ref<boolean>(false);
 const isSuccess = ref<boolean>(false);
+const resendingEmail = ref<string | null>(null);
 
 onMounted(async () => {
     await authStore.fetchCollaborators();
 });
 
-function handleResend(email: string) {
-    // Add logic here to resend the invite if needed
-    console.log("Resend invite to:", email);
+async function handleResend(email: string) {
+    resendingEmail.value = email;
+    try {
+        const response = await authStore.addCollaborator(email);
+        if (response) {
+            isSuccess.value = true;
+        }
+    } finally {
+        resendingEmail.value = null;
+    }
 }
 
 function handleAdd() {

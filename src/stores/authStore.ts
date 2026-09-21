@@ -35,7 +35,7 @@ export const useAuthStore = defineStore("auth", () => {
     isLoading.value = true;
     message.value.errorMessage = "";
     try {
-      const response = await api("/account/register/", "POST", payload, {requireAuth: false});
+      const response = await api("/account/register/", "POST", payload, { requireAuth: false });
       if (!response.ok) {
         message.value.errorMessage = "Inscription impossible revoyez vos identifiants";
         return false;
@@ -54,7 +54,7 @@ export const useAuthStore = defineStore("auth", () => {
     isLoading.value = true;
     message.value.errorMessage = "";
     try {
-      const response = await api("/account/login/", "POST", payload, {requireAuth: false});
+      const response = await api("/account/login/", "POST", payload, { requireAuth: false });
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
         message.value.errorMessage = errorData?.error || "Identifiants incorrects";
@@ -187,7 +187,7 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  async function addCollaborator(email:string) {
+  async function addCollaborator(email: string) {
     isLoading.value = true;
     try {
       const response = await api("/account/collaborators/", 'POST', { email }, { requireAuth: true });
