@@ -210,6 +210,7 @@ class CollaborateurView(APIView):
             )
 
 class CollaboratorCodeView(APIView):
+
     permission_classes = [AllowAny] # Permet à un utilisateur non connecté de valider son code
 
     def get(self, request):
