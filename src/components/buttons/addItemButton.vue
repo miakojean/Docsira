@@ -1,6 +1,6 @@
 <template>
     <button class="outline-btn" @click="$emit('add')">
-        <span class="btn-icon">+</span> {{btnLabel}}
+        {{btnLabel}}
     </button>
 </template>
 
@@ -9,7 +9,7 @@ export default {
     props:{
         btnLabel:{
             type:String,
-            default:"Ajouter un dossier"
+            default:"Ouvrir un dossier"
         }
     }
 }
@@ -18,6 +18,8 @@ export default {
 <style scoped>
 
 .outline-btn {
+    width: 100%;
+    max-width: 200px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -27,7 +29,7 @@ export default {
     border-radius: 8px;
     padding: 0.6rem 1.25rem;
     font-size: 0.95rem;
-    font-weight: 500;
+    font-weight: 400;
     color: #374151;
     cursor: pointer;
     transition: all 0.2s ease;

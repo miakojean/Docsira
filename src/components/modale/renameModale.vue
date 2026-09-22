@@ -5,7 +5,7 @@
         <div class="modal-card" role="dialog" aria-modal="true">
 
           <div class="modal-header">
-            <h3 class="modal-title">Renommer le {{ isFolder ? 'dossier' : 'fichier' }}</h3>
+            <h3 class="modal-title">{{title}}</h3>
             <button class="close-btn" @click="closeModal" aria-label="Fermer la modale">
               &times;
             </button>
@@ -18,18 +18,16 @@
               type="text"
               v-model="newName"
               class="text-input"
-              placeholder="Entrez le nouveau nom..."
+              placeholder="Entrer le nom du dossier "
               @keyup.enter="submitRename"
               autofocus
             />
           </div>
 
-          <div class="modal-footer">
-            <button class="btn btn-secondary" @click="closeModal">Annuler</button>
-            <button class="btn btn-primary" @click="submitRename" :disabled="!isNameValid">
-              Enregistrer
-            </button>
-          </div>
+            <div class="modal-footer flex justify-between">
+                <addItemButton btnLabel="annuler création" @click="closeModal"/>
+                <secondButton label="Enregistrer dossier" @click="submitRename" />
+            </div>
 
         </div>
       </div>
@@ -39,11 +37,14 @@
 
 <script setup lang="ts">
 import { ref, watch, computed, onUnmounted } from 'vue';
+import addItemButton from '../buttons/addItemButton.vue';
+import secondButton from '../buttons/secondButton.vue';
 
 const props = defineProps<{
   isOpen: boolean;
-  currentName: string;
+  title: string;
   isFolder?: boolean;
+  currentName?: string; // ✅ déclaré et optionnel
 }>();
 
 const emit = defineEmits(['close', 'rename']);
@@ -53,16 +54,17 @@ const newName = ref('');
 
 // Désactiver le bouton d'enregistrement si le champ est vide ou inchangé
 const isNameValid = computed(() => {
-  return newName.value.trim().length > 0 && newName.value.trim() !== props.currentName;
+  const trimmed = newName.value.trim();
+  return trimmed.length > 0 && trimmed !== (props.currentName ?? '');
 });
 
 // Synchroniser la valeur de l'input quand la modale s'ouvre
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    newName.value = props.currentName;
-    document.body.style.overflow = 'hidden'; // Empêche le scroll derrière
+    newName.value = props.currentName ?? ''; // ✅ jamais undefined
+    document.body.style.overflow = 'hidden';
   } else {
-    document.body.style.overflow = ''; // Restaure le scroll
+    document.body.style.overflow = '';
   }
 });
 
@@ -159,6 +161,7 @@ onUnmounted(() => {
   display: flex;
   gap: 0.75rem;
   margin-top: 0.5rem;
+  width: 100%;
 }
 
 .btn {

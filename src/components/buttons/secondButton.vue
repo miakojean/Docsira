@@ -27,23 +27,27 @@ export default {
 <style scoped>
 
 .main-button{
-  padding: 0.8rem;
-  width: 100%;
-  max-width: 350px;
-  border-radius: 0.5rem;
-  border: none;
-  background: #fff;
-  color:  #0f0e0e;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: var(--primary-color-ligth);
+    border-radius: 4px;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    width: 100%;
+    max-width: 200px;
 }
 
 .main-button:hover{
-    background: #fff;
-    color:  #0f0e0e;
-    transition: 0.1s ease-in;
+    background: var(--primary-color-dark);
+    color: #fff;
+    transition: 0.3s ease-in;
     border: none;
 }
 
