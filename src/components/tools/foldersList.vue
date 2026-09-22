@@ -77,7 +77,7 @@ const getFolderName = (fullPath: string): string => {
     align-items: center;
     justify-content: center;
     padding: 3rem 1rem;
-    background-color: #f9fafb;
+    background-color: none;
     /* border: 2px dashed #e5e7eb;*/
     border-radius: 12px;
     color: #6b7280;
@@ -87,20 +87,18 @@ const getFolderName = (fullPath: string): string => {
 
 /* --- Liste et Éléments --- */
 .folder-list {
-    background-color: #ffffff;
+    background-color: none;
     border-radius: 12px;
     padding: 1rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     width: 100%;
 }
 
 .folder-item {
     padding: 0.75rem 1rem;
-    border-radius: 8px;
     border: 1px solid transparent;
     transition: all 0.2s ease;
     cursor: pointer;
-    background-color: #ffffff;
+    border-bottom: 1px solid #0a17246f;
 }
 
 .folder-item:hover {
@@ -137,7 +135,7 @@ const getFolderName = (fullPath: string): string => {
 .folder-name {
     margin: 0;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 500;
     color: #1f2937;
 }
 
