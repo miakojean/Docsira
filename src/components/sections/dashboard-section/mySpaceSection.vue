@@ -7,7 +7,10 @@
 
             <h3 class="mb-4 text-sm font-bold">Dossiers ouverts</h3>
 
-            <addItemButton @click="addFolder"/>
+            <div class="w-full flex justify-center items-center gap-4">
+                <addItemButton @click="addFolder"/>
+                <secondButton @click="() => { newDirModal = true }" label="Nouveau dossier"/>
+            </div>
             <!-- Intégration du composant enfant -->
             <foldersList
                 :folders="myOpenedFolders"
@@ -15,6 +18,13 @@
                 @open="openFolder"
             />
         </div>
+
+        <renameModale
+            title="Nom du dossier"
+            :isOpen="newDirModal"
+            @rename="handleMakeDir"
+            @close="() => { newDirModal = false }"
+        />
     </div>
 </template>
 
@@ -22,11 +32,14 @@
 import { ref, onMounted } from 'vue';
 import { open } from '@tauri-apps/plugin-dialog';
 import { load } from '@tauri-apps/plugin-store';
+import { mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { appDataDir, join } from '@tauri-apps/api/path';
 import {useRouter} from 'vue-router';
 
 import foldersList from '../../tools/foldersList.vue';
 import addItemButton from '../../buttons/addItemButton.vue';
-import toolsButton from '../../buttons/toolsButton.vue';
+import secondButton from '../../buttons/secondButton.vue';
+import renameModale from '../../modale/renameModale.vue';
 
 
 const router = useRouter();
@@ -74,6 +87,39 @@ const openFolder = (fullPath: string) => {
     // On envoie le chemin complet encodé pour pouvoir le récupérer dans la page du dossier.
     router.push(`/dashboard/mySpace/${encodeURIComponent(fullPath)}`);
 };
+
+// 5. Créér un nouveau dossier
+//
+// Handle modale
+
+const newDirModal = ref<boolean>(false);
+
+const handleMakeDir = async (dirName: string) => {
+    try {
+        // 1. Créer le dossier physiquement sur le disque
+        await mkdir(dirName, {
+            baseDir: BaseDirectory.AppData,
+            recursive: true
+        });
+
+        // 2. Reconstruire le chemin absolu, car mkdir() avec baseDir
+        //    ne retourne rien : on doit le calculer nous-mêmes.
+        const baseDir = await appDataDir();
+        const fullPath = await join(baseDir, dirName);
+
+        // 3. Ajouter à la liste réactive (en évitant les doublons)
+        if (!myOpenedFolders.value.includes(fullPath)) {
+            myOpenedFolders.value.push(fullPath);
+
+            // 4. Sauvegarder dans le store, comme pour addFolder()
+            await saveOpenedFolders();
+        }
+
+        console.log("Dossier créé avec succès");
+    } catch (error: any) {
+        console.error("Une erreur est survenue lors de la création :", error);
+    }
+}
 
 onMounted(async () => {
     const store = await load('myWorkspaceStore.json', {autoSave: false});
