@@ -2,25 +2,25 @@
     <section class="main-section w-full">
 
 
-        <div class="actions">
-            <affairsCards v-for="folder in 9"
-                :key="folder"
-                @goTo="handleGoTo(folder)"
-                @open="handleOpenModal"
-                @rename="handleRenameModal"
-                @link="handleLinkModal"
-                @share="handleShare"
-                @archive="handleArchive"
-                @delete="handleDelete"
-            />
-        </div>
+      <div class="actions">
+        <affairsCards v-for="folder in 9"
+          :key="folder"
+          @goTo="handleGoTo(folder)"
+          @open="handleOpenModal"
+          @rename="handleRenameModal"
+          @link="handleLinkModal"
+          @share="handleShare"
+          @archive="handleArchive"
+          @delete="handleDelete"
+        />
+      </div>
 
-    <!-- About modale -->
+      <!-- About modale -->
 
-    <detailsModale
-        :isOpen="isModalOpen"
-        @close="() => { isModalOpen = false}"
-    />
+      <detailsModale
+          :isOpen="isModalOpen"
+          @close="() => { isModalOpen = false}"
+      />
 
     <renameModale
         :currentName="currentName"

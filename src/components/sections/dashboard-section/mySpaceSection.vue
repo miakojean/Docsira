@@ -3,9 +3,11 @@
         <!-- Bouton pour ajouter un dossier -->
 
 
-        <div class="mt-8">
-            <h3 class="mb-4 text-lg font-bold">Dossiers ouverts</h3>
+        <div class="w-full flex flex-col items-center justify-center gap-2">
 
+            <h3 class="mb-4 text-sm font-bold">Dossiers ouverts</h3>
+
+            <addItemButton @click="addFolder"/>
             <!-- Intégration du composant enfant -->
             <foldersList
                 :folders="myOpenedFolders"
@@ -23,18 +25,23 @@ import { load } from '@tauri-apps/plugin-store';
 import {useRouter} from 'vue-router';
 
 import foldersList from '../../tools/foldersList.vue';
-import mainButton from '../../buttons/mainButton.vue';
+import addItemButton from '../../buttons/addItemButton.vue';
+import toolsButton from '../../buttons/toolsButton.vue';
+
 
 const router = useRouter();
 
 // 1. Déclarer la liste réactive qui stockera les chemins
 const myOpenedFolders = ref<string[]>([]);
 
+const saveOpenedFolders = async () => {
+    const store = await load('myWorkspaceStore.json', {autoSave: false});
+    await store.set('myOpenedFolders', myOpenedFolders.value);
+    await store.save();
+};
+
 // 2. Fonction pour ajouter via Tauri
 const addFolder = async () => {
-
-    const store = await load('myWorkspaceStore.json', {autoSave: false});
-
     try {
         const selectedPath = await open({
             directory: true,
@@ -48,8 +55,7 @@ const addFolder = async () => {
                 myOpenedFolders.value.push(selectedPath);
 
                 // Enregistrer dans le store
-                await store.set('myOpenedFolders', myOpenedFolders.value);
-                await store.save();
+                await saveOpenedFolders();
             }
         }
     } catch (error) {
@@ -58,8 +64,9 @@ const addFolder = async () => {
 };
 
 // 3. Retirer un dossier de la liste
-const removeFolder = (index: number) => {
+const removeFolder = async (index: number) => {
     myOpenedFolders.value.splice(index, 1);
+    await saveOpenedFolders();
 };
 
 // 4. Action quand on clique sur la carte du dossier
