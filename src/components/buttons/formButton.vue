@@ -26,7 +26,7 @@ export default {
 .main-button {
     padding: 0.8rem;
     width: 100%;
-    max-width: 150px;
+    max-width: 200px;
     border-radius: 0.5rem;
     border: none;
     background: var(--primary-color);
