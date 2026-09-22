@@ -12,6 +12,7 @@ export interface Customer {
   username: string;
   password: string;
   account_type?: string;
+  has_changed_password?: boolean;
 }
 
 export const useAuthStore = defineStore("auth", () => {

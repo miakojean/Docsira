@@ -49,7 +49,7 @@
         </form>
 
         <form class="main-form" @submit.prevent="handleChangePassword">
-            <div class="attention-paragraph w-full flex justify-start gap-4">
+            <div class="attention-paragraph w-full flex justify-start gap-4" v-if="user.account_type === 'collaborator' && !user.has_changed_password">
                 <p>Pensez à changer votre mot de passe si vous aviez été invité !</p>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                      stroke-width="1.5" stroke="currentColor" class="size-6">

@@ -8,7 +8,7 @@
                 <template v-for="(collaborator, index) in filteredCollaborators" :key="collaborator.id || index">
                     <CollaboratorCard
                         v-if="collaborator.status === 'accepted'"
-                        :name="collaborator.user.username || collaborator.user.email"
+                        :name="getCollaboratorName(collaborator.user)"
                         :email="collaborator.user.email"
                         :typeLabel="String(collaborator.id).startsWith('main_') ? 'Entreprise' : 'Collaborateur'"
                         :canDelete="isOwner"
@@ -101,9 +101,15 @@ const filteredCollaborators = computed(() => {
     return authStore.collaborators.filter(c => {
         const username = c.user.username ? c.user.username.toLowerCase() : '';
         const email = c.user.email ? c.user.email.toLowerCase() : '';
-        return username.includes(lowerQuery) || email.includes(lowerQuery);
+        const fullName = `${c.user.first_name || ''} ${c.user.last_name || ''}`.toLowerCase().trim();
+        return username.includes(lowerQuery) || email.includes(lowerQuery) || fullName.includes(lowerQuery);
     });
 });
+
+function getCollaboratorName(user: any) {
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    return fullName ? fullName : (user.username || user.email);
+}
 
 onMounted(async () => {
     await authStore.fetchCollaborators();

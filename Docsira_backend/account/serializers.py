@@ -6,7 +6,7 @@ class SimpleUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         # On ne renvoie que les données strictement nécessaires au frontend
-        fields = ['id', 'username', 'email']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name']
 
 # 2. CORRECTION : Sécurisation du sérialiseur principal
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -19,6 +19,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'account_type',
+            'has_changed_password',
             'password',
         ]
         # On rend le mot de passe invisible en lecture !
