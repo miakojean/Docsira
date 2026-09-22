@@ -110,17 +110,29 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  async function ChangePassword(payload:object){
+  async function ChangePassword(payload: {
+    old_password: string;
+    new_password: string;
+    confirm_password: string;
+  }) {
     isLoading.value = true;
     try {
-      const response = await api('/account/change-password/', 'POST', {payload}, {requireAuth:true});
-      if(response.ok){
-        message.value.succesMessage = "Mot de passe changé avec succès"
-      } else{
-        message.value.errorMessage = "Une erreur est survenue lors de la modification"
+      const response = await api('/account/change-password/', 'POST', payload, { requireAuth: true });
+      if (response.ok) {
+        message.value.succesMessage = "Mot de passe changé avec succès";
+        return true;
       }
-    } catch{
-      message.value.errorMessage = "Un soucis côté serveur est survenu"
+
+      const errorData = await response.json().catch(() => null);
+      const backendError = errorData?.error;
+      message.value.errorMessage = Array.isArray(backendError)
+        ? backendError.join(' ')
+        : backendError || "Une erreur est survenue lors de la modification";
+      return false;
+    } catch (error) {
+      message.value.errorMessage = "Un soucis côté serveur est survenu";
+      console.error(error);
+      return false;
     } finally{
       isLoading.value = false;
     }
