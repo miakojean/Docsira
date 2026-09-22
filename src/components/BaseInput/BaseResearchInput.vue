@@ -9,14 +9,32 @@
             </svg>
         </button>
 
-        <input type="text" class="research-input" placeholder="Trouver un collaborateur">
+        <input 
+            type="text" 
+            class="research-input" 
+            placeholder="Trouver un collaborateur"
+            :value="modelValue"
+            @input="onInput"
+        >
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'ResearchBar'
+<script setup lang="ts">
+const props = defineProps({
+  modelValue: {
+    type: String,
+    default: ''
+  }
+});
+
+const emit = defineEmits(['update:modelValue']);
+
+function onInput(event: Event) {
+  const target = event.target as HTMLInputElement;
+  if (target) {
+    emit('update:modelValue', target.value);
+  }
 }
 </script>
 

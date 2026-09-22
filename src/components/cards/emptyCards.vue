@@ -25,7 +25,7 @@
         </div>
 
         <!-- 3. Pied de page (Footer) avec le bouton "Outlined" -->
-        <div class="footer-section">
+        <div class="footer-section" v-if="showAddButton">
             <!-- On émet un événement 'add' pour que le composant parent ouvre la modale d'invitation -->
             <button class="outline-btn" @click="$emit('add')">
                 <span class="btn-icon">+</span> {{btnLabel}}
@@ -43,13 +43,15 @@ const props = withDefaults(
         title?: string,
         mainText?: string,
         subtitle?: string,
-        btnLabel?: string
+        btnLabel?: string,
+        showAddButton?: boolean
     }>(),
     {
         title: "Mes collaborateurs",
         mainText: "Vous n'avez aucun collaborateur.",
         subtitle: "N'hésitez pas à en inviter un.",
-        btnLabel: "Ajouter un collaborateur"
+        btnLabel: "Ajouter un collaborateur",
+        showAddButton: true
     }
 )
 </script>

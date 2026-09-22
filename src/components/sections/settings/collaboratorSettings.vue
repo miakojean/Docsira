@@ -1,11 +1,11 @@
 <template>
     <div class="main-section gap-2">
-        <headerNav title="Mes collaborateurs" @handleEvent="handleAdd"/>
+        <headerNav title="Mes collaborateurs" :showToolsButton="isOwner" @handleEvent="handleAdd" v-model="searchQuery"/>
 
         <div v-if="authStore.collaborators.length > 0" class="content-container">
 
-            <div class="cards-grid">
-                <template v-for="(collaborator, index) in authStore.collaborators" :key="collaborator.id || index">
+            <div class="cards-grid" v-if="filteredCollaborators.length > 0">
+                <template v-for="(collaborator, index) in filteredCollaborators" :key="collaborator.id || index">
                     <CollaboratorCard
                         v-if="collaborator.status === 'accepted'"
                         :name="collaborator.user.username || collaborator.user.email"
@@ -24,10 +24,19 @@
                     />
                 </template>
             </div>
+            
+            <div v-else class="flex-1 w-full flex justify-center items-center">
+                <emptyCards 
+                    title="Aucun résultat"
+                    :mainText="`Aucun collaborateur trouvé pour '${searchQuery}'`"
+                    subtitle="Vérifiez l'orthographe ou essayez un autre terme."
+                    :showAddButton="false"
+                />
+            </div>
         </div>
 
         <div v-else class="h-full w-full flex justify-center items-center">
-            <emptyCards @add="handleAdd"/>
+            <emptyCards :showAddButton="isOwner" @add="handleAdd"/>
         </div>
 
         <inviteModale
@@ -83,6 +92,19 @@ const isOwner = computed(() => {
     return !authStore.collaborators.some(c => String(c.id).startsWith('main_'));
 });
 
+const searchQuery = ref("");
+
+const filteredCollaborators = computed(() => {
+    if (!searchQuery.value) return authStore.collaborators;
+    
+    const lowerQuery = searchQuery.value.toLowerCase();
+    return authStore.collaborators.filter(c => {
+        const username = c.user.username ? c.user.username.toLowerCase() : '';
+        const email = c.user.email ? c.user.email.toLowerCase() : '';
+        return username.includes(lowerQuery) || email.includes(lowerQuery);
+    });
+});
+
 onMounted(async () => {
     await authStore.fetchCollaborators();
 });
@@ -101,6 +123,7 @@ async function handleResend(email: string) {
 }
 
 function handleAdd() {
+    if (!isOwner.value) return;
     isOpen.value = true;
 }
 
@@ -151,6 +174,8 @@ async function handleInvite(email: string) {
 .content-container {
     padding: 2rem;
     flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .actions-bar {

@@ -22,6 +22,7 @@
                 <BaseInput
                     label="Type de compte"
                     v-model="user.account_type"
+                    disabled
                 />
 
                 <BaseInput

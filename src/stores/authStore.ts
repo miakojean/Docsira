@@ -262,6 +262,7 @@ export const useAuthStore = defineStore("auth", () => {
     fetchUserProfile,
     addCollaborator,
     fetchCollaborators,
+    removeCollaborator,
     ChangePassword
   };
 });
