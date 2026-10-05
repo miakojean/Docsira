@@ -55,7 +55,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'corsheaders',
-    'account'
+    'account',
+    'Client'
 ]
 
 REST_FRAMEWORK = {
