@@ -5,13 +5,14 @@
 
         <div class="w-full flex flex-col items-center justify-center gap-2">
 
-            <h3 class="mb-4 text-sm font-bold">Dossiers ouverts</h3>
-
             <div class="w-full flex justify-center items-center gap-4">
                 <addItemButton @click="addFolder"/>
                 <secondButton @click="() => { newDirModal = true }" label="Nouveau dossier"/>
             </div>
             <!-- Intégration du composant enfant -->
+
+            <h3 class="mb-4 text-sm font-bold">Dossiers ouverts</h3>
+
             <foldersList
                 :folders="myOpenedFolders"
                 @remove="removeFolder"
