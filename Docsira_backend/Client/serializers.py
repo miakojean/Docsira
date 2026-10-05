@@ -39,7 +39,7 @@ class ClientSerializer(serializers.ModelSerializer):
             'numero_cc', 'capital_social',
             
             # Coordonnées
-            'adresse', 'ville', 'commune', 'telephone_1',
+            'adresse', 'ville', 'commune', 'pays', 'telephone_1',
             'telephone_2', 'email',
             
             # Informations juridiques complémentaires 

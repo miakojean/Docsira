@@ -5,18 +5,26 @@ import { api } from "../services/api";
 export type TypeClient = "PERSONNE_PHYSIQUE" | "PERSONNE_MORALE";
 export type StatutClient = "ACTIF" | "INACTIF" | "PROSPECT" | "ARCHIVE";
 
+// Correspond à ClientSerializer (le GET /Client renvoie un tableau brut)
 export interface ClientListItem {
-  id: number;
+  id: string; // UUID
   reference_client: string;
   type_client: TypeClient;
   statut: StatutClient;
   nom_complet: string;
+  nom: string;
+  prenoms: string;
+  raison_sociale: string;
   telephone_1: string;
+  telephone_2: string;
   email: string;
+  adresse: string;
   ville: string;
-  charge_de_clientele_nom: string;
+  commune: string;
+  pays?: string;
+  charge_de_clientele: number | string | null;
   date_creation: string;
-  nombre_dossiers: number;
+  date_premier_contact: string | null;
 }
 
 export interface ClientPayload {
@@ -38,6 +46,7 @@ export interface ClientPayload {
   adresse?: string;
   ville?: string;
   commune?: string;
+  pays?: string;
   notes?: string;
 }
 
@@ -57,7 +66,8 @@ export const useClientStore = defineStore("client", () => {
         return false;
       }
       const data = await response.json();
-      clients.value = data.clients ?? [];
+      // Le backend renvoie directement un tableau ; on garde une tolérance sur l'ancien format
+      clients.value = Array.isArray(data) ? data : (data?.clients ?? []);
       return true;
     } catch (error) {
       console.error(error);
@@ -89,6 +99,8 @@ export const useClientStore = defineStore("client", () => {
           fieldErrors.value.non_field_errors || data?.message || "Création du client impossible";
         return false;
       }
+      // Ajout optimiste en tête de liste puis resynchronisation
+      if (data?.client) clients.value.unshift(data.client);
       await fetchClients();
       return true;
     } catch (error) {

@@ -44,6 +44,7 @@
               <BaseInput label="Email" type="email" placeholder="email@exemple.com" v-model="form.email" :errorMessage="err('email')" />
               <BaseInput label="Ville" placeholder="Ville" v-model="form.ville" :errorMessage="err('ville')" />
               <BaseInput label="Commune" placeholder="Commune" v-model="form.commune" :errorMessage="err('commune')" />
+              <BaseInput label="Pays" placeholder="Côte d'Ivoire" v-model="form.pays" :errorMessage="err('pays')" />
               <BaseInput label="Adresse" placeholder="Adresse" v-model="form.adresse" :errorMessage="err('adresse')" />
             </div>
 
@@ -75,7 +76,7 @@ const emptyForm = (): ClientPayload => ({
   nom: '', prenoms: '', date_naissance: '', lieu_naissance: '',
   raison_sociale: '', forme_juridique: '', numero_rccm: '', numero_cc: '',
   representant_legal_nom: '', representant_legal_fonction: '',
-  telephone_1: '', telephone_2: '', email: '', adresse: '', ville: '', commune: '',
+  telephone_1: '', telephone_2: '', email: '', adresse: '', ville: '', commune: '', pays: '',
 });
 
 const form = reactive<ClientPayload>(emptyForm());
