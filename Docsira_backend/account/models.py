@@ -22,6 +22,8 @@ class CustomUser(AbstractUser):
         verbose_name=_("Type de compte")
     )
 
+    has_changed_password = models.BooleanField(default=False)
+
     def __str__(self):
         return self.username
 

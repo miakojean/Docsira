@@ -1,5 +1,10 @@
 <template>
   <div class="collaborator-card pending-card">
+    <button v-if="canDelete" class="delete-btn" @click="$emit('delete', email)" title="Supprimer l'invitation">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="delete-icon">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+      </svg>
+    </button>
     <!-- Options or status indicator -->
     <div class="status-badge">
       <span class="status-dot"></span>
@@ -40,10 +45,14 @@ const props = defineProps({
     isLoading: {
         type: Boolean,
         default: false,
+    },
+    canDelete: {
+        type: Boolean,
+        default: false,
     }
 });
 
-const emit = defineEmits(['resend']);
+const emit = defineEmits(['resend', 'delete']);
 </script>
 
 <style scoped>
@@ -78,7 +87,7 @@ const emit = defineEmits(['resend']);
 .status-badge {
   position: absolute;
   top: 16px;
-  right: 16px;
+  left: 16px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -164,5 +173,31 @@ const emit = defineEmits(['resend']);
   background-color: #f9fafb;
   border-color: #d1d5db;
   color: #111827;
+}
+
+/* Bouton de suppression */
+.delete-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ef4444; /* red-500 */
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.delete-btn:hover {
+  color: #dc2626; /* red-600 */
+  transform: scale(1.1);
+}
+
+.delete-icon {
+  width: 20px;
+  height: 20px;
 }
 </style>

@@ -82,7 +82,8 @@ class ChangePasswordView(APIView):
             )
 
         request.user.set_password(new_password)
-        request.user.save(update_fields=['password'])
+        request.user.has_changed_password = True
+        request.user.save(update_fields=['password', 'has_changed_password'])
 
         return Response(
             {'message': 'Mot de passe modifié avec succès.'},

@@ -12,7 +12,9 @@
                   <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5l-1-1h-5l-1 1H5v2h14V4h-3.5z"/>
                 </svg>
               </span>
-              <h3 class="modal-title">Supprimer le {{ isFolder ? 'dossier' : 'fichier' }}</h3>
+              <h3 class="modal-title">
+                {{ title || `Supprimer le ${isFolder ? 'dossier' : 'fichier'}` }}
+              </h3>
             </div>
             <button class="close-btn" @click="closeModal" aria-label="Fermer la modale">
               &times;
@@ -20,12 +22,8 @@
           </div>
 
           <div class="modal-body">
-            <p class="delete-description">
-              Êtes-vous sûr de vouloir supprimer définitivement <strong>{{ itemName }}</strong> ?
-            </p>
-            <p class="delete-subtext">
-              Attention, cette action est <strong>irréversible</strong>. Cet élément sera supprimé pour vous et pour tous les collaborateurs qui y ont accès.
-            </p>
+            <p class="delete-description" v-html="description || `Êtes-vous sûr de vouloir supprimer définitivement <strong>${itemName}</strong> ?`"></p>
+            <p class="delete-subtext" v-html="subtext || `Attention, cette action est <strong>irréversible</strong>. Cet élément sera supprimé pour vous et pour tous les collaborateurs qui y ont accès.`"></p>
           </div>
 
           <div class="modal-footer">
@@ -49,6 +47,9 @@ const props = withDefaults(
     isOpen: boolean;
     itemName?: string;
     isFolder?: boolean;
+    title?: string;
+    description?: string;
+    subtext?: string;
   }>(),
   {
     isOpen: false,
@@ -83,6 +84,21 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* --- Overlay --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(17, 24, 39, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
 /* --- Structure de base --- */
 .modal-card {
   background: #ffffff;

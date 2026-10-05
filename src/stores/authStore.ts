@@ -12,6 +12,7 @@ export interface Customer {
   username: string;
   password: string;
   account_type?: string;
+  has_changed_password?: boolean;
 }
 
 export const useAuthStore = defineStore("auth", () => {
@@ -133,7 +134,7 @@ export const useAuthStore = defineStore("auth", () => {
       message.value.errorMessage = "Un soucis côté serveur est survenu";
       console.error(error);
       return false;
-    } finally{
+    } finally {
       isLoading.value = false;
     }
   }
@@ -237,6 +238,28 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  async function removeCollaborator(email: string) {
+    isLoading.value = true;
+    try {
+      const response = await api(`/account/collaborators/?email=${encodeURIComponent(email)}`, 'DELETE', undefined, { requireAuth: true });
+      if (response.ok) {
+        message.value.succesMessage = "Collaborateur retiré";
+        await fetchCollaborators();
+        return true;
+      } else {
+        const errorData = await response.json().catch(() => null);
+        message.value.errorMessage = errorData?.error || "Erreur lors de la suppression";
+        return false;
+      }
+    } catch (error) {
+      message.value.errorMessage = "Erreur serveur";
+      console.error(error);
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   return {
     router,
     isLoading,
@@ -252,6 +275,7 @@ export const useAuthStore = defineStore("auth", () => {
     fetchUserProfile,
     addCollaborator,
     fetchCollaborators,
+    removeCollaborator,
     ChangePassword
   };
 });

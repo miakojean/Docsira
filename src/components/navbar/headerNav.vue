@@ -4,35 +4,42 @@
             <h3>{{title}}</h3>
         </div>
         <div class="tools-frame flex items-center justify-center gap-4">
-            <BaseResearchInput />
-            <toolsButton @handleEvent="$emit('handleEvent')"/>
+            <BaseResearchInput :modelValue="modelValue" @update:modelValue="$emit('update:modelValue', $event)" />
+            <toolsButton v-if="showToolsButton" @handleEvent="$emit('handleEvent')"/>
         </div>
     </nav>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue';
 import BaseResearchInput from '../BaseInput/BaseResearchInput.vue';
 import toolsButton from '../buttons/toolsButton.vue';
-export default {
 
+export default defineComponent({
     name: "headerNav",
     props:{
         title: {
           type: String,
           default: "Mes collaborateurs"
+        },
+        showToolsButton: {
+          type: Boolean,
+          default: true
+        },
+        modelValue: {
+          type: String,
+          default: ""
         }
     },
     components:{
         BaseResearchInput,
         toolsButton
     },
-    emits:['handleEvent'],
+    emits:['handleEvent', 'update:modelValue'],
     setup() {
-
+        return {};
     }
-
-}
-
+});
 </script>
 
 <style scoped>
