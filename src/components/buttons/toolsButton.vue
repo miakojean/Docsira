@@ -37,7 +37,7 @@ export default {
   padding: 0.5rem;
   color: #fff;
   border: none;
-  border-radius: 5px;
+  border-radius: 20%;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
