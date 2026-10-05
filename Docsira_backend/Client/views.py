@@ -1,11 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .serializers import ClientSerializer
+from .models import Client
 from rest_framework.response import Response
 from rest_framework import status
+from account.models import CustomUser
 
 class ManageClient(APIView):
-    
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -14,7 +16,8 @@ class ManageClient(APIView):
 
         if serializer.is_valid():
             # 2- On sauvegarde l'instance dans la base de données
-            serializer.save()
+            # Le créateur devient automatiquement le propriétaire du client.
+            serializer.save(charge_de_clientele=request.user)
 
             # 3- On retourne les données fraîchement créées
             return Response({
@@ -32,4 +35,9 @@ class ManageClient(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):
-        pass
+        # Récupère uniquement les clients gérés par l'utilisateur connecté
+        clients = Client.objects.filter(charge_de_clientele=request.user)
+
+        serializer = ClientSerializer(clients, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)

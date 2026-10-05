@@ -7,7 +7,7 @@ from django.core.validators import RegexValidator, MinValueValidator, FileExtens
 from django.utils import timezone
 from account.models import CustomUser
 from decimal import Decimal
-import os
+import uuid
 from django.conf import settings
 import re
 from unidecode import unidecode 
@@ -29,6 +29,8 @@ class Client(models.Model):
         ('PROSPECT', 'Prospect'),
         ('ARCHIVE', 'Archivé'),
     ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     
     # Informations générales
     type_client = models.CharField(_("Type de client"), max_length=20, choices=TYPE_CLIENT_CHOICES)
