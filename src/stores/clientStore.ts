@@ -60,7 +60,7 @@ export const useClientStore = defineStore("client", () => {
     isLoading.value = true;
     errorMessage.value = "";
     try {
-      const response = await api("/Client", "GET");
+      const response = await api("/Client/", "GET");
       if (!response.ok) {
         errorMessage.value = "Impossible de charger la liste des clients";
         return false;
@@ -87,7 +87,7 @@ export const useClientStore = defineStore("client", () => {
       const cleaned = Object.fromEntries(
         Object.entries(payload).filter(([, v]) => v !== "" && v !== null && v !== undefined),
       );
-      const response = await api("/Client", "POST", cleaned);
+      const response = await api("/Client/", "POST", cleaned);
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
