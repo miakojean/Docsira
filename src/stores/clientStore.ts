@@ -112,5 +112,63 @@ export const useClientStore = defineStore("client", () => {
     }
   }
 
-  return { clients, isLoading, fieldErrors, errorMessage, fetchClients, addClient };
+  async function updateClient(id: string, payload: ClientPayload) {
+    isLoading.value = true;
+    errorMessage.value = "";
+    fieldErrors.value = {};
+    try {
+      const cleaned = Object.fromEntries(
+        Object.entries(payload).filter(([, v]) => v !== "" && v !== null && v !== undefined),
+      );
+      const response = await api(`/Client/${id}/`, "PATCH", cleaned);
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const errors = data?.errors ?? {};
+        for (const [key, value] of Object.entries(errors)) {
+          fieldErrors.value[key] = Array.isArray(value) ? String(value[0]) : String(value);
+        }
+        errorMessage.value =
+          fieldErrors.value.non_field_errors || data?.message || "Modification du client impossible";
+        return false;
+      }
+      
+      const index = clients.value.findIndex(c => c.id === id);
+      if (index !== -1 && data?.client) {
+        clients.value[index] = data.client;
+      } else {
+        await fetchClients();
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function deleteClient(id: string) {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const response = await api(`/Client/${id}/`, "DELETE");
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        errorMessage.value = data?.message || "Suppression du client impossible";
+        return false;
+      }
+      clients.value = clients.value.filter(c => c.id !== id);
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  return { clients, isLoading, fieldErrors, errorMessage, fetchClients, addClient, updateClient, deleteClient };
 });

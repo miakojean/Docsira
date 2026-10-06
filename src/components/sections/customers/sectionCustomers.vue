@@ -63,12 +63,22 @@
 
     <addClientModale :isOpen="isOpen" @close="isOpen = false" @created="onCreated" />
     <viewClientModale :isOpen="isViewOpen" :client="selectedClient" @close="isViewOpen = false" />
+    <editClientModale :isOpen="isEditOpen" :client="selectedClient" @close="isEditOpen = false" @updated="onUpdated" />
+    <deleteModale
+      :isOpen="isDeleteOpen"
+      :itemName="clientToDelete?.nom_complet || 'ce client'"
+      title="Supprimer le client"
+      description="Êtes-vous sûr de vouloir supprimer définitivement ce client ?"
+      subtext="Attention, cette action est <strong>irréversible</strong>. Toutes les données associées seront supprimées."
+      @close="isDeleteOpen = false"
+      @delete="confirmDeleteClient"
+    />
 
     <SuccesModale
-      modaleTitle="Client ajouté"
+      modaleTitle="Succès"
       :isOpen="isSuccess"
-      title="Client créé avec succès"
-      subtitle="Le nouveau client a été ajouté à votre liste."
+      :title="successTitle"
+      :subtitle="successSubtitle"
       actionText="continuer"
       @close="isSuccess = false"
       @handleEvent="isSuccess = false"
@@ -110,17 +120,24 @@ import headerNav from '../../navbar/headerNav.vue';
 import emptyCards from '../../cards/emptyCards.vue';
 import addClientModale from '../../modale/addClientModale.vue';
 import viewClientModale from '../../modale/viewClientModale.vue';
+import editClientModale from '../../modale/editClientModale.vue';
+import deleteModale from '../../modale/deleteModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
 import { useClientStore } from '../../../stores/clientStore';
 
 const clientStore = useClientStore();
 const isOpen = ref(false);
 const isViewOpen = ref(false);
+const isEditOpen = ref(false);
+const isDeleteOpen = ref(false);
 const isSuccess = ref(false);
+const successTitle = ref('');
+const successSubtitle = ref('');
 const searchQuery = ref('');
 const activeMenu = ref<string | null>(null);
 const activeClient = ref<any>(null);
 const selectedClient = ref<any>(null);
+const clientToDelete = ref<any>(null);
 const menuStyle = ref({ top: '0px', left: '0px' });
 
 const statutLabels: Record<string, string> = {
@@ -146,6 +163,15 @@ function formatDate(value: string) {
 
 function onCreated() {
   isOpen.value = false;
+  successTitle.value = "Client créé avec succès";
+  successSubtitle.value = "Le nouveau client a été ajouté à votre liste.";
+  isSuccess.value = true;
+}
+
+function onUpdated() {
+  isEditOpen.value = false;
+  successTitle.value = "Client mis à jour";
+  successSubtitle.value = "Les informations du client ont été modifiées avec succès.";
   isSuccess.value = true;
 }
 
@@ -183,8 +209,7 @@ function viewClient(client: any) {
 function editClient(client: any) {
   selectedClient.value = client;
   closeMenu();
-  console.log("Modifier client", client.id);
-  // TODO: Ouvrir la modale d'édition
+  isEditOpen.value = true;
 }
 
 function shareClient(client: any) {
@@ -197,11 +222,20 @@ function archiveClient(client: any) {
   console.log("Archiver client", client.id);
 }
 
-async function deleteClient(client: any) {
+function deleteClient(client: any) {
   closeMenu();
-  if (confirm(`Êtes-vous sûr de vouloir supprimer le client ${client.nom_complet} ?`)) {
-    // await clientStore.deleteClient(client.id); // À implémenter dans le store
-    console.log("Supprimer client", client.id);
+  clientToDelete.value = client;
+  isDeleteOpen.value = true;
+}
+
+async function confirmDeleteClient() {
+  if (clientToDelete.value) {
+    const ok = await clientStore.deleteClient(clientToDelete.value.id);
+    if (ok) {
+      successTitle.value = "Client supprimé";
+      successSubtitle.value = "Le client a été retiré de votre liste.";
+      isSuccess.value = true;
+    }
   }
 }
 
