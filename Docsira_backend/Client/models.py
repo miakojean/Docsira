@@ -84,6 +84,9 @@ class Client(models.Model):
         verbose_name=_("Chargé de clientèle")
     )
 
+    # Actions pour mettre dans la corbeille
+    is_deleted = models.BooleanField(default=False, verbose_name="Dans la corbeille")
+
     class Meta:
         ordering = ['-date_creation']
         verbose_name = _("Client")
