@@ -17,14 +17,14 @@
           <template v-else-if="!isSuccess">
             <div class="modal-header">
               <div class="title-container">
-                <span class="header-icon-box is-danger">
-                  <!-- Icône Corbeille -->
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="icon">
-                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5l-1-1h-5l-1 1H5v2h14V4h-3.5z"/>
+                <span class="header-icon-box is-primary">
+                  <!-- Icône Restaurer -->
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                   </svg>
                 </span>
                 <h3 class="modal-title">
-                  {{ title || `Supprimer le ${isFolder ? 'dossier' : 'fichier'}` }}
+                  {{ title || `Restaurer le ${isFolder ? 'dossier' : 'fichier'}` }}
                 </h3>
               </div>
               <button class="close-btn" @click="closeModal" aria-label="Fermer la modale">
@@ -35,18 +35,17 @@
             <div class="modal-body">
               <p class="delete-description">
                 <template v-if="description">{{ description }}</template>
-                <template v-else>Êtes-vous sûr de vouloir supprimer définitivement <strong>{{ itemName }}</strong> ?</template>
+                <template v-else>Êtes-vous sûr de vouloir restaurer <strong>{{ itemName }}</strong> ?</template>
               </p>
               <p class="delete-subtext">
-                <template v-if="subtext">{{ subtext }}</template>
-                <template v-else>Attention, cette action est <strong>irréversible</strong>. Cet élément sera supprimé pour vous et pour tous les collaborateurs qui y ont accès.</template>
+                {{ subtext || `Cet élément réapparaîtra dans votre liste d'éléments actifs.` }}
               </p>
             </div>
 
             <div class="modal-footer">
               <button class="btn" @click="closeModal" :disabled="isLoading">Annuler</button>
-              <button class="btn btn-danger" @click="confirmDelete" :disabled="isLoading">
-                {{ isLoading ? 'En cours...' : 'Oui, supprimer' }}
+              <button class="btn btn-primary-action" @click="confirmRestore" :disabled="isLoading">
+                {{ isLoading ? 'En cours...' : 'Oui, restaurer' }}
               </button>
             </div>
           </template>
@@ -71,7 +70,7 @@
             <div class="modal-body text-center" style="align-items: center; text-align: center;">
                 <h3 class="modal-title" style="margin-bottom: 0.5rem;">{{ successTitle || 'Opération réussie' }}</h3>
                 <p class="modal-description" style="color: #6b7280; font-size: 0.95rem; margin: 0;">
-                  {{ successSubtitle || 'L\'élément a été traité avec succès.' }}
+                  {{ successSubtitle || 'L\'élément a été restauré avec succès.' }}
                 </p>
             </div>
 
@@ -113,20 +112,14 @@ const props = withDefaults(
   }
 );
 
-const emit = defineEmits(['close', 'delete']);
+const emit = defineEmits(['close', 'restore']);
 
 const closeModal = () => {
   emit('close');
 };
 
-const confirmDelete = () => {
-  emit('delete');
-  // If the parent manages async state (isLoading), we don't close immediately.
-  // We'll let the parent close it. Wait, let's just emit 'delete'.
-  // If `isLoading` or `isSuccess` props are not used by the parent, they might expect it to close.
-  // Since we are changing the paradigm to 'async modal', we will rely on the parent to close it if it's successful,
-  // or we can just not call `closeModal()` here and update the parents.
-  // Actually, to be safe: we don't close it automatically anymore. The parent must close it or change its state to isSuccess.
+const confirmRestore = () => {
+  emit('restore');
 };
 
 // Gestion du blocage du scroll en arrière-plan
@@ -195,10 +188,10 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-/* Thème Alerte / Danger */
-.header-icon-box.is-danger {
-  background-color: #fee2e2; /* Rouge très clair */
-  color: #dc2626; /* Rouge vif */
+/* Thème Primaire / Bleu */
+.header-icon-box.is-primary {
+  background-color: #e0e7ff; /* Bleu très clair */
+  color: #4f46e5; /* Bleu vif */
 }
 
 .header-icon-box .icon {
@@ -224,7 +217,7 @@ onUnmounted(() => {
   transition: color 0.2s ease;
 }
 
-.close-btn:hover { color: #ef4444; }
+.close-btn:hover { color: #4f46e5; }
 
 /* --- Corps de la modale --- */
 .modal-body {
@@ -243,7 +236,7 @@ onUnmounted(() => {
 .delete-subtext {
   margin: 0;
   font-size: 0.85rem;
-  color: #ef4444; /* Texte rouge pour insister sur l'aspect irréversible */
+  color: #4b5563; /* Gris standard, pas rouge */
   line-height: 1.4;
 }
 
@@ -279,14 +272,14 @@ onUnmounted(() => {
   background-color: #e5e7eb;
 }
 
-/* Bouton spécifique pour la suppression */
-.btn-danger {
-  background-color: #dc2626; /* Rouge vif */
+/* Bouton spécifique pour la restauration */
+.btn-primary-action {
+  background-color: #4f46e5; /* Bleu vif */
   color: white;
 }
 
-.btn-danger:hover {
-  background-color: #b91c1c; /* Rouge plus foncé au survol */
+.btn-primary-action:hover {
+  background-color: #4338ca; /* Bleu plus foncé au survol */
 }
 
 /* --- Responsive Ordinateur --- */

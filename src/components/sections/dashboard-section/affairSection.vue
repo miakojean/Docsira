@@ -25,6 +25,7 @@
     <renameModale
         :currentName="currentName"
         :isOpen="isRenameModalOpen"
+        title="Renommer le dossier"
         @close="() => { isRenameModalOpen = false}"
     />
 
@@ -46,6 +47,7 @@
     <deleteModale
         :isOpen="isDeleteModalOpen"
         @close="() => { isDeleteModalOpen = false}"
+        @delete="() => { isDeleteModalOpen = false}"
     />
 
     </section>

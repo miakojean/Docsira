@@ -52,6 +52,7 @@ export interface ClientPayload {
 
 export const useClientStore = defineStore("client", () => {
   const clients = ref<ClientListItem[]>([]);
+  const trashClients = ref<ClientListItem[]>([]);
   const isLoading = ref(false);
   const fieldErrors = ref<Record<string, string>>({});
   const errorMessage = ref("");
@@ -68,6 +69,27 @@ export const useClientStore = defineStore("client", () => {
       const data = await response.json();
       // Le backend renvoie directement un tableau ; on garde une tolérance sur l'ancien format
       clients.value = Array.isArray(data) ? data : (data?.clients ?? []);
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function fetchTrashClients() {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const response = await api("/Client/?trash=true", "GET");
+      if (!response.ok) {
+        errorMessage.value = "Impossible de charger la corbeille";
+        return false;
+      }
+      const data = await response.json();
+      trashClients.value = Array.isArray(data) ? data : (data?.clients ?? []);
       return true;
     } catch (error) {
       console.error(error);
@@ -170,5 +192,26 @@ export const useClientStore = defineStore("client", () => {
     }
   }
 
-  return { clients, isLoading, fieldErrors, errorMessage, fetchClients, addClient, updateClient, deleteClient };
+  async function restoreClient(id: string) {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const response = await api(`/Client/${id}/restore/`, "POST");
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        errorMessage.value = data?.message || "Restauration du client impossible";
+        return false;
+      }
+      trashClients.value = trashClients.value.filter(c => c.id !== id);
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  return { clients, trashClients, isLoading, fieldErrors, errorMessage, fetchClients, fetchTrashClients, addClient, updateClient, deleteClient, restoreClient };
 });

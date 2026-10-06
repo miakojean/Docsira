@@ -37,8 +37,9 @@ class ManageClient(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):
+        is_trash = request.query_params.get('trash', 'false').lower() == 'true'
         # Récupère uniquement les clients gérés par l'utilisateur connecté
-        clients = Client.objects.filter(charge_de_clientele=request.user, is_deleted=False)
+        clients = Client.objects.filter(charge_de_clientele=request.user, is_deleted=is_trash)
 
         serializer = ClientSerializer(clients, many=True)
 
@@ -130,6 +131,33 @@ class ManageClient(APIView):
             return Response({
                 'success': True,
                 'message': 'Client déplacé vers la corbeille avec succès'
+            }, status=status.HTTP_200_OK)
+
+        except Client.DoesNotExist:
+            return Response({
+                'message': 'Client non trouvé',
+                'success': False
+            }, status=status.HTTP_404_NOT_FOUND)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': 'Erreur interne du serveur',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class RestoreClient(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, client_id, *args, **kwargs):
+        try:
+            client = Client.objects.get(id=client_id, charge_de_clientele=request.user)
+            client.is_deleted = False
+            client.save(update_fields=['is_deleted'])
+            
+            return Response({
+                'success': True,
+                'message': 'Client restauré avec succès'
             }, status=status.HTTP_200_OK)
 
         except Client.DoesNotExist:
