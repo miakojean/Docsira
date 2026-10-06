@@ -38,7 +38,7 @@ class ManageClient(APIView):
 
     def get(self, request):
         # Récupère uniquement les clients gérés par l'utilisateur connecté
-        clients = Client.objects.filter(charge_de_clientele=request.user)
+        clients = Client.objects.filter(charge_de_clientele=request.user, is_deleted=False)
 
         serializer = ClientSerializer(clients, many=True)
 
@@ -120,18 +120,17 @@ class ManageClient(APIView):
 
     def delete(self, request, client_id, *args, **kwargs):
         try:
-            # 1. On cherche le client spécifique par son ID[cite: 5]
-            # (Optionnel : vous pouvez aussi ajouter charge_de_clientele=request.user pour plus de sécurité)
-            client = Client.objects.get(id=client_id)
+            # Sécurité supplémentaire : on s'assure que le client appartient bien à l'utilisateur
+            client = Client.objects.get(id=client_id, charge_de_clientele=request.user)
             
-            # 2. On supprime le client de la base de données
-            client.delete()
+            # Mise à la corbeille (Soft Delete)
+            client.is_deleted = True
+            client.save(update_fields=['is_deleted'])
             
-            # 3. On retourne une réponse de succès en gardant la même structure JSON[cite: 5]
             return Response({
                 'success': True,
-                'message': 'Client supprimé avec succès'
-            }, status=status.HTTP_200_OK) # Le standard REST autorise aussi status.HTTP_204_NO_CONTENT sans corps de réponse
+                'message': 'Client déplacé vers la corbeille avec succès'
+            }, status=status.HTTP_200_OK)
 
         except Client.DoesNotExist:
             return Response({
@@ -145,4 +144,3 @@ class ManageClient(APIView):
                 'message': 'Erreur interne du serveur',
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                
