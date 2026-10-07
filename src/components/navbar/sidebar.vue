@@ -144,6 +144,11 @@ export default {
 
     const toggleReduce = async() => {
       isReduced.value = !isReduced.value;
+      if (isReduced.value) {
+        document.body.classList.add('sidebar-reduced');
+      } else {
+        document.body.classList.remove('sidebar-reduced');
+      }
     };
 
     async function goToAuth(){
