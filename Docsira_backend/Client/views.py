@@ -172,3 +172,52 @@ class RestoreClient(APIView):
                 'message': 'Erreur interne du serveur',
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class PermanentDeleteClient(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, client_id, *args, **kwargs):
+        try:
+            user = request.user
+            
+            # 1. Déterminer le "propriétaire" du cabinet et vérifier les permissions
+            if hasattr(user, 'collaborator_profile'):
+                collab_profile = user.collaborator_profile
+                
+                # Si le collaborateur n'est pas un administrateur, on bloque l'action
+                if collab_profile.role != 'admin': 
+                    return Response({
+                        'success': False,
+                        'message': 'Action refusée : Seul un administrateur peut supprimer définitivement un client.'
+                    }, status=status.HTTP_403_FORBIDDEN)
+                
+                # Le client appartient au compte principal de ce collaborateur
+                owner = collab_profile.main_account
+            else:
+                # L'utilisateur connecté est le compte principal (Firme/Individu)
+                owner = user
+
+            # 2. Récupérer le client en s'assurant qu'il appartient bien au cabinet 
+            # (On utilise 'owner' pour sécuriser la vérification)
+            client = Client.objects.get(id=client_id, charge_de_clientele=owner)
+
+            # 3. Suppression physique définitive de la base de données
+            client.delete()
+            
+            return Response({
+                'success': True,
+                'message': 'Le client a été supprimé définitivement du système.'
+            }, status=status.HTTP_200_OK)
+
+        except Client.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Client introuvable ou vous n\'avez pas l\'autorisation de le supprimer.'
+            }, status=status.HTTP_404_NOT_FOUND)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': 'Erreur interne du serveur',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
