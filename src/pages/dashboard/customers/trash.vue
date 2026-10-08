@@ -2,14 +2,14 @@
     <div class="main-layout">
         <sidebar/>
         <main class="main-content">
-            <sectionCustomers />
+            <sectionTrash />
         </main>
     </div>
 </template>
 
 <script setup lang="ts">
-import sidebar from '../../components/navbar/sidebar.vue'
-import sectionCustomers from '../../components/sections/customers/sectionCustomers.vue';
+import sidebar from '../../../components/navbar/sidebar.vue'
+import sectionTrash from '../../../components/sections/customers/sectionTrash.vue';
 </script>
 
 <style scoped>

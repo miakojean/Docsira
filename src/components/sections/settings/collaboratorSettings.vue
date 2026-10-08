@@ -59,10 +59,14 @@
 
         <deleteModale
             :isOpen="isDeleteModalOpen"
+            :isLoading="isDeleting"
+            :isSuccess="isDeleteSuccess"
             title="Retirer le collaborateur"
             :description="`Êtes-vous sûr de vouloir retirer le collaborateur <strong>${collaboratorToDelete}</strong> ?`"
             subtext="Attention, cette action supprimera tous ses accès à vos dossiers et fichiers partagés."
-            @close="() => { isDeleteModalOpen = false }"
+            successTitle="Collaborateur retiré"
+            successSubtitle="Le collaborateur a été retiré avec succès et n'a plus accès à vos données."
+            @close="() => { isDeleteModalOpen = false; isDeleteSuccess = false }"
             @delete="confirmDeletion"
         />
     </div>
@@ -86,6 +90,8 @@ const successSubtitle = ref("Une invitation de collaboration a été envoyée da
 const resendingEmail = ref<string | null>(null);
 
 const isDeleteModalOpen = ref(false);
+const isDeleting = ref(false);
+const isDeleteSuccess = ref(false);
 const collaboratorToDelete = ref<string | null>(null);
 
 const isOwner = computed(() => {
@@ -140,13 +146,15 @@ async function handleDelete(email: string) {
 
 async function confirmDeletion() {
     if (collaboratorToDelete.value) {
+        isDeleting.value = true;
         const success = await authStore.removeCollaborator(collaboratorToDelete.value);
-        isDeleteModalOpen.value = false;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        isDeleting.value = false;
         
         if (success) {
-            successSubtitle.value = "Le collaborateur a été retiré avec succès et n'a plus accès à vos données.";
-            isSuccess.value = true;
+            isDeleteSuccess.value = true;
         } else {
+            isDeleteModalOpen.value = false;
             alert(authStore.message.errorMessage || "Une erreur s'est produite lors de la suppression.");
         }
         collaboratorToDelete.value = null;

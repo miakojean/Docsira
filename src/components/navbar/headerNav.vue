@@ -5,6 +5,7 @@
         </div>
         <div class="tools-frame flex items-center justify-center gap-4">
             <BaseResearchInput :modelValue="modelValue" @update:modelValue="$emit('update:modelValue', $event)" />
+            <slot name="actions"></slot>
             <toolsButton v-if="showToolsButton" @handleEvent="$emit('handleEvent')"/>
         </div>
     </nav>

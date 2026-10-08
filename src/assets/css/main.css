@@ -2,7 +2,7 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-*{
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -18,14 +18,17 @@ body,
   width: 100%;
 }
 
-:root{
+:root {
   --primary-black-color: #222222;
   --primary-color: #005792;
-  --primary-color-ligth:#325aaf;
+  --primary-color-ligth: #325aaf;
   --primary-color-dark: #005380;
   --secondary-color: #7ac17a;
   --adn-gray-color: #555555;
   --adn-white-color: #f3f3f3;
+
+  --blues-color: #002945;
+  --blues-light-color: #002945;
 }
 
 .logo.vite:hover {
@@ -50,33 +53,33 @@ body,
 /* Form UI */
 
 .form-ui {
-    padding: 1.5rem 1.2rem;
-    max-width: 400px;
-    min-height: 100%;
-    border-radius: 0.5rem;
-    border: 1px solid #d6d6d6;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: 1px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
+  padding: 1.5rem 1.2rem;
+  max-width: 400px;
+  min-height: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid #d6d6d6;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: 1px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
 }
 
-.main-section{
-    padding: 1rem;
+.main-section {
+  padding: 1rem;
 }
 
 .main-section h4 {
-    font-size: 1.2rem;
-    font-weight: 500;
-    color: #141212;
-    text-align: left;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #141212;
+  text-align: left;
 }
 
-svg{
+svg {
   font-size: 12px;
 }
 
