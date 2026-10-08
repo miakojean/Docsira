@@ -159,14 +159,11 @@ class LoginView(APIView):
                     invitation.save(update_fields=['accepted_at'])
 
             refresh = RefreshToken.for_user(user)
+            user_data = CustomUserSerializer(user).data
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email
-                }
+                'user': user_data
             }, status=status.HTTP_200_OK)
         else:
             return Response(

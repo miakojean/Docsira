@@ -77,6 +77,29 @@
       @close="isRestoreOpen = false; isRestoreSuccess = false"
       @restore="confirmRestoreClient"
     />
+    <deleteModale
+      :isOpen="isPermanentDeleteOpen"
+      :isLoading="isPermanentDeleting"
+      :isSuccess="isPermanentDeleteSuccess"
+      :itemName="clientToPermanentDelete?.nom_complet || 'ce client'"
+      title="Suppression définitive"
+      description="Êtes-vous sûr de vouloir supprimer définitivement ce client ?"
+      subtext="Cette action est irréversible."
+      successTitle="Client supprimé"
+      successSubtitle="Le client a été supprimé définitivement."
+      @close="isPermanentDeleteOpen = false; isPermanentDeleteSuccess = false"
+      @delete="confirmPermanentDeleteClient"
+    />
+
+    <errorModale
+      :isOpen="isErrorOpen"
+      modaleTitle="Accès refusé"
+      :title="errorTitle"
+      :subtitle="errorSubtitle"
+      actionText="Compris"
+      @close="isErrorOpen = false"
+      @handleEvent="isErrorOpen = false"
+    />
 
     <SuccesModale
       modaleTitle="Succès"
@@ -100,7 +123,7 @@
              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
              Restaurer
           </li>
-          <li class="danger2">
+          <li class="danger2" @click.stop="permanentDeleteClientAction(activeClient)">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
             </svg>
@@ -120,9 +143,13 @@ import addClientModale from '../../modale/addClientModale.vue';
 import viewClientModale from '../../modale/viewClientModale.vue';
 import editClientModale from '../../modale/editClientModale.vue';
 import restoreModale from '../../modale/restoreModale.vue';
+import deleteModale from '../../modale/deleteModale.vue';
+import errorModale from '../../modale/errorModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
 import { useClientStore } from '../../../stores/clientStore';
+import { useAuthStore } from '../../../stores/authStore';
 
+const authStore = useAuthStore();
 const clientStore = useClientStore();
 const isOpen = ref(false);
 const isViewOpen = ref(false);
@@ -130,6 +157,16 @@ const isEditOpen = ref(false);
 const isRestoreOpen = ref(false);
 const isRestoring = ref(false);
 const isRestoreSuccess = ref(false);
+
+const isPermanentDeleteOpen = ref(false);
+const isPermanentDeleting = ref(false);
+const isPermanentDeleteSuccess = ref(false);
+const clientToPermanentDelete = ref<any>(null);
+
+const isErrorOpen = ref(false);
+const errorTitle = ref('');
+const errorSubtitle = ref('');
+
 const isSuccess = ref(false);
 const successTitle = ref('');
 const successSubtitle = ref('');
@@ -220,6 +257,30 @@ async function confirmRestoreClient() {
     isRestoring.value = false;
     if (ok) {
       isRestoreSuccess.value = true;
+    }
+  }
+}
+
+function permanentDeleteClientAction(client: any) {
+  closeMenu();
+  clientToPermanentDelete.value = client;
+  isPermanentDeleteOpen.value = true;
+}
+
+async function confirmPermanentDeleteClient() {
+  if (clientToPermanentDelete.value) {
+    isPermanentDeleting.value = true;
+    const ok = await clientStore.deleteClientPermanently(clientToPermanentDelete.value.id);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    isPermanentDeleting.value = false;
+    isPermanentDeleteOpen.value = false; // Close the confirmation modal
+
+    if (ok) {
+      isPermanentDeleteSuccess.value = true;
+    } else {
+      errorTitle.value = "Action refusée";
+      errorSubtitle.value = clientStore.errorMessage || "Vous n'êtes pas autorisé à réaliser cette action.";
+      isErrorOpen.value = true;
     }
   }
 }
