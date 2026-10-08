@@ -157,18 +157,18 @@ onMounted(() => {
 
 <style scoped>
 .main-section { display: flex; flex-direction: column; height: 100%; }
-.content-container { padding: 2rem; flex: 1; display: flex; flex-direction: column; }
+.content-container { padding: 0.5rem; flex: 1; display: flex; flex-direction: column; }
 
 .clients-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 2.5rem;
+  gap: 0.5rem;
   width: 100%;
 }
 
 @media (min-width: 1200px) {
   .clients-grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   }
 }
 
