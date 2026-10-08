@@ -7,6 +7,17 @@ from rest_framework import status
 from account.models import CustomUser
 from django.db import transaction
 
+def get_firm_users(user):
+    if user.account_type == CustomUser.AccountType.COLLABORATOR:
+        try:
+            main_account = user.collaborator_profile.main_account
+        except Exception:
+            main_account = user
+    else:
+        main_account = user
+        
+    collaborators = CustomUser.objects.filter(collaborator_profile__main_account=main_account)
+    return [main_account] + list(collaborators)
 
 class ManageClient(APIView):
 
@@ -38,8 +49,9 @@ class ManageClient(APIView):
 
     def get(self, request):
         is_trash = request.query_params.get('trash', 'false').lower() == 'true'
-        # Récupère uniquement les clients gérés par l'utilisateur connecté
-        clients = Client.objects.filter(charge_de_clientele=request.user, is_deleted=is_trash)
+        
+        users_to_include = get_firm_users(request.user)
+        clients = Client.objects.filter(charge_de_clientele__in=users_to_include, is_deleted=is_trash)
 
         serializer = ClientSerializer(clients, many=True)
 
@@ -47,7 +59,8 @@ class ManageClient(APIView):
 
     def put(self, request, client_id, *args, **kwargs):
         try:
-            client = Client.objects.get(id=client_id)
+            users_to_include = get_firm_users(request.user)
+            client = Client.objects.get(id=client_id, charge_de_clientele__in=users_to_include)
             serializer = ClientSerializer(client, data=request.data, partial=True, context={'request': request})
             
             if serializer.is_valid():
@@ -83,10 +96,9 @@ class ManageClient(APIView):
 
     def patch(self, request, client_id, *args, **kwargs):
         try:
-            # 1. On récupère le client à mettre à jour
-            client = Client.objects.get(id=client_id)
+            users_to_include = get_firm_users(request.user)
+            client = Client.objects.get(id=client_id, charge_de_clientele__in=users_to_include)
 
-            # 2. On serialize les données
             serializer = ClientSerializer(client, data=request.data, partial=True, context={'request': request})
 
             if serializer.is_valid():
@@ -121,8 +133,8 @@ class ManageClient(APIView):
 
     def delete(self, request, client_id, *args, **kwargs):
         try:
-            # Sécurité supplémentaire : on s'assure que le client appartient bien à l'utilisateur
-            client = Client.objects.get(id=client_id, charge_de_clientele=request.user)
+            users_to_include = get_firm_users(request.user)
+            client = Client.objects.get(id=client_id, charge_de_clientele__in=users_to_include)
             
             # Mise à la corbeille (Soft Delete)
             client.is_deleted = True
@@ -151,7 +163,9 @@ class RestoreClient(APIView):
 
     def post(self, request, client_id, *args, **kwargs):
         try:
-            client = Client.objects.get(id=client_id, charge_de_clientele=request.user)
+            users_to_include = get_firm_users(request.user)
+            client = Client.objects.get(id=client_id, charge_de_clientele__in=users_to_include)
+            
             client.is_deleted = False
             client.save(update_fields=['is_deleted'])
             
