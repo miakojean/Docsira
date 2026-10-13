@@ -14,6 +14,7 @@
           @share="shareClient"
           @archive="archiveClient"
           @delete="deleteClient"
+          @folders="openFolders"
         />
       </div>
 
@@ -39,6 +40,7 @@
 
     <addClientModale :isOpen="isOpen" @close="isOpen = false" @created="onCreated" />
     <viewClientModale :isOpen="isViewOpen" :client="selectedClient" @close="isViewOpen = false" />
+    <clientDossiersModale :isOpen="isFoldersOpen" :client="selectedClient" @close="isFoldersOpen = false" />
     <editClientModale :isOpen="isEditOpen" :client="selectedClient" @close="isEditOpen = false" @updated="onUpdated" />
     <deleteModale
       :isOpen="isDeleteOpen"
@@ -73,6 +75,7 @@ import emptyCards from '../../cards/emptyCards.vue';
 import customerCard from '../../cards/customerCard.vue';
 import addClientModale from '../../modale/addClientModale.vue';
 import viewClientModale from '../../modale/viewClientModale.vue';
+import clientDossiersModale from '../../modale/clientDossiersModale.vue';
 import editClientModale from '../../modale/editClientModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
@@ -81,6 +84,7 @@ import { useClientStore } from '../../../stores/clientStore';
 const clientStore = useClientStore();
 const isOpen = ref(false);
 const isViewOpen = ref(false);
+const isFoldersOpen = ref(false);
 const isEditOpen = ref(false);
 const isDeleteOpen = ref(false);
 const isDeleting = ref(false);
@@ -118,6 +122,11 @@ function onUpdated() {
 function viewClient(client: any) {
   selectedClient.value = client;
   isViewOpen.value = true;
+}
+
+function openFolders(client: any) {
+  selectedClient.value = client;
+  isFoldersOpen.value = true;
 }
 
 function editClient(client: any) {
