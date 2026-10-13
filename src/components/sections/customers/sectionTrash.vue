@@ -147,9 +147,7 @@ import deleteModale from '../../modale/deleteModale.vue';
 import errorModale from '../../modale/errorModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
 import { useClientStore } from '../../../stores/clientStore';
-import { useAuthStore } from '../../../stores/authStore';
 
-const authStore = useAuthStore();
 const clientStore = useClientStore();
 const isOpen = ref(false);
 const isViewOpen = ref(false);
