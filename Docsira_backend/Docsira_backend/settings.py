@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
+import os
+from django.utils.translation import gettext_lazy as _
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -55,8 +58,10 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'corsheaders',
+    # Applications locales
     'account',
-    'Client'
+    'Client',
+    'affairs'
 ]
 
 REST_FRAMEWORK = {
@@ -174,3 +179,26 @@ SIMPLE_JWT = {
     'AUTH_COOKIE_HTTP_ONLY': True,  # HttpOnly pour sécurité
     'AUTH_COOKIE_SAMESITE': 'Lax',  # ou 'Strict' selon vos besoins
 }
+
+# Internationalization
+# https://docs.djangoproject.com/en/5.2/topics/i18n/
+
+LANGUAGE_CODE = 'fr-fr'  # CORRECTION: Une seule définition
+
+TIME_ZONE = 'Africa/Abidjan'  # CORRECTION: Fuseau horaire d'Abidjan
+
+USE_I18N = True
+
+USE_L10N = True  # AJOUT: Pour la localisation des formats
+
+USE_TZ = True
+
+# Langues supportées
+LANGUAGES = [
+    ('fr', _('French')),
+    ('en', _('English')),
+]
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
