@@ -90,7 +90,7 @@
 <script setup lang="ts">
 import { defineProps, defineEmits, ref } from 'vue';
 
-const props = defineProps({
+defineProps({
   client: {
     type: Object,
     required: true

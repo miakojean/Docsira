@@ -10,10 +10,11 @@ from Client.serializers import ClientSerializer
 class AffairSerializer(serializers.ModelSerializer):
     # 1. ÉCRITURE : Champs virtuels pour intercepter les UUID envoyés via le POST[cite: 1, 3]
     client_id = serializers.PrimaryKeyRelatedField(
-        queryset=Client.objects.all(), source='client', write_only=True
+        queryset=Client.objects.all(), source='client', write_only=True, required=False
     )
     collaborator_id = serializers.PrimaryKeyRelatedField(
-        queryset=Collaborator.objects.all(), source='collaborator', write_only=True
+        queryset=Collaborator.objects.all(), source='collaborator', write_only=True,
+        required=False, allow_null=True
     )
 
     # 2. LECTURE : Champs imbriqués pour l'affichage Frontend[cite: 3]

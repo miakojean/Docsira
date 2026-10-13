@@ -1,90 +1,189 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import type { ClientPayload } from "./clientStore";
+import { api } from "../services/api";
+import type { ClientListItem } from "./clientStore";
 
-/**
- * Dossier du workspace.
- * ⚠️ DONNÉES STATIQUES : le serveur workspace (backend + frontend) n'est pas encore
- * disponible. Quand il le sera, il suffira de remplacer `fetchWorkspaceDossiers`
- * par un appel API (ex: api("/Workspace/dossiers/", "GET")) et de persister les
- * liens côté serveur dans `linkDossier` / `unlinkDossier`.
- */
-export interface WorkspaceDossier {
+/** Dossier (Affair) renvoyé par GET /affairs/ (AffairSerializer). */
+export interface Dossier {
   id: string;
-  client?: ClientPayload;
-  name: string;
-  reference: string;
-  fileCount: number;
-  updatedAt: string; // ISO
+  reference_affair: string;
+  title: string;
+  type_affair: string;
+  statut: string;
+  creation_date: string;
+  client: ClientListItem | null;
 }
 
-const STATIC_WORKSPACE_DOSSIERS: WorkspaceDossier[] = [
-  { id: "ws-001", name: "Contrat de bail commercial", reference: "DOS-2026-001", fileCount: 12, updatedAt: "2026-09-28T10:15:00Z" },
-  { id: "ws-002", name: "Litige foncier – Cocody", reference: "DOS-2026-002", fileCount: 27, updatedAt: "2026-10-02T14:40:00Z" },
-  { id: "ws-003", name: "Constitution de société SARL", reference: "DOS-2026-003", fileCount: 8, updatedAt: "2026-10-05T09:05:00Z" },
-  { id: "ws-004", name: "Succession famille Koné", reference: "DOS-2026-004", fileCount: 19, updatedAt: "2026-10-07T16:20:00Z" },
-  { id: "ws-005", name: "Recouvrement de créances", reference: "DOS-2026-005", fileCount: 5, updatedAt: "2026-10-09T11:30:00Z" },
-  { id: "ws-006", name: "Divorce par consentement mutuel", reference: "DOS-2026-006", fileCount: 14, updatedAt: "2026-10-10T08:50:00Z" },
-];
-
-const STORAGE_KEY = "docsira_client_dossier_links";
-
-function loadLinks(): Record<string, string[]> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+export interface DossierPayload {
+  title: string;
+  client_id: string;
+  type_affair?: string;
 }
 
 export const useClientDossierStore = defineStore("clientDossier", () => {
-  const workspaceDossiers = ref<WorkspaceDossier[]>([]);
-  // clientId -> liste d'ids de dossiers liés
-  const links = ref<Record<string, string[]>>(loadLinks());
+  // clientId -> dossiers du client
+  const dossiersByClient = ref<Record<string, Dossier[]>>({});
+  // Tous les dossiers du cabinet (page workspace)
+  const allDossiers = ref<Dossier[]>([]);
   const isLoading = ref(false);
+  const errorMessage = ref("");
+  const fieldErrors = ref<Record<string, string>>({});
 
-  function persist() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(links.value));
-  }
-
-  // Simule un appel au serveur workspace
-  async function fetchWorkspaceDossiers() {
+  async function fetchAllDossiers() {
     isLoading.value = true;
+    errorMessage.value = "";
     try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      workspaceDossiers.value = STATIC_WORKSPACE_DOSSIERS;
+      const response = await api("/affairs/", "GET");
+      if (!response.ok) {
+        errorMessage.value = "Impossible de charger les dossiers";
+        return false;
+      }
+      const data = await response.json();
+      allDossiers.value = Array.isArray(data) ? data : [];
       return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
     } finally {
       isLoading.value = false;
     }
   }
 
-  function getLinkedDossiers(clientId: string): WorkspaceDossier[] {
-    const ids = links.value[clientId] ?? [];
-    return STATIC_WORKSPACE_DOSSIERS.filter((d) => ids.includes(d.id));
+  async function fetchClientDossiers(clientId: string) {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/?client=${clientId}`, "GET");
+      if (!response.ok) {
+        errorMessage.value = "Impossible de charger les dossiers";
+        return false;
+      }
+      const data = await response.json();
+      dossiersByClient.value = {
+        ...dossiersByClient.value,
+        [clientId]: Array.isArray(data) ? data : [],
+      };
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
   }
 
-  function linkDossier(clientId: string, dossierId: string) {
-    const current = links.value[clientId] ?? [];
-    if (current.includes(dossierId)) return;
-    links.value = { ...links.value, [clientId]: [...current, dossierId] };
-    persist();
+  async function addDossier(payload: DossierPayload) {
+    isLoading.value = true;
+    errorMessage.value = "";
+    fieldErrors.value = {};
+    try {
+      const response = await api("/affairs/", "POST", {
+        type_affair: "AUTRE",
+        ...payload,
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        for (const [key, value] of Object.entries(data ?? {})) {
+          fieldErrors.value[key] = Array.isArray(value) ? String(value[0]) : String(value);
+        }
+        errorMessage.value = "Création du dossier impossible";
+        return false;
+      }
+      const current = dossiersByClient.value[payload.client_id] ?? [];
+      dossiersByClient.value = {
+        ...dossiersByClient.value,
+        [payload.client_id]: [data, ...current],
+      };
+      allDossiers.value = [data, ...allDossiers.value];
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
   }
 
-  function unlinkDossier(clientId: string, dossierId: string) {
-    const current = links.value[clientId] ?? [];
-    links.value = { ...links.value, [clientId]: current.filter((id) => id !== dossierId) };
-    persist();
+  async function updateDossier(
+    id: string,
+    payload: { title?: string; client_id?: string; type_affair?: string; statut?: string }
+  ) {
+    isLoading.value = true;
+    errorMessage.value = "";
+    fieldErrors.value = {};
+    try {
+      const response = await api(`/affairs/${id}/`, "PATCH", payload);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        for (const [key, value] of Object.entries(data ?? {})) {
+          fieldErrors.value[key] = Array.isArray(value) ? String(value[0]) : String(value);
+        }
+        errorMessage.value = "Modification du dossier impossible";
+        return false;
+      }
+
+      // Mise à jour dans allDossiers
+      const idx = allDossiers.value.findIndex((d) => d.id === id);
+      if (idx !== -1) {
+        allDossiers.value[idx] = data;
+      }
+
+      // Mise à jour dans dossiersByClient
+      for (const clientId of Object.keys(dossiersByClient.value)) {
+        dossiersByClient.value[clientId] = dossiersByClient.value[clientId].filter((d) => d.id !== id);
+      }
+      if (data.client?.id) {
+        const cId = data.client.id;
+        if (dossiersByClient.value[cId]) {
+          dossiersByClient.value[cId] = [data, ...dossiersByClient.value[cId]];
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function deleteDossier(id: string) {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/${id}/`, "DELETE");
+      if (!response.ok) {
+        errorMessage.value = "Suppression du dossier impossible";
+        return false;
+      }
+      allDossiers.value = allDossiers.value.filter((d) => d.id !== id);
+      for (const clientId of Object.keys(dossiersByClient.value)) {
+        dossiersByClient.value[clientId] = dossiersByClient.value[clientId].filter((d) => d.id !== id);
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   return {
-    workspaceDossiers,
-    links,
+    dossiersByClient,
+    allDossiers,
     isLoading,
-    fetchWorkspaceDossiers,
-    getLinkedDossiers,
-    linkDossier,
-    unlinkDossier,
+    errorMessage,
+    fieldErrors,
+    fetchAllDossiers,
+    fetchClientDossiers,
+    addDossier,
+    updateDossier,
+    deleteDossier,
   };
 });

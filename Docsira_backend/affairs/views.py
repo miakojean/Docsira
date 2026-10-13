@@ -21,19 +21,22 @@ class AffairView(APIView):
     def get(self, request, affair_id=None):
         if affair_id:
             try:
-                affair = Affair.objects.get(id=affair_id)
+                affair = Affair.objects.get(id=affair_id, firm=request.user)
                 serializer = AffairSerializer(affair)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except Affair.DoesNotExist:
                 return Response({"error": "Affair not found."}, status=status.HTTP_404_NOT_FOUND)
         else:
             affairs = Affair.objects.filter(firm=request.user)
+            client_id = request.query_params.get('client')
+            if client_id:
+                affairs = affairs.filter(client_id=client_id)
             serializer = AffairSerializer(affairs, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request, affair_id):
         try:
-            affair = Affair.objects.get(id=affair_id)
+            affair = Affair.objects.get(id=affair_id, firm=request.user)
             serializer = AffairSerializer(affair, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -44,7 +47,7 @@ class AffairView(APIView):
 
     def delete(self, request, affair_id):
         try:
-            affair = Affair.objects.get(id=affair_id)
+            affair = Affair.objects.get(id=affair_id, firm=request.user)
             affair.delete()
             return Response({"message": "Affair deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Affair.DoesNotExist:

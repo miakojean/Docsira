@@ -11,6 +11,7 @@ const routes: RouteRecordRaw[] = [
 
   // Dashboard
   { path: '/dashboard', component: () => import('../pages/dashboard/index.vue'), name: 'dashboard' },
+  { path: '/dashboard/affairs', component: () => import('../pages/dashboard/affairs.vue'), name: 'workspace' },
   { path: '/dashboard/mySpace', component: () => import('../pages/dashboard/mySpace.vue'), name: 'mySpace' },
   { path: '/dashboard/mySpace/:folderPath', component: () => import('../pages/dashboard/mySpaceFolder.vue') },
   { path: '/dashboard/settings', component: () => import('../pages/dashboard/settings.vue'), name: 'settings' },
