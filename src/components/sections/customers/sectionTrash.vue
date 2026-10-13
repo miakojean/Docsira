@@ -15,7 +15,7 @@
               <th>Localisation</th>
               <th>Statut</th>
               <th>Créé le</th>
-              <th class="text-right">Actions</th>
+              <th class="text-right">Actions</th> 
             </tr>
           </thead>
           <tbody>
