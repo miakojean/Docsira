@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Affair
+from .models import Affair, Document
 from Client.models import Client
 from account.models import Collaborator
 
@@ -28,3 +28,12 @@ class AffairSerializer(serializers.ModelSerializer):
         fields = '__all__'
         # On empêche formellement l'écrasement de ces champs système[cite: 2, 3]
         read_only_fields = ['reference_affair', 'path_affair', 'firm']
+
+class DocumentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Document
+        fields = ['id', 'affair', 'title', 'file', 'uploaded_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.affair.reference_affair})"

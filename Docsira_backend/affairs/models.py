@@ -5,7 +5,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 # Relation 
-from account.models import CustomUser,Collaborator
+from account.models import CustomUser, Collaborator
 from Client.models import Client
 # Create your models here.
 
@@ -158,3 +158,21 @@ class Affair(models.Model):
             os.makedirs(self.path_affair, exist_ok=True)
         except Exception as e:
             print(f"❌ Erreur création dossier client: {e}")
+
+class Document(models.Model):
+    """
+        Modèle pour gérer les documents liés à une affaire
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    affair = models.ForeignKey(Affair, on_delete=models.CASCADE, related_name='documents', verbose_name=_("Affaire"))
+    title = models.CharField(_("Titre du document"), max_length=200)
+    file = models.FileField(_("Fichier"), upload_to='documents/%Y/%m/%d/')
+    uploaded_at = models.DateTimeField(_("Date de téléchargement"), auto_now_add=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = _("Document")
+        verbose_name_plural = _("Documents")
+
+    def __str__(self):
+        return f"{self.title} ({self.affair.reference_affair})"
