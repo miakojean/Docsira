@@ -24,9 +24,13 @@
       "allow": [
         { "path": "$HOME/**" },
         { "path": "$DOCUMENT/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DESKTOP/**" },
         { "path": "$PICTURE/**" },
         { "path": "$APPDATA/*" },
-        { "path": "D:/DOCSIRA/**" }
+        { "path": "D:/DOCSIRA/**" },
+        { "path": "C:/**" },
+        { "path": "D:/**" }
       ]
     },
     {
@@ -34,9 +38,13 @@
       "allow": [
         { "path": "$HOME/**" },
         { "path": "$DOCUMENT/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DESKTOP/**" },
         { "path": "$PICTURE/**" },
         { "path": "$APPDATA/*" },
-        { "path": "D:/DOCSIRA/**" }
+        { "path": "D:/DOCSIRA/**" },
+        { "path": "C:/**" },
+        { "path": "D:/**" }
       ]
     },
     {
@@ -44,10 +52,16 @@
       "allow": [
         { "path": "$APPDATA/*" },
         { "path": "$HOME/**" },
-        { "path": "D:/DOCSIRA/**" }
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DESKTOP/**" },
+        { "path": "D:/DOCSIRA/**" },
+        { "path": "C:/**" },
+        { "path": "D:/**" }
       ]
     },
     "dialog:default",
+    "fs:allow-write-file",
     {
       "identifier": "opener:allow-open-path",
       "allow": [{ "path": "/path/to/file" }, { "path": "$APPDATA/file" }]

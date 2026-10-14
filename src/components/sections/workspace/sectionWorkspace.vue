@@ -20,8 +20,9 @@
           v-for="d in filteredDossiers"
           :key="d.id"
           :dossier="d"
-          @goTo="openEdit(d)"
-          @open="openEdit(d)"
+          @goTo="openDossier(d)"
+          @open="openDossier(d)"
+          @details="openDossier(d)"
           @edit="openEdit(d)"
           @rename="openEdit(d)"
           @delete="openDelete(d)"
@@ -78,6 +79,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import headerNav from '../../navbar/headerNav.vue';
 import emptyCards from '../../cards/emptyCards.vue';
 import affairsCards from '../../cards/affairsCards.vue';
@@ -88,6 +90,11 @@ import SuccesModale from '../../modale/succesModale.vue';
 import { useClientDossierStore, type Dossier } from '../../../stores/dossierStore';
 
 const store = useClientDossierStore();
+const router = useRouter();
+
+function openDossier(d: Dossier) {
+  router.push(`/dashboard/affairs/${d.id}`);
+}
 const isAddOpen = ref(false);
 const isSuccess = ref(false);
 const successTitle = ref('');

@@ -12,6 +12,23 @@ export interface Dossier {
   statut: string;
   creation_date: string;
   client: ClientListItem | null;
+  documents_count?: number;
+}
+
+/** Récupère toutes les pages d'un endpoint DRF paginé (ou une simple liste). */
+async function fetchAllPages(url: string): Promise<Dossier[] | null> {
+  const items: Dossier[] = [];
+  const separator = url.includes("?") ? "&" : "?";
+  let page = 1;
+  for (;;) {
+    const response = await api(`${url}${separator}page=${page}`, "GET");
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (Array.isArray(data)) return data;
+    items.push(...(data.results ?? []));
+    if (!data.next) return items;
+    page += 1;
+  }
 }
 
 export interface DossierPayload {
@@ -33,13 +50,12 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
     isLoading.value = true;
     errorMessage.value = "";
     try {
-      const response = await api("/affairs/", "GET");
-      if (!response.ok) {
+      const items = await fetchAllPages("/affairs/");
+      if (!items) {
         errorMessage.value = "Impossible de charger les dossiers";
         return false;
       }
-      const data = await response.json();
-      allDossiers.value = Array.isArray(data) ? data : [];
+      allDossiers.value = items;
       return true;
     } catch (error) {
       console.error(error);
@@ -54,15 +70,14 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
     isLoading.value = true;
     errorMessage.value = "";
     try {
-      const response = await api(`/affairs/?client=${clientId}`, "GET");
-      if (!response.ok) {
+      const items = await fetchAllPages(`/affairs/?client=${clientId}`);
+      if (!items) {
         errorMessage.value = "Impossible de charger les dossiers";
         return false;
       }
-      const data = await response.json();
       dossiersByClient.value = {
         ...dossiersByClient.value,
-        [clientId]: Array.isArray(data) ? data : [],
+        [clientId]: items,
       };
       return true;
     } catch (error) {
@@ -71,6 +86,18 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
       return false;
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /** Charge un dossier précis (page de détail). */
+  async function fetchDossier(id: string): Promise<Dossier | null> {
+    try {
+      const response = await api(`/affairs/${id}/`, "GET");
+      if (!response.ok) return null;
+      return (await response.json()) as Dossier;
+    } catch (error) {
+      console.error(error);
+      return null;
     }
   }
 
@@ -182,6 +209,7 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
     fieldErrors,
     fetchAllDossiers,
     fetchClientDossiers,
+    fetchDossier,
     addDossier,
     updateDossier,
     deleteDossier,

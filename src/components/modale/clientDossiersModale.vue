@@ -33,7 +33,7 @@
             </div>
 
             <ul v-else class="dossier-list">
-              <li v-for="d in dossiers" :key="d.id" class="dossier-item">
+              <li v-for="d in dossiers" :key="d.id" class="dossier-item selectable" title="Ouvrir le dossier" @click="openDossier(d)">
                 <div class="dossier-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
@@ -140,6 +140,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useClientDossierStore, type Dossier } from '../../stores/dossierStore';
 import { useClientStore, type ClientListItem } from '../../stores/clientStore';
 import editDossierModale from './editDossierModale.vue';
@@ -153,6 +154,12 @@ const props = defineProps<{
 defineEmits(['close']);
 
 const dossierStore = useClientDossierStore();
+const router = useRouter();
+
+function openDossier(d: Dossier) {
+  document.body.style.overflow = '';
+  router.push(`/dashboard/affairs/${d.id}`);
+}
 const clientStore = useClientStore();
 
 const mode = ref<'list' | 'add'>('list');

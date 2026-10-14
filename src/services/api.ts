@@ -63,9 +63,12 @@ export async function api(
 ): Promise<Response> {
   const { requireAuth = true, _isRetry = false } = options;
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
+
+  // Pour un FormData, le Content-Type (avec boundary) doit être posé automatiquement
+  const headers: Record<string, string> = isFormData
+    ? {}
+    : { "Content-Type": "application/json" };
 
   if (requireAuth) {
     try {
@@ -87,7 +90,8 @@ export async function api(
   const response = await fetch(`${BASE_URL}${normalizedEndpoint}`, {
     method,
     headers,
-    body: data === undefined ? undefined : JSON.stringify(data),
+    body:
+      data === undefined ? undefined : isFormData ? (data as FormData) : JSON.stringify(data),
   });
 
   // Intercepteur 401 : on tente un refresh puis on relance UNE seule fois
