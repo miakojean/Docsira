@@ -1,9 +1,11 @@
 import os
 import uuid
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
+
 # Relation 
 from account.models import CustomUser, Collaborator
 from Client.models import Client
@@ -62,6 +64,12 @@ class Affair(models.Model):
 
     # Observations et notes
     observations = models.TextField(_("Observations"), blank=True)
+    progression = models.PositiveSmallIntegerField(
+        _("Progression (%)"),
+        default=10,  # 10 % dès la création du dossier
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        editable=False,
+    )
 
     #Archivage et suppression
     is_archived = models.BooleanField(_("Archivé"), default=False)
@@ -159,10 +167,55 @@ class Affair(models.Model):
         except Exception as e:
             print(f"❌ Erreur création dossier client: {e}")
 
+    def calculer_progression(self):
+        """Retourne le pourcentage selon le jalon le plus avancé atteint."""
+        docs = self.documents.all()
+        types = set(docs.values_list('type_document', flat=True))
+        constitution_validee = docs.filter(
+            type_document='CONSTITUTION', valide=True
+        ).exists()
+
+        if 'LIVRABLES' in types:
+            return 100
+        if 'OPERATIONS' in types:
+            return 95
+        if constitution_validee:
+            return 60
+        if 'IDENTIFICATION' in types:
+            return 45
+        return 10
+
+    def recalculer_progression(self):
+        """Met à jour la progression sans repasser par save() (évite la logique de référence/dossier physique)."""
+        Affair.objects.filter(pk=self.pk).update(
+            progression=self.calculer_progression(),
+            last_activiation_date=timezone.now(),  # update() ne déclenche pas auto_now
+        )
+
+class DocumentQuerySet(models.QuerySet):
+    def delete(self):
+        # Couvre queryset.delete() et l'action « supprimer la sélection » de l'admin
+        affair_ids = set(self.values_list('affair_id', flat=True))
+        with transaction.atomic():
+            result = super().delete()
+            for affair in Affair.objects.filter(pk__in=affair_ids):
+                affair.recalculer_progression()
+        return result
+
 class Document(models.Model):
     """
         Modèle pour gérer les documents liés à une affaire
     """
+    TYPE_DOCUMENTS_CHOICES = [
+        ('IDENTIFICATION', 'Documents d\'identification'),
+        ('CONSTITUTION', 'Document de constitution'),
+        ('PROCEDURES', 'Prcédures engagées'),
+        ('OPERATIONS', 'Opérations documentées'),
+        ('LIVRABLES', 'Livrables pour clôture')
+    ]
+
+    objects = DocumentQuerySet.as_manager()
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     affair = models.ForeignKey(Affair, on_delete=models.CASCADE, related_name='documents', verbose_name=_("Affaire"))
     title = models.CharField(_("Titre du document"), max_length=200)
@@ -176,3 +229,26 @@ class Document(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.affair.reference_affair})"
+
+    def save(self, *args, **kwargs):
+        # Si le document change d'affaire, on recalcule aussi l'ancienne
+        ancienne_affair_id = None
+        if self.pk:
+            ancienne_affair_id = (
+                Document.objects.filter(pk=self.pk)
+                .values_list('affair_id', flat=True)
+                .first()
+            )
+
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            self.affair.recalculer_progression()
+            if ancienne_affair_id and ancienne_affair_id != self.affair_id:
+                Affair.objects.get(pk=ancienne_affair_id).recalculer_progression()
+
+    def delete(self, *args, **kwargs):
+        affair = self.affair
+        with transaction.atomic():
+            result = super().delete(*args, **kwargs)
+            affair.recalculer_progression()
+        return result

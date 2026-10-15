@@ -388,6 +388,7 @@ function onAction(action: CardAction) {
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
+  max-width: 320px;
 }
 
 .card:hover {

@@ -140,7 +140,7 @@ function formatDate(value: string) {
 .customer-card {
   background-color: #fcfbfb;
   border-radius: 20px;
-  padding: 1.5rem;
+  padding: 1rem;
   color: #ffffff;
   font-family: 'Inter', system-ui, sans-serif;
   box-shadow: 0 10px 30px rgba(0,0,0,0.1);
@@ -149,7 +149,7 @@ function formatDate(value: string) {
   gap: 1.5rem;
   position: relative;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  min-width: 350px;
+  max-width: 350px;
 }
 
 .card--active {
