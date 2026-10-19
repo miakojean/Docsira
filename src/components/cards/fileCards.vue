@@ -1,10 +1,10 @@
 <template>
-    <li class="file-item" :class="`file-item--${view}`" @click="emit('open', filePath)">
+    <li class="file-item" :class="`file-item--${view}`" @click="emit('open', itemPayload)">
         <div class="file-info flex items-center gap-4 truncate">
-            <div v-if="isImage" class="image-box">
+            <div v-if="isImage && imageSource" class="image-box">
                 <img :src="imageSource" :alt="fileName" class="file-preview" @error="imageLoadFailed = true" />
             </div>
-            <div v-else-if="hasPreview && view === 'grid'" class="preview-box">
+            <div v-else-if="hasPreview && view === 'grid' && previewSource" class="preview-box">
                 <iframe :src="previewSource" class="file-preview pointer-events-none" frameborder="0" scrolling="no" tabindex="-1"></iframe>
             </div>
             <div v-else class="icon-box" :class="fileColorClass">
@@ -15,19 +15,40 @@
             </div>
 
             <div class="file-text truncate">
-                <h4 class="file-name truncate">{{ fileName }}</h4>
-                <span class="file-path truncate">{{ fileExtension.toUpperCase() }} • Modifié récemment</span>
+                <div class="file-title-row flex items-center gap-2 truncate">
+                    <h4 class="file-name truncate" :title="fileName">{{ fileName }}</h4>
+                    <span v-if="document?.version && document.version > 1" class="version-badge">v{{ document.version }}</span>
+                </div>
+                <span class="file-path truncate">{{ subText }}</span>
             </div>
         </div>
 
         <div class="actions-group flex items-center gap-1">
-            <button class="action-btn" @click.stop="emit('rename', filePath)" title="Renommer">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+            <!-- Bouton Visualiser avec l'œil -->
+            <button class="action-btn" @click.stop="emit('preview', itemPayload)" title="Visualiser le fichier">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="size-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                </svg>
             </button>
-            <button class="action-btn" @click.stop="emit('share', filePath)" title="Partager">
+
+            <!-- Bouton Télécharger (si document cloud) ou Partager (si fichier local) -->
+            <button v-if="document" class="action-btn" @click.stop="emit('download', itemPayload)" title="Télécharger sur l'ordinateur">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="size-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+            </button>
+            <button v-else class="action-btn" @click.stop="emit('share', itemPayload)" title="Partager">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" /></svg>
             </button>
-            <button class="action-btn text-red-500 hover:bg-red-50" @click.stop="emit('delete', filePath)" title="Supprimer">
+
+            <!-- Bouton Renommer -->
+            <button class="action-btn" @click.stop="emit('rename', itemPayload)" title="Renommer">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+            </button>
+
+            <!-- Bouton Supprimer -->
+            <button class="action-btn text-red-500 hover:bg-red-50" @click.stop="emit('delete', itemPayload)" title="Supprimer">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
             </button>
         </div>
@@ -39,49 +60,103 @@ import { computed, ref } from 'vue';
 import { convertFileSrc } from '@tauri-apps/api/core';
 
 const props = defineProps<{
-    filePath: string;
+    filePath?: string;
+    document?: any;
     view?: 'list' | 'grid';
 }>();
+
 const emit = defineEmits<{
-    open: [filePath: string];
-    rename: [filePath: string];
-    share: [filePath: string];
-    delete: [filePath: string];
+    open: [payload: any];
+    preview: [payload: any];
+    rename: [payload: any];
+    share: [payload: any];
+    download: [payload: any];
+    delete: [payload: any];
 }>();
+
+const itemPayload = computed(() => props.document ?? props.filePath);
 
 const imageLoadFailed = ref(false);
 const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'];
 const previewExtensions = ['pdf', 'txt', 'html', 'md', 'csv', 'json'];
 
-const fileName = computed(() => props.filePath.split(/[/\\]/).pop() || 'Fichier inconnu');
-const fileExtension = computed(() => {
-    const parts = fileName.value.split('.');
-    return parts.length > 1 ? parts.pop() || '' : 'Fichier';
+const fileName = computed(() => {
+    if (props.document) {
+        return props.document.title || props.document.file_name || 'Document';
+    }
+    if (props.filePath) {
+        return props.filePath.split(/[/\\]/).pop() || 'Fichier inconnu';
+    }
+    return 'Fichier inconnu';
 });
 
-const isImage = computed(() => imageExtensions.includes(fileExtension.value.toLowerCase()) && !imageLoadFailed.value);
-const isPdf = computed(() => fileExtension.value.toLowerCase() === 'pdf');
-const hasPreview = computed(() => previewExtensions.includes(fileExtension.value.toLowerCase()) && !imageLoadFailed.value);
+const fileExtension = computed(() => {
+    if (props.document?.extension) {
+        return String(props.document.extension).toLowerCase();
+    }
+    const parts = fileName.value.split('.');
+    return parts.length > 1 ? (parts.pop() || '').toLowerCase() : '';
+});
 
-const imageSource = computed(() => convertFileSrc(props.filePath));
+function formatSize(bytes?: number) {
+    if (!bytes || bytes <= 0) return '0 Ko';
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} Ko`;
+    return `${(kb / 1024).toFixed(1)} Mo`;
+}
+
+function formatDate(iso?: string) {
+    if (!iso) return '';
+    try {
+        return new Date(iso).toLocaleDateString('fr-FR', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+    } catch {
+        return iso;
+    }
+}
+
+const subText = computed(() => {
+    const ext = fileExtension.value ? fileExtension.value.toUpperCase() : 'FICHIER';
+    if (props.document) {
+        const size = formatSize(props.document.size);
+        const date = formatDate(props.document.uploaded_at);
+        return date ? `${ext} • ${size} • ${date}` : `${ext} • ${size}`;
+    }
+    return `${ext} • Modifié récemment`;
+});
+
+const isImage = computed(() => imageExtensions.includes(fileExtension.value) && !imageLoadFailed.value);
+const isPdf = computed(() => fileExtension.value === 'pdf');
+const hasPreview = computed(() => previewExtensions.includes(fileExtension.value) && !imageLoadFailed.value);
+
+const imageSource = computed(() => {
+    if (props.filePath) return convertFileSrc(props.filePath);
+    return '';
+});
+
 const previewSource = computed(() => {
+    if (!props.filePath) return '';
     if (isPdf.value) return `${imageSource.value}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
     return imageSource.value;
 });
 
 const fileColorClass = computed(() => {
-    const extension = fileExtension.value.toLowerCase();
+    const extension = fileExtension.value;
     if (extension === 'pdf') return 'is-pdf';
-    if (['doc', 'docx', 'txt'].includes(extension)) return 'is-word';
-    if (['xls', 'xlsx', 'csv'].includes(extension)) return 'is-excel';
+    if (['doc', 'docx', 'txt', 'rtf', 'odt'].includes(extension)) return 'is-word';
+    if (['xls', 'xlsx', 'csv', 'ods'].includes(extension)) return 'is-excel';
+    if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(extension)) return 'is-image';
     return 'is-default';
 });
 </script>
 
 <style scoped>
 .file-item { 
-    padding: 0.5rem; 
-    border-radius: 8px; 
+    padding: 0.5rem 0.75rem; 
+    border-radius: 12px; 
     border: 1px solid transparent; 
     transition: all 0.2s ease; 
     cursor: pointer; 
@@ -90,7 +165,10 @@ const fileColorClass = computed(() => {
     align-items: center; 
     justify-content: space-between; 
 }
-.file-item--list:hover { background-color: #f8fafc; }
+.file-item--list:hover { 
+    background-color: #f8fafc; 
+    border-color: #e2e8f0;
+}
 
 .file-info { flex: 1; min-width: 0; }
 .icon-box, .image-box, .preview-box { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 8px; flex: 0 0 40px; overflow: hidden; }
@@ -100,10 +178,22 @@ const fileColorClass = computed(() => {
 .is-pdf { background-color: #fee2e2; color: #ef4444; }
 .is-word { background-color: #e0e7ff; color: #4f46e5; }
 .is-excel { background-color: #dcfce7; color: #16a34a; }
+.is-image { background-color: #f3e8ff; color: #9333ea; }
 .is-default { background-color: #f3f4f6; color: #6b7280; }
 .file-text { display: flex; flex-direction: column; min-width: 0; }
 .file-name { margin: 0; font-size: 0.95rem; font-weight: 600; color: #1f2937; }
 .file-path { font-size: 0.75rem; color: #9ca3af; font-weight: 500; }
+.version-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 6px;
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+    flex-shrink: 0;
+}
+
 .actions-group { opacity: 0; transition: opacity 0.2s ease; }
 .file-item--list:hover .actions-group { opacity: 1; }
 .action-btn { background: transparent; border: none; color: #64748b; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
@@ -148,7 +238,7 @@ const fileColorClass = computed(() => {
     width: 100%; 
     height: 100%; 
     flex-basis: auto; 
-    border-radius: 0;
+    border-radius: 0; 
     z-index: 1;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -243,7 +333,7 @@ const fileColorClass = computed(() => {
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     background: transparent;
     pointer-events: none; /* Disable pointer events when hidden */
-    gap: 12px !important; 
+    gap: 8px !important; 
     justify-content: center !important;
 }
 
@@ -289,5 +379,20 @@ const fileColorClass = computed(() => {
     width: 56px;
     height: 56px;
     opacity: 1;
+}
+
+.truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.size-4 {
+    width: 1rem;
+    height: 1rem;
+}
+.size-6 {
+    width: 1.5rem;
+    height: 1.5rem;
 }
 </style>

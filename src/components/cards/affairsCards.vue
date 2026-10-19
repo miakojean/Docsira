@@ -293,7 +293,8 @@ const formattedDate = computed(() => {
 
 const displayFilesCount = computed(() => {
   if (props.filesCount !== undefined) return props.filesCount;
-  return props.dossier ? 0 : 2;
+  if (props.dossier) return props.dossier.documents_count ?? 0;
+  return 2;
 });
 
 const effectiveProgress = computed(() => {

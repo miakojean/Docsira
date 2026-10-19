@@ -1,6 +1,11 @@
+import math
+import os
+from django.core.exceptions import ValidationError
+from django.http import FileResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 
@@ -70,8 +75,21 @@ class AffairView(BaseFirmView):
         except Affair.DoesNotExist:
             return Response({"error": "Affair not found."}, status=status.HTTP_404_NOT_FOUND)
 
+# N'oubliez pas l'import si ce n'est pas déjà fait en haut de votre fichier :
+# from rest_framework.pagination import PageNumberPagination
 
-class DocumentView(BaseFirmView):
+def _touch_affair(affair):
+    """Marque une activité sur le dossier ; un dossier NOUVEAU passe EN_COURS."""
+    fields_to_update = ['last_activiation_date']
+    if affair.statut == 'NOUVEAU':
+        affair.statut = 'EN_COURS'
+        fields_to_update.append('statut')
+    affair.save(update_fields=fields_to_update)
+
+
+class DocumentView(APIView):
+    """Liste et ajout de documents d'un dossier (GET/POST /affairs/<affair_id>/documents/)."""
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -125,3 +143,51 @@ class DocumentView(BaseFirmView):
             return Response({"message": "Document deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Document.DoesNotExist:
             return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        uploaded = request.FILES.get('file') or request.FILES.get('files')
+        if not uploaded and request.FILES:
+            uploaded = next(iter(request.FILES.values()), None)
+
+        if not uploaded:
+            return Response({"error": "Aucun fichier fourni."}, status=status.HTTP_400_BAD_REQUEST)
+
+        pos_x = request.data.get('pos_x')
+        pos_y = request.data.get('pos_y')
+        try:
+            pos_x = float(pos_x) if pos_x is not None else None
+            pos_y = float(pos_y) if pos_y is not None else None
+        except (ValueError, TypeError):
+            pos_x = None
+            pos_y = None
+
+        title = (request.data.get('title') or '').strip() or source.title
+
+        new_version = Document.objects.create(
+            affair=source.affair,
+            title=title[:200],
+            file=uploaded,
+            parent=source,
+            relation=Document.Relation.UPDATED,
+            version=source.version + 1,
+            pos_x=pos_x,
+            pos_y=pos_y,
+        )
+        _touch_affair(source.affair)
+        return Response(DocumentSerializer(new_version).data, status=status.HTTP_201_CREATED)
+
+
+class DocumentDownloadView(APIView):
+    """Téléchargement authentifié (/affairs/documents/<document_id>/download/)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, document_id):
+        try:
+            document = Document.objects.get(id=document_id, affair__firm=request.user)
+            handle = document.file.open('rb')
+        except Document.DoesNotExist:
+            return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+        except (FileNotFoundError, ValueError):
+            return Response({"error": "Fichier introuvable sur le disque."}, status=status.HTTP_404_NOT_FOUND)
+
+        return FileResponse(handle, as_attachment=False, filename=os.path.basename(document.file.name))

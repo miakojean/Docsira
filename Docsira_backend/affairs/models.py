@@ -206,21 +206,28 @@ class Document(models.Model):
     """
         Modèle pour gérer les documents liés à une affaire
     """
-    TYPE_DOCUMENTS_CHOICES = [
-        ('IDENTIFICATION', 'Documents d\'identification'),
-        ('CONSTITUTION', 'Document de constitution'),
-        ('PROCEDURES', 'Prcédures engagées'),
-        ('OPERATIONS', 'Opérations documentées'),
-        ('LIVRABLES', 'Livrables pour clôture')
-    ]
-
-    objects = DocumentQuerySet.as_manager()
+    class Relation(models.TextChoices):
+        INITIAL = 'INITIAL', _("Document initial")
+        ADDED = 'ADDED', _("Ajout")
+        UPDATED = 'UPDATED', _("Mise à jour")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     affair = models.ForeignKey(Affair, on_delete=models.CASCADE, related_name='documents', verbose_name=_("Affaire"))
     title = models.CharField(_("Titre du document"), max_length=200)
     file = models.FileField(_("Fichier"), upload_to='documents/%Y/%m/%d/')
     uploaded_at = models.DateTimeField(_("Date de téléchargement"), auto_now_add=True)
+
+    # Évolution du dossier : liaison avec le document dont celui-ci découle
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='children', verbose_name=_("Document précédent"),
+    )
+    relation = models.CharField(_("Type de liaison"), max_length=10, choices=Relation.choices, default=Relation.INITIAL)
+    version = models.PositiveIntegerField(_("Version"), default=1)
+
+    # Position sur l'espace de travail (null = disposition automatique)
+    pos_x = models.FloatField(_("Position X"), null=True, blank=True)
+    pos_y = models.FloatField(_("Position Y"), null=True, blank=True)
 
     class Meta:
         ordering = ['-uploaded_at']

@@ -17,6 +17,7 @@
                 :file-path="filePath"
             :view="view"
                 @open="emit('open', $event)"
+                @preview="emit('open', $event)"
                 @rename="emit('rename', $event)"
                 @share="emit('share', $event)"
                 @delete="emit('delete', $event)"
