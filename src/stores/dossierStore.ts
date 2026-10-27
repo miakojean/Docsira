@@ -13,6 +13,8 @@ export interface Dossier {
   creation_date: string;
   client: ClientListItem | null;
   documents_count?: number;
+  /** Extensions des derniers documents (max 3), pour l'aperçu du dossier. */
+  documents_preview?: string[];
 }
 
 /** Récupère toutes les pages d'un endpoint DRF paginé (ou une simple liste). */

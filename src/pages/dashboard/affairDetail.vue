@@ -1,7 +1,10 @@
 <template>
   <div class="main-layout">
     <!-- Barre latérale -->
-    <sidebar />
+    <sidebar :defaultReduced="true" />
+
+    <!-- Arborescence des dossiers et documents -->
+    <affairTree :currentId="affairId" :documents="documents" @openDocument="openDocument" />
 
     <!-- Contenu principal -->
     <main class="main-content">
@@ -127,6 +130,7 @@
               :view="view"
               @open="openDocument"
               @preview="openDocument"
+              @details="openDocDetails"
               @download="downloadDocument"
               @rename="openRename"
               @delete="openDelete"
@@ -213,6 +217,14 @@
         </Transition>
       </Teleport>
 
+      <!-- MODALE DE DÉTAILS DU DOCUMENT -->
+      <detailsModale
+        :isOpen="isDetailsOpen"
+        :item="docDetailsItem"
+        @close="isDetailsOpen = false"
+        @action="onDetailsAction"
+      />
+
       <!-- MODALE DE SUPPRESSION -->
       <deleteModale
         :isOpen="isDeleteOpen"
@@ -231,14 +243,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog';
 import { readFile, writeFile } from '@tauri-apps/plugin-fs';
 import sidebar from '../../components/navbar/sidebar.vue';
+import affairTree from '../../components/navbar/affairTree.vue';
 import footerSection from '../../components/layout/footerSection.vue';
 import fileCards from '../../components/cards/fileCards.vue';
 import deleteModale from '../../components/modale/deleteModale.vue';
+import detailsModale, { type ItemDetails } from '../../components/modale/detailsModale.vue';
 import { useClientDossierStore, type Dossier } from '../../stores/dossierStore';
 import { useDocumentStore, type DossierDocument } from '../../stores/documentStore';
 
@@ -289,10 +303,12 @@ function goBack() {
 
 async function refreshDossier() {
   if (!affairId.value) return;
-  if (dossierStore.dossiers.length === 0) {
-    await dossierStore.fetchDossiers();
+  const fetched = await dossierStore.fetchDossier(affairId.value);
+  if (fetched) {
+    dossier.value = fetched;
+  } else {
+    dossier.value = dossierStore.allDossiers.find((d: Dossier) => d.id === affairId.value) ?? null;
   }
-  dossier.value = dossierStore.dossiers.find((d) => d.id === affairId.value) ?? null;
 }
 
 // ---------- Sélection et Import de fichiers depuis l'ordinateur ----------
@@ -434,6 +450,61 @@ async function confirmRename() {
   }
 }
 
+// ---------- Détails ----------
+const isDetailsOpen = ref(false);
+const docForDetails = ref<DossierDocument | null>(null);
+
+function formatSize(bytes?: number) {
+  if (!bytes || bytes <= 0) return '0 Ko';
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} Ko`;
+  return `${(kb / 1024).toFixed(1)} Mo`;
+}
+
+function formatDate(iso?: string) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+const docDetailsItem = computed<ItemDetails>(() => {
+  const doc = docForDetails.value;
+  if (!doc) {
+    return { isFolder: false, name: 'Document' };
+  }
+  return {
+    isFolder: false,
+    name: doc.title || doc.file_name || 'Document',
+    path: `Dossier: ${dossier.value?.title || 'Dossier'} / ${doc.file_name || ''}`,
+    size: formatSize(doc.size),
+    owner: dossier.value?.client?.nom_complet || 'Cabinet',
+    createdAt: formatDate(doc.uploaded_at),
+    updatedAt: doc.version && doc.version > 1 ? `Version ${doc.version}` : 'Version originale (v1)',
+    isShared: false,
+  };
+});
+
+function openDocDetails(doc: DossierDocument) {
+  docForDetails.value = doc;
+  isDetailsOpen.value = true;
+}
+
+function onDetailsAction() {
+  if (docForDetails.value) {
+    isDetailsOpen.value = false;
+    downloadDocument(docForDetails.value);
+  }
+}
+
 // ---------- Suppression ----------
 const isDeleteOpen = ref(false);
 const docToDelete = ref<DossierDocument | null>(null);
@@ -460,6 +531,12 @@ async function confirmDelete() {
 }
 
 onMounted(async () => {
+  await Promise.all([refreshDossier(), docStore.fetchDocuments(affairId.value)]);
+});
+
+// Navigation d'un dossier à l'autre depuis l'arborescence
+watch(affairId, async () => {
+  closePreview();
   await Promise.all([refreshDossier(), docStore.fetchDocuments(affairId.value)]);
 });
 

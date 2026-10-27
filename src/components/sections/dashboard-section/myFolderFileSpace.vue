@@ -18,6 +18,7 @@
             :view="view"
                 @open="emit('open', $event)"
                 @preview="emit('open', $event)"
+                @details="emit('details', $event)"
                 @rename="emit('rename', $event)"
                 @share="emit('share', $event)"
                 @delete="emit('delete', $event)"
@@ -38,7 +39,7 @@ defineProps<{
 }>();
 
 // Les événements émis correspondent à ceux attendus par vos modales
-const emit = defineEmits(['open', 'rename', 'share', 'delete']);
+const emit = defineEmits(['open', 'details', 'rename', 'share', 'delete']);
 const view = ref<'list' | 'grid'>('list');
 </script>
 
