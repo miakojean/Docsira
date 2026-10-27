@@ -30,11 +30,10 @@ export default {
   padding: 0.8rem;
   width: 100%;
   max-width: 350px;
-  border-radius: 0.5rem;
   border: none;
   background: #f70776;
   color: #fff;
-  font-size: 1rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: 0.2s ease-in-out;
 }

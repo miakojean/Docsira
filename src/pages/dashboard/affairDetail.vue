@@ -183,7 +183,7 @@
             <div class="modal-box">
               <div class="modal-box-header">
                 <h3 class="modal-box-title">Renommer le document</h3>
-                <button type="button" class="modal-box-close" @click="renamingDoc = null">×</button>
+                <button type="button" class="modal-box-close" @click="renamingDoc = null">x</button>
               </div>
               <div class="modal-box-body">
                 <label class="input-label" for="renameDocInput">Titre du document</label>

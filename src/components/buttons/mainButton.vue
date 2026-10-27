@@ -34,11 +34,11 @@ export default {
   padding: 0.8rem;
   width: 100%;
   max-width: 350px;
-  border-radius: 0.5rem;
+  border-radius: 2px;
   border: none;
   background: var(--primary-color);
   color: #fff;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
   transition: 0.2s ease-in-out;

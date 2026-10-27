@@ -177,7 +177,7 @@ onMounted(() => {
 
 @media (min-width: 1200px) {
   .clients-grid {
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 }
 

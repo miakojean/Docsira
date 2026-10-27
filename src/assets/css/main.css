@@ -90,6 +90,12 @@ svg {
   text-align: center;
 }
 
+/* About my button*/
+button{
+    padding: 0.8rem;
+    border-radius: 2px;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
