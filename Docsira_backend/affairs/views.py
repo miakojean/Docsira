@@ -87,60 +87,137 @@ def _touch_affair(affair):
     affair.save(update_fields=fields_to_update)
 
 
-class DocumentView(APIView):
+class DocumentView(BaseFirmView):
     """Liste et ajout de documents d'un dossier (GET/POST /affairs/<affair_id>/documents/)."""
 
     permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = DocumentSerializer(data=request.data)
-        if serializer.is_valid():
-            firm = self.get_firm(request.user)
-            affair = serializer.validated_data['affair']
-            # Vérification de sécurité : le dossier appartient-il à l'entreprise ?[cite: 1, 3]
-            if affair.firm != firm:
-                return Response({"error": "Accès refusé."}, status=status.HTTP_403_FORBIDDEN)
-            
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request, affair_id):
+        firm = self.get_firm(request.user)
         try:
-            firm = self.get_firm(request.user)
             affair = Affair.objects.get(id=affair_id, firm=firm)
-            documents = affair.documents.all()
-            
-            paginator = PageNumberPagination()
-            paginator.page_size = 10 
-            paginated_documents = paginator.paginate_queryset(documents, request)
-            serializer = DocumentSerializer(paginated_documents, many=True)
-            
-            return paginator.get_paginated_response(serializer.data)
-            
         except Affair.DoesNotExist:
             return Response({"error": "Affair not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    def patch(self, request, document_id):
+        documents = affair.documents.all()
+        serializer = DocumentSerializer(documents, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, affair_id=None):
+        """
+        Accepte un ou plusieurs fichiers (champ `files` répété, ou `file`).
+        `affair` peut venir de l'URL ou du corps (ancienne route /document/).
+        """
+        firm = self.get_firm(request.user)
+        affair_id = affair_id or request.data.get('affair')
         try:
-            firm = self.get_firm(request.user)
-            # Utilisation de affair__firm car Document n'a pas de champ firm[cite: 1, 3]
-            document = Document.objects.get(id=document_id, affair__firm=firm)
-            serializer = DocumentSerializer(document, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            affair = Affair.objects.get(id=affair_id, firm=firm)
+        except (Affair.DoesNotExist, ValueError, ValidationError):
+            return Response({"error": "Affair not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        files = request.FILES.getlist('files') + request.FILES.getlist('file')
+        if not files:
+            return Response({"error": "Aucun fichier fourni."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Les nouveaux documents sont reliés au dernier document du dossier : c'est ce
+        # qui dessine l'évolution du dossier dans l'espace de travail.
+        last_document = affair.documents.order_by('-uploaded_at').first()
+        relation = Document.Relation.ADDED if last_document else Document.Relation.INITIAL
+
+        single_title = request.data.get('title') if len(files) == 1 else None
+        created = []
+        for uploaded in files:
+            title = single_title or os.path.splitext(uploaded.name)[0]
+            document = Document.objects.create(
+                affair=affair, title=title[:200], file=uploaded,
+                parent=last_document, relation=relation,
+            )
+            created.append(document)
+
+        _touch_affair(affair)
+        serializer = DocumentSerializer(created, many=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class DocumentDetailView(BaseFirmView):
+    """Renommage et suppression d'un document (/affairs/documents/<document_id>/)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _get_document(self, request, document_id):
+        firm = self.get_firm(request.user)
+        return Document.objects.get(id=document_id, affair__firm=firm)
+
+    def get(self, request, document_id):
+        try:
+            document = self._get_document(request, document_id)
         except Document.DoesNotExist:
             return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
-    
+        return Response(DocumentSerializer(document).data, status=status.HTTP_200_OK)
+
+    def patch(self, request, document_id):
+        try:
+            document = self._get_document(request, document_id)
+        except Document.DoesNotExist:
+            return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+        update_fields = []
+
+        if 'title' in data:
+            title = (data.get('title') or '').strip()
+            if not title:
+                return Response({"title": ["Le titre est requis."]}, status=status.HTTP_400_BAD_REQUEST)
+            document.title = title[:200]
+            update_fields.append('title')
+
+        # Position sur l'espace de travail
+        for axis in ('pos_x', 'pos_y'):
+            if axis in data:
+                raw = data.get(axis)
+                try:
+                    value = None if raw is None else float(raw)
+                except (TypeError, ValueError):
+                    return Response({axis: ["Nombre attendu."]}, status=status.HTTP_400_BAD_REQUEST)
+                if value is not None and not math.isfinite(value):
+                    return Response({axis: ["Nombre attendu."]}, status=status.HTTP_400_BAD_REQUEST)
+                setattr(document, axis, value)
+                update_fields.append(axis)
+
+        if not update_fields:
+            return Response({"error": "Aucune modification fournie."}, status=status.HTTP_400_BAD_REQUEST)
+        document.save(update_fields=update_fields)
+        return Response(DocumentSerializer(document).data, status=status.HTTP_200_OK)
+
     def delete(self, request, document_id):
         try:
+            document = self._get_document(request, document_id)
+        except Document.DoesNotExist:
+            return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # On recolle la chaîne : les documents suivants se rattachent au précédent
+        Document.objects.filter(parent=document).update(parent=document.parent)
+        document.file.delete(save=False)  # supprime aussi le fichier physique
+        document.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DocumentVersionView(BaseFirmView):
+    """Dépose une nouvelle version d'un document (POST /affairs/documents/<document_id>/versions/).
+
+    L'ancienne version est conservée : la nouvelle y est reliée (relation UPDATED).
+    """
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request, document_id):
+        try:
             firm = self.get_firm(request.user)
-            # Idem pour la suppression, on filtre via la relation[cite: 1, 3]
-            document = Document.objects.get(id=document_id, affair__firm=firm)
-            document.delete()
-            return Response({"message": "Document deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+            source = Document.objects.select_related('affair').get(
+                id=document_id, affair__firm=firm
+            )
         except Document.DoesNotExist:
             return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -176,14 +253,15 @@ class DocumentView(APIView):
         return Response(DocumentSerializer(new_version).data, status=status.HTTP_201_CREATED)
 
 
-class DocumentDownloadView(APIView):
+class DocumentDownloadView(BaseFirmView):
     """Téléchargement authentifié (/affairs/documents/<document_id>/download/)."""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request, document_id):
         try:
-            document = Document.objects.get(id=document_id, affair__firm=request.user)
+            firm = self.get_firm(request.user)
+            document = Document.objects.get(id=document_id, affair__firm=firm)
             handle = document.file.open('rb')
         except Document.DoesNotExist:
             return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
