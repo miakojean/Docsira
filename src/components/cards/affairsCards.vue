@@ -1,119 +1,126 @@
 <template>
   <div
-    class="card"
+    class="folder-card"
     ref="cardRef"
-    :class="{ 'card--active': isOpen }"
+    :class="{ 'folder-card--active': isOpen }"
+    :title="displayTitle"
     @click="handleCardClick"
   >
-    <!-- En-tête -->
-    <div class="card__header">
-      <div class="card__header-left">
-        <span class="card__badge" :class="statusClass">
-          {{ displayBadge }}
-        </span>
-        <span v-if="displayRef" class="card__ref">
-          {{ displayRef }}
-        </span>
-      </div>
-
-      <button
-        type="button"
-        class="card__menu-trigger"
-        aria-label="Actions du dossier"
-        @click.stop="toggleMenu"
+    <!-- Bouton 3 points (visible au survol) -->
+    <button
+      type="button"
+      class="card__menu-trigger"
+      aria-label="Actions du dossier"
+      @click.stop="toggleMenu"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.8"
+        stroke="currentColor"
+        class="size-5"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="size-6"
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z"
+        />
+      </svg>
+    </button>
+
+    <!-- Visuel du dossier -->
+    <div class="folder-visual">
+      <!-- Fond arrière sombre du dossier -->
+      <div class="folder-back"></div>
+
+      <!-- Feuilles / documents qui dépassent du dossier -->
+      <div v-if="papers.length" class="folder-papers">
+        <div
+          v-for="(paper, i) in papers"
+          :key="i"
+          class="paper"
+          :class="`paper-${i}`"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z"
-          />
-        </svg>
-      </button>
-    </div>
-
-    <!-- Corps -->
-    <div class="card__body">
-      <template v-if="dossier">
-        <h4 class="card__title" :title="displayTitle">{{ displayTitle }}</h4>
-        <p class="card__client">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="client-icon"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
-            />
-          </svg>
-          <span class="client-name">{{ displayClient }}</span>
-        </p>
-      </template>
-      <p v-else class="card__text">
-        {{ content }}
-      </p>
-    </div>
-
-    <!-- Métadonnées additionnelles pour le dossier -->
-    <div v-if="dossier && (displayType || formattedDate)" class="card__meta">
-      <span v-if="displayType" class="card__meta-type">{{ displayType }}</span>
-      <span v-if="formattedDate" class="card__meta-date">{{ formattedDate }}</span>
-    </div>
-
-    <!-- Pied de page -->
-    <div class="card__footer">
-      <div class="icons">
-        <span class="footer__content">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25M9 16.5v.75m3-3v3M15 12v5.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-          </svg>
-        </span>
-        <span class="footer__content">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25M9 16.5v.75m3-3v3M15 12v5.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-          </svg>
-        </span>
-      </div>
-
-      <div class="info">
-        <p>{{ displayFilesCount }} fichier(s)</p>
-
-        <div class="progress-ring" :title="effectiveProgress + '% complété'">
-          <svg width="36" height="36" viewBox="0 0 36 36">
-            <circle
-              class="progress-ring__track"
-              stroke-width="3"
-              fill="transparent"
-              :r="radius"
-              cx="18"
-              cy="18"
-            />
-            <circle
-              class="progress-ring__circle"
-              stroke-width="3"
-              fill="transparent"
-              :r="radius"
-              cx="18"
-              cy="18"
-              :stroke-dasharray="circumference"
-              :stroke-dashoffset="progressOffset"
-            />
-          </svg>
-          <span class="progress-ring__text">{{ effectiveProgress }}%</span>
+          <span class="paper-badge" :class="paper.cls">{{ paper.label }}</span>
+          <div class="paper-lines">
+            <span></span>
+            <span></span>
+          </div>
         </div>
       </div>
+
+      <!-- Rabat avant avec découpe courbée (style maquette) -->
+      <div class="folder-front" :title="effectiveProgress + '% complété'">
+        <svg
+          class="folder-front__svg"
+          viewBox="0 0 210 125"
+          preserveAspectRatio="none"
+        >
+          <defs>
+            <linearGradient id="folderFrontGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ecbd04" />
+              <stop offset="100%" stop-color="#bf9903" />
+            </linearGradient>
+          </defs>
+          <!-- Forme du rabat avec onglet courbé à gauche -->
+          <path
+            d="M 0,18
+               A 16,16 0 0,1 16,2
+               L 76,2
+               C 94,2 100,20 118,20
+               L 194,20
+               A 16,16 0 0,1 210,36
+               L 210,109
+               A 16,16 0 0,1 194,125
+               L 16,125
+               A 16,16 0 0,1 0,109
+               Z"
+            fill="url(#folderFrontGrad)"
+            stroke="rgba(255, 255, 255, 0.16)"
+            stroke-width="1.5"
+          />
+        </svg>
+      </div>
+
+      <!-- Cercle de progression dans le coin inférieur droit -->
+      <div class="folder-progress-circle" :title="effectiveProgress + '% complété'">
+        <svg viewBox="0 0 44 44" class="progress-ring">
+          <!-- Anneau de fond -->
+          <circle
+            class="progress-ring__track"
+            cx="22"
+            cy="22"
+            :r="circleRadius"
+            fill="none"
+            stroke-width="3.5"
+          />
+          <!-- Anneau de progression dynamique -->
+          <circle
+            class="progress-ring__fill"
+            cx="22"
+            cy="22"
+            :r="circleRadius"
+            fill="none"
+            stroke-width="3.5"
+            stroke-linecap="round"
+            :stroke="progressColor"
+            :stroke-dasharray="circleCircumference"
+            :stroke-dashoffset="progressDashOffset"
+          />
+        </svg>
+        <span class="progress-ring__text">{{ effectiveProgress }}%</span>
+      </div>
+    </div>
+
+    <!-- Informations sous le dossier -->
+    <div class="folder-info">
+      <p class="folder-client" :title="dossier ? displayClient : displayTitle">
+        {{ dossier ? displayClient : displayTitle }}
+      </p>
+      <p class="files-count">
+        {{ displayFilesCount }} {{ displayFilesCount > 1 ? 'Files' : 'File' }}
+      </p>
     </div>
 
     <!-- Overlay pour fermer le menu -->
@@ -142,7 +149,7 @@
             </svg>
             <span>Ouvrir</span>
           </li>
-          <li @click="onAction('open')">
+          <li @click="onAction('details')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
             </svg>
@@ -201,13 +208,15 @@ const props = withDefaults(
     content?: string;
     progress?: number;
     filesCount?: number;
+    color?: string;
   }>(),
   {
     dossier: null,
-    title: 'Dossier',
-    content: 'Lorem ipsum, dolor sit amet consectetur adipisicing elit. Harum cum eligendi.',
+    title: 'Onboarding',
+    content: 'Onboarding',
     progress: undefined,
     filesCount: undefined,
+    color: undefined,
   }
 );
 
@@ -226,76 +235,39 @@ const emit = defineEmits([
 
 const isOpen = ref<boolean>(false);
 const cardRef = ref<HTMLElement | null>(null);
-
 const menuPositionX = ref<'left' | 'right' | 'inner-right'>('right');
 
-const statutLabels: Record<string, string> = {
-  NOUVEAU: 'Nouveau',
-  EN_COURS: 'En cours',
-  EN_ATTENTE: 'En attente',
-  BLOQUE: 'Bloqué',
-  TERMINE: 'Terminé',
-  CLOTURE: 'Clôturé',
-  ANNULE: 'Annulé',
-};
-
-const typeLabels: Record<string, string> = {
-  CONSTITUTION: 'Constitution',
-  MODIFICATION: 'Modification',
-  DISSOLUTION: 'Dissolution',
-  CONTENTIEUX: 'Contentieux',
-  CONSEIL: 'Conseil',
-  CONTRAT: 'Contrat',
-  AUDIT: 'Audit',
-  PROPRIETE_INTELLECTUELLE: 'Propriété intellectuelle',
-  FUSION_ACQUISITION: 'Fusion/Acquisition',
-  RECOUVREMENT: 'Recouvrement',
-  AUTRE: 'Autre',
-};
-
-const displayBadge = computed(() => {
-  if (props.dossier?.statut) {
-    return statutLabels[props.dossier.statut] || props.dossier.statut;
-  }
-  return props.title;
-});
-
-const statusClass = computed(() => {
-  return props.dossier?.statut?.toLowerCase() || '';
-});
-
-const displayRef = computed(() => {
-  return props.dossier?.reference_affair || '';
-});
-
 const displayTitle = computed(() => {
-  return props.dossier?.title || props.content;
+  return props.dossier?.title || props.title;
 });
 
 const displayClient = computed(() => {
   if (!props.dossier) return '';
-  return props.dossier.client?.nom_complet || 'Aucun client';
-});
-
-const displayType = computed(() => {
-  if (!props.dossier?.type_affair) return '';
-  return typeLabels[props.dossier.type_affair] || props.dossier.type_affair;
-});
-
-const formattedDate = computed(() => {
-  if (!props.dossier?.creation_date) return '';
-  return new Date(props.dossier.creation_date).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+  return props.dossier.client?.nom_complet || props.dossier.title || 'Aucun client';
 });
 
 const displayFilesCount = computed(() => {
   if (props.filesCount !== undefined) return props.filesCount;
   if (props.dossier) return props.dossier.documents_count ?? 0;
-  return 2;
+  return 15;
 });
+
+// Cartes de fichiers affichées en haut du dossier
+const papers = computed(() => {
+  if (displayFilesCount.value <= 0) return [];
+  const exts = (props.dossier?.documents_preview ?? []).slice(0, 2);
+  const list = exts.length ? exts : ['', 'pdf'];
+  return list.map((ext) => describeExtension(ext));
+});
+
+function describeExtension(ext: string) {
+  const e = (ext || '').toLowerCase();
+  if (e === 'pdf') return { label: 'PDF', cls: 'is-pdf' };
+  if (['doc', 'docx', 'odt', 'rtf', 'txt'].includes(e)) return { label: 'DOC', cls: 'is-word' };
+  if (['xls', 'xlsx', 'csv', 'ods'].includes(e)) return { label: 'XLS', cls: 'is-excel' };
+  if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(e)) return { label: 'IMG', cls: 'is-image' };
+  return { label: '', cls: 'is-default' };
+}
 
 const effectiveProgress = computed(() => {
   if (props.progress !== undefined) {
@@ -319,14 +291,24 @@ const effectiveProgress = computed(() => {
         return 40;
     }
   }
-  return 35;
+  return 60;
 });
 
-// Anneau de progression
-const radius = 15;
-const circumference = 2 * Math.PI * radius;
-const progressOffset = computed(() => {
-  return circumference - (effectiveProgress.value / 100) * circumference;
+// Calculs pour le cercle SVG de progression
+const circleRadius = 17.5;
+const circleCircumference = 2 * Math.PI * circleRadius;
+
+const progressDashOffset = computed(() => {
+  const pct = effectiveProgress.value;
+  return circleCircumference - (pct / 100) * circleCircumference;
+});
+
+const progressColor = computed(() => {
+  if (props.color) return props.color;
+  const pct = effectiveProgress.value;
+  if (pct >= 60) return '#22c55e'; // Vert (comme le 60% de l'image)
+  if (pct >= 30) return '#0ea5e9'; // Bleu/Teal (comme le 35% de l'image)
+  return '#3b82f6'; // Bleu (comme le 15% de l'image)
 });
 
 function toggleMenu() {
@@ -376,266 +358,218 @@ function onAction(action: CardAction) {
 </script>
 
 <style scoped>
-.card {
+/* =========================================
+   CARTE CONTENEUR (Style gris clair au survol/carte)
+   ========================================= */
+.folder-card {
+  position: relative;
   width: 100%;
-  padding: 1.5rem 1.25rem;
+  max-width: 265px;
+  padding: 1.5rem 1.25rem 1.25rem;
+  border-radius: 20px;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  background: #ffffff;
-  border-radius: 16px;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-  position: relative;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  align-items: center;
+  gap: 1.05rem;
+  background-color: none;
   box-sizing: border-box;
-  max-width: 320px;
+  transition: background-color 0.2s ease, transform 0.25s ease, box-shadow 0.2s ease;
 }
 
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.09);
-}
-
-.card--active {
+.folder-card--active {
   z-index: 50;
+}
+
+@media (hover: hover) {
+  .folder-card:hover {
+    background-color: #cacaca;
+    transform: translateY(-2px);
+  }
+  .folder-card:hover .paper-0 {
+    transform: translateY(-6px) rotate(-10deg);
+  }
+  .folder-card:hover .paper-1 {
+    transform: translateY(-8px) rotate(12deg);
+  }
+  .folder-card:hover .card__menu-trigger {
+    opacity: 1;
+  }
+}
+
+/* =========================================
+   VISUEL DU DOSSIER
+   ========================================= */
+.folder-visual {
   position: relative;
+  width: 200px;
+  height: 145px;
+  user-select: none;
 }
 
-/* --- Header --- */
-.card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
+/* Partie arrière sombre */
+.folder-back {
+  position: absolute;
+  top: 8px;
+  left: 4px;
+  right: 8px;
+  bottom: 6px;
+  background: #bf9903;
+  border-radius: 16px;
+  z-index: 1;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.card__header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  min-width: 0;
+/* =========================================
+   FEUILLES DE PAPIER À L'INTÉRIEUR
+   ========================================= */
+.folder-papers {
+  position: absolute;
+  top: 2px;
+  left: 12px;
+  right: 12px;
+  height: 75px;
+  z-index: 2;
+  pointer-events: none;
 }
 
-.card__badge {
-  padding: 0.35rem 0.85rem;
-  background: var(--primary-color, #2563eb);
-  color: #ffffff;
-  border: none;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-}
-
-.card__badge.nouveau {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.card__badge.en_cours {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.card__badge.en_attente {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.card__badge.bloque {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.card__badge.termine {
-  background: #e0e7ff;
-  color: #3730a3;
-}
-
-.card__badge.cloture {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.card__badge.annule {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.card__ref {
-  font-size: 0.75rem;
-  color: #9ca3af;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.card__menu-trigger {
-  background: none;
-  border: none;
-  color: #9ca3af;
-  padding: 0.25rem;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.card__menu-trigger:hover {
-  background: #f3f4f6;
-  color: #111827;
-}
-
-/* --- Body --- */
-.card__body {
+.paper {
+  position: absolute;
+  width: 82px;
+  height: 62px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+  padding: 8px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  min-height: 52px;
-}
-
-.card__title {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: #111827;
-  line-height: 1.35;
-  word-break: break-word;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.card__client {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #6b7280;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.client-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.client-icon {
-  width: 0.95rem;
-  height: 0.95rem;
-  color: #9ca3af;
-  flex-shrink: 0;
-}
-
-.card__text {
-  margin: 0;
-  color: #4b5563;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-/* --- Meta --- */
-.card__meta {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 0.75rem;
-  color: #9ca3af;
-  padding-top: 0.35rem;
-  border-top: 1px dashed #f3f4f6;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.card__meta-type {
-  font-weight: 500;
-  color: #6b7280;
+/* Feuille gauche inclinée */
+.paper-0 {
+  left: 8px;
+  top: 4px;
+  transform: rotate(-7deg);
+  z-index: 1;
 }
 
-.card__meta-date {
-  color: #9ca3af;
+/* Feuille droite inclinée avec badge PDF */
+.paper-1 {
+  right: 12px;
+  top: 6px;
+  transform: rotate(9deg);
+  z-index: 2;
 }
 
-/* --- Footer --- */
-.card__footer {
+/* Petite illusion d'une 3e feuille derrière à droite */
+.paper-1::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 12px;
+  width: 20px;
+  height: 45px;
+  background: #e5e7eb;
+  border-radius: 6px;
+  z-index: -1;
+  transform: rotate(6deg);
+}
+
+.paper-lines {
   display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 4px;
   margin-top: auto;
-  padding-top: 0.25rem;
 }
 
-.icons {
-  display: flex;
-  align-items: center;
+.paper-lines span {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: #e5e7eb;
 }
 
-.card__footer .footer__content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0.4rem;
-  background: var(--primary-color, #2563eb);
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  flex-shrink: 0;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-  position: relative;
-  transition: transform 0.2s ease;
+.paper-lines span:first-child {
+  width: 70%;
 }
 
-.card__footer .footer__content + .footer__content {
-  margin-left: -14px;
+.paper-lines span:last-child {
+  width: 45%;
 }
 
-.card__footer .footer__content:hover {
-  transform: scale(1.1);
-  z-index: 10;
+.paper-badge {
+  align-self: flex-start;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  line-height: 1;
 }
 
-.card__footer .footer__content svg {
-  width: 18px;
-  height: 18px;
+.paper-badge.is-pdf {
+  background: #dc2626;
   color: #ffffff;
-  stroke: #ffffff;
+}
+.paper-badge.is-word {
+  background: #2563eb;
+  color: #ffffff;
+}
+.paper-badge.is-excel {
+  background: #16a34a;
+  color: #ffffff;
+}
+.paper-badge.is-image {
+  background: #9333ea;
+  color: #ffffff;
+}
+.paper-badge.is-default {
+  display: none;
 }
 
-.card__footer p {
-  color: #7d8796;
-  font-size: 0.8rem;
-  font-weight: 500;
-  margin: 0;
+/* =========================================
+   RABAT AVANT (SVG COURBÉ)
+   ========================================= */
+.folder-front {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 122px;
+  z-index: 3;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.16));
 }
 
-/* --- Anneau de progression --- */
-.info {
+.folder-front__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* =========================================
+   CERCLE DE PROGRESSION EN BAS À DROITE
+   ========================================= */
+.folder-progress-circle {
+  position: absolute;
+  right: -8px;
+  bottom: -6px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 5;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
 }
 
 .progress-ring {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-}
-
-.progress-ring svg {
+  width: 44px;
+  height: 44px;
   transform: rotate(-90deg);
 }
 
@@ -643,20 +577,91 @@ function onAction(action: CardAction) {
   stroke: #e5e7eb;
 }
 
-.progress-ring__circle {
-  stroke: var(--primary-color, #2563eb);
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.5s ease-in-out;
+.progress-ring__fill {
+  transition: stroke-dashoffset 0.5s ease-out, stroke 0.3s ease;
 }
 
 .progress-ring__text {
   position: absolute;
-  font-size: 0.6rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: #4b5563;
+  color: #111827;
+  letter-spacing: -0.3px;
 }
 
-/* --- Dropbox --- */
+/* =========================================
+   INFOS SOUS LE DOSSIER
+   ========================================= */
+.folder-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.folder-client {
+  margin: 0;
+  max-width: 100%;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.files-count {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* =========================================
+   BOUTON MENU (3 POINTS EN HAUT À DROITE)
+   ========================================= */
+.card__menu-trigger {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 6;
+  width: 30px;
+  height: 30px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #475569;
+  padding: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s;
+}
+
+.card__menu-trigger:focus-visible,
+.folder-card--active .card__menu-trigger {
+  opacity: 1;
+}
+
+.card__menu-trigger:hover {
+  color: #0f172a;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+@media (hover: none) {
+  .card__menu-trigger {
+    opacity: 1;
+  }
+}
+
+/* =========================================
+   DROPBOX (MENU D'ACTIONS)
+   ========================================= */
 .dropbox {
   position: absolute;
   top: 5px;
@@ -728,7 +733,7 @@ function onAction(action: CardAction) {
   color: #b91c1c;
 }
 
-/* --- Animations --- */
+/* Animations slide */
 .slide-right-enter-active,
 .slide-right-leave-active,
 .slide-left-enter-active,
@@ -748,7 +753,7 @@ function onAction(action: CardAction) {
   transform: translateX(15px) scale(0.95);
 }
 
-/* --- Overlay --- */
+/* Overlay */
 :global(.overlay) {
   position: fixed;
   top: 0;

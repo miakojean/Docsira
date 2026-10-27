@@ -136,8 +136,11 @@ import { useAuthStore } from '../../stores/authStore';
 
 export default {
   name: 'Sidebar',
-  setup() {
-    const isReduced = ref(false);
+  props: {
+    defaultReduced: { type: Boolean, default: false },
+  },
+  setup(props: { defaultReduced: boolean }) {
+    const isReduced = ref(props.defaultReduced);
     const router = useRouter();
     const route = useRoute();
     const authStore = useAuthStore();

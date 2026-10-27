@@ -24,9 +24,18 @@ class AffairSerializer(serializers.ModelSerializer):
     collaborator = CollaboratorSerializer(read_only=True)
     client = ClientSerializer(read_only=True)
     documents_count = serializers.SerializerMethodField()
+    documents_preview = serializers.SerializerMethodField()
 
     def get_documents_count(self, obj):
         return obj.documents.count()
+
+    def get_documents_preview(self, obj):
+        """Extensions (max 3) des derniers documents, pour l'aperçu du dossier."""
+        docs = obj.documents.order_by('-uploaded_at')[:3]
+        return [
+            os.path.splitext(d.file.name)[1].lstrip('.').lower() if d.file else ''
+            for d in docs
+        ]
 
     class Meta:
         model = Affair

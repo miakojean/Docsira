@@ -22,7 +22,7 @@
           :dossier="d"
           @goTo="openDossier(d)"
           @open="openDossier(d)"
-          @details="openDossier(d)"
+          @details="openDetails(d)"
           @edit="openEdit(d)"
           @rename="openEdit(d)"
           @delete="openDelete(d)"
@@ -48,6 +48,13 @@
         @add="isAddOpen = true"
       />
     </div>
+
+    <detailsModale
+      :isOpen="isDetailsOpen"
+      :item="folderDetailsItem"
+      @close="isDetailsOpen = false"
+      @action="onDetailsAction"
+    />
 
     <addDossierModale :isOpen="isAddOpen" @close="isAddOpen = false" @created="onCreated" />
     <editDossierModale :isOpen="isEditOpen" :dossier="editingDossier" @close="isEditOpen = false" @updated="onUpdated" />
@@ -86,6 +93,7 @@ import affairsCards from '../../cards/affairsCards.vue';
 import addDossierModale from '../../modale/addDossierModale.vue';
 import editDossierModale from '../../modale/editDossierModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
+import detailsModale, { type ItemDetails } from '../../modale/detailsModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
 import { useClientDossierStore, type Dossier } from '../../../stores/dossierStore';
 
@@ -94,6 +102,39 @@ const router = useRouter();
 
 function openDossier(d: Dossier) {
   router.push(`/dashboard/affairs/${d.id}`);
+}
+
+const isDetailsOpen = ref(false);
+const selectedDossier = ref<Dossier | null>(null);
+
+const folderDetailsItem = computed<ItemDetails>(() => {
+  const d = selectedDossier.value;
+  if (!d) return { isFolder: true, name: 'Dossier' };
+  return {
+    isFolder: true,
+    name: d.title,
+    path: d.reference_affair ? `Dossier / ${d.reference_affair}` : '/Projets/Docsira',
+    size: `${d.documents_count ?? 0} document(s)`,
+    fileCount: d.documents_count ?? 0,
+    owner: d.client?.nom_complet || 'Client',
+    createdAt: d.creation_date
+      ? new Date(d.creation_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+      : undefined,
+    updatedAt: d.statut || 'En cours',
+    isShared: false,
+  };
+});
+
+function openDetails(d: Dossier) {
+  selectedDossier.value = d;
+  isDetailsOpen.value = true;
+}
+
+function onDetailsAction() {
+  if (selectedDossier.value) {
+    isDetailsOpen.value = false;
+    openDossier(selectedDossier.value);
+  }
 }
 const isAddOpen = ref(false);
 const isSuccess = ref(false);
@@ -220,7 +261,7 @@ onMounted(() => {
 .dossiers-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-  gap: 1rem;
+  gap: 0.01rem;
   width: 100%;
   padding-bottom: 2rem;
 }

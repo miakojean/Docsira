@@ -32,6 +32,13 @@
                 </svg>
             </button>
 
+            <!-- Bouton Détails (Info) -->
+            <button class="action-btn" @click.stop="emit('details', itemPayload)" title="Détails du document">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="size-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+                </svg>
+            </button>
+
             <!-- Bouton Télécharger (si document cloud) ou Partager (si fichier local) -->
             <button v-if="document" class="action-btn" @click.stop="emit('download', itemPayload)" title="Télécharger sur l'ordinateur">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="size-4">
@@ -68,6 +75,7 @@ const props = defineProps<{
 const emit = defineEmits<{
     open: [payload: any];
     preview: [payload: any];
+    details: [payload: any];
     rename: [payload: any];
     share: [payload: any];
     download: [payload: any];
