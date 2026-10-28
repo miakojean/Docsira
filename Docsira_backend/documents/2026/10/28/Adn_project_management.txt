@@ -1,0 +1,4 @@
+ADN project management enhancing:
+
+- Pouvoir envoyer des emails de confirmation pour la validation des dossiers aux clients !!!
+- Mettre en place un système de rappel par email pour prevenir sur les delais !!!

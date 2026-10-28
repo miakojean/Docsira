@@ -81,6 +81,8 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
         ...dossiersByClient.value,
         [clientId]: items,
       };
+      // Debugging
+      console.log("Dossier du client", dossiersByClient.value)
       return true;
     } catch (error) {
       console.error(error);

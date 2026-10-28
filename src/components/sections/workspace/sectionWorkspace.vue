@@ -1,42 +1,47 @@
 <template>
-  <div class="main-section gap-2">
-    <headerNav title="Workspace" :showToolsButton="true" @handleEvent="isAddOpen = true" v-model="searchQuery" />
+    <div class="main-section gap-2">
 
-    <div v-if="store.allDossiers.length > 0" class="content-container">
-      <div class="filters">
-        <button
-          v-for="f in filters"
-          :key="f.value"
-          class="filter-chip"
-          :class="{ active: statutFilter === f.value }"
-          @click="statutFilter = f.value"
-        >
-          {{ f.label }}
-        </button>
-      </div>
-
-      <div v-if="filteredDossiers.length > 0" class="dossiers-grid">
-        <affairsCards
-          v-for="d in filteredDossiers"
-          :key="d.id"
-          :dossier="d"
-          @goTo="openDossier(d)"
-          @open="openDossier(d)"
-          @details="openDetails(d)"
-          @edit="openEdit(d)"
-          @rename="openEdit(d)"
-          @delete="openDelete(d)"
+        <headerNav
+            title="Workspace" :showToolsButton="true"
+            @handleEvent="isAddOpen = true"
+            v-model="searchQuery"
         />
-      </div>
 
-      <div v-else class="flex-1 w-full flex justify-center items-center">
-        <emptyCards
-          title="Workspace"
-          mainText="Aucun dossier ne correspond à votre recherche."
-          subtitle="Vérifiez l'orthographe ou changez de filtre."
-          :showAddButton="false"
-        />
-      </div>
+        <div v-if="store.allDossiers.length > 0" class="content-container">
+          <div class="filters">
+            <button
+              v-for="f in filters"
+              :key="f.value"
+              class="filter-chip"
+              :class="{ active: statutFilter === f.value }"
+              @click="statutFilter = f.value"
+            >
+              {{ f.label }}
+            </button>
+          </div>
+
+          <div v-if="filteredDossiers.length > 0" class="dossiers-grid">
+            <affairsCards
+                  v-for="d in filteredDossiers"
+                  :key="d.id"
+                  :dossier="d"
+                  @goTo="openDossier(d)"
+                  @open="openDossier(d)"
+                  @details="openDetails(d)"
+                  @edit="openEdit(d)"
+                  @rename="openEdit(d)"
+                  @delete="openDelete(d)"
+            />
+          </div>
+
+          <div v-else class="flex-1 w-full flex justify-center items-center">
+            <emptyCards
+              title="Workspace"
+              mainText="Aucun dossier ne correspond à votre recherche."
+              subtitle="Vérifiez l'orthographe ou changez de filtre."
+              :showAddButton="false"
+            />
+          </div>
     </div>
 
     <div v-else-if="!store.isLoading" class="h-full w-full flex justify-center items-center">
@@ -48,6 +53,8 @@
         @add="isAddOpen = true"
       />
     </div>
+
+    <!-- About modal management -->
 
     <detailsModale
       :isOpen="isDetailsOpen"
@@ -260,7 +267,7 @@ onMounted(() => {
 
 .dossiers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 0.01rem;
   width: 100%;
   padding-bottom: 2rem;

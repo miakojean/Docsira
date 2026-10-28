@@ -364,9 +364,9 @@ function onAction(action: CardAction) {
 .folder-card {
   position: relative;
   width: 100%;
-  max-width: 265px;
-  padding: 1.5rem 1.25rem 1.25rem;
-  border-radius: 20px;
+  max-width: 245px;
+  padding: 0.5rem;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -383,7 +383,7 @@ function onAction(action: CardAction) {
 
 @media (hover: hover) {
   .folder-card:hover {
-    background-color: #cacaca;
+    background-color: #fdfcfc;
     transform: translateY(-2px);
   }
   .folder-card:hover .paper-0 {

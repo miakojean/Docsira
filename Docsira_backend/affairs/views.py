@@ -1,11 +1,9 @@
-import math
 import os
-from django.core.exceptions import ValidationError
-from django.http import FileResponse
+from django.db import transaction
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 
@@ -85,6 +83,73 @@ def _touch_affair(affair):
         affair.statut = 'EN_COURS'
         fields_to_update.append('statut')
     affair.save(update_fields=fields_to_update)
+
+
+class AffairDocumentsView(BaseFirmView):
+    """Liste et ajoute plusieurs documents dans un dossier du cabinet."""
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_affair(self, request, affair_id):
+        try:
+            affair = Affair.objects.get(pk=affair_id)
+        except Affair.DoesNotExist:
+            return None, Response({"error": "Dossier introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        if affair.firm_id != self.get_firm(request.user).id:
+            return None, Response({"error": "Accès refusé."}, status=status.HTTP_403_FORBIDDEN)
+        return affair, None
+
+    def get(self, request, affair_id):
+        affair, error_response = self.get_affair(request, affair_id)
+        if error_response:
+            return error_response
+
+        documents = affair.documents.all()
+        return Response(DocumentSerializer(documents, many=True).data, status=status.HTTP_200_OK)
+
+    def post(self, request, affair_id):
+        affair, error_response = self.get_affair(request, affair_id)
+        if error_response:
+            return error_response
+
+        files = request.FILES.getlist("files") or request.FILES.getlist("file")
+        if not files:
+            return Response(
+                {"files": "Sélectionnez au moins un fichier à ajouter."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializers = []
+        for uploaded_file in files:
+            file_name = os.path.basename(uploaded_file.name.replace("\\", "/"))
+            title = os.path.splitext(file_name)[0].strip() or file_name
+            serializer = DocumentSerializer(data={
+                "affair": str(affair.pk),
+                "title": title[:200],
+                "file": uploaded_file,
+            })
+            if not serializer.is_valid():
+                return Response(
+                    {"files": serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            serializers.append(serializer)
+
+        created_documents = []
+        previous = affair.documents.order_by("-uploaded_at").first()
+        with transaction.atomic():
+            for serializer in serializers:
+                relation = Document.Relation.ADDED if previous else Document.Relation.INITIAL
+                document = serializer.save(parent=previous, relation=relation, version=1)
+                created_documents.append(document)
+                previous = document
+            _touch_affair(affair)
+
+        return Response(
+            DocumentSerializer(created_documents, many=True).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 class DocumentView(BaseFirmView):
     permission_classes = [IsAuthenticated]

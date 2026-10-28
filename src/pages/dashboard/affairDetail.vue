@@ -10,26 +10,27 @@
     <main class="main-content">
       <!-- En-tête de l'affaire -->
       <header class="affair-header">
-        <div class="header-left">
-          <button type="button" class="back-btn" title="Retour aux dossiers" @click="goBack">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-            </svg>
-          </button>
+            <div class="header-left">
+                <button type="button" class="back-btn" title="Retour aux dossiers" @click="goBack">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                </button>
 
-          <div class="header-info">
-            <div class="header-title-row">
-              <h1 class="page-title">{{ dossier?.title || 'Dossier' }}</h1>
-              <span v-if="dossier" class="status-badge" :class="dossier.statut.toLowerCase()">
-                {{ statutLabels[dossier.statut] || dossier.statut }}
-              </span>
-            </div>
-            <p v-if="dossier" class="page-subtitle">
-              <span class="ref-text">{{ dossier.reference_affair }}</span>
-              <template v-if="dossier.client"> · {{ dossier.client.nom_complet }}</template>
-              <span class="meta-dot">·</span>
-              <span class="doc-count">{{ documents.length }} document(s)</span>
-            </p>
+            <div class="header-info">
+
+                <div class="header-title-row">
+                    <h1 class="page-title">{{ dossier?.title || 'Dossier' }}</h1>
+                    <span v-if="dossier" class="status-badge" :class="dossier.statut.toLowerCase()">
+                        {{ statutLabels[dossier.statut] || dossier.statut }}
+                    </span>
+                </div>
+                <p v-if="dossier" class="page-subtitle">
+                  <span class="ref-text">{{ dossier.reference_affair }}</span>
+                  <template v-if="dossier.client"> · {{ dossier.client.nom_complet }}</template>
+                  <span class="meta-dot">·</span>
+                  <span class="doc-count">{{ documents.length }} document(s)</span>
+                </p>
           </div>
         </div>
 
@@ -59,18 +60,18 @@
           </div>
 
           <!-- Bouton Ajouter un document -->
-          <button
+        <button
             type="button"
             class="add-btn"
             :disabled="docStore.isUploading"
             title="Ajouter un document depuis votre ordinateur"
             @click="pickFromDisk"
-          >
+        >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
             <span>{{ docStore.isUploading ? 'Ajout en cours...' : 'Ajouter un document' }}</span>
-          </button>
+        </button>
         </div>
       </header>
 
@@ -81,17 +82,17 @@
       </div>
 
       <!-- Zone de contenu des fichiers -->
-      <div
-        class="files-workspace"
-        :class="{ 'is-drag-over': isDraggingOver }"
-        @dragover.prevent="isDraggingOver = true"
-        @dragleave.prevent="isDraggingOver = false"
-        @drop.prevent="onDropFiles"
-      >
+        <div
+            class="files-workspace"
+            :class="{ 'is-drag-over': isDraggingOver }"
+            @dragover.prevent="isDraggingOver = true"
+            @dragleave.prevent="isDraggingOver = false"
+            @drop.prevent="onDropFiles"
+        >
         <!-- État de chargement initial -->
         <div v-if="docStore.isLoading" class="loading-state">
-          <div class="spinner"></div>
-          <p>Chargement des documents du dossier...</p>
+              <div class="spinner"></div>
+              <p>Chargement des documents du dossier...</p>
         </div>
 
         <!-- ÉTAT VIDE : Aucun document trouvé -->
@@ -122,20 +123,20 @@
 
         <!-- LISTE / GRILLE DES FICHIERS -->
         <div v-else class="files-content-area">
-          <ul class="file-list" :class="`file-list--${view}`">
-            <fileCards
-              v-for="doc in documents"
-              :key="doc.id"
-              :document="doc"
-              :view="view"
-              @open="openDocument"
-              @preview="openDocument"
-              @details="openDocDetails"
-              @download="downloadDocument"
-              @rename="openRename"
-              @delete="openDelete"
-            />
-          </ul>
+            <ul class="file-list" :class="`file-list--${view}`">
+                <fileCards
+                    v-for="doc in documents"
+                    :key="doc.id"
+                    :document="doc"
+                    :view="view"
+                    @open="openDocument"
+                    @preview="openDocument"
+                    @details="openDocDetails"
+                    @download="downloadDocument"
+                    @rename="openRename"
+                    @delete="openDelete"
+                />
+            </ul>
         </div>
 
         <!-- Footer identique à Mon Espace avec switcher de vue -->
@@ -390,19 +391,19 @@ async function typedBlob(doc: DossierDocument) {
 }
 
 async function openDocument(doc: DossierDocument) {
-  const ext = (doc.extension || '').toLowerCase();
-  const isImg = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext);
-  const isPdf = ext === 'pdf';
+    const ext = (doc.extension || '').toLowerCase();
+    const isImg = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext);
+    const isPdf = ext === 'pdf';
 
-  if (!isImg && !isPdf) {
-    return downloadDocument(doc);
-  }
+    if (!isImg && !isPdf) {
+        return downloadDocument(doc);
+    }
 
-  const blob = await typedBlob(doc);
-  if (!blob) {
-    docStore.errorMessage = 'Impossible de charger le document pour la visualisation.';
-    return;
-  }
+    const blob = await typedBlob(doc);
+        if (!blob) {
+            docStore.errorMessage = 'Impossible de charger le document pour la visualisation.';
+        return;
+    }
 
   closePreview();
   preview.value = {

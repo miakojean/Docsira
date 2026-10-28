@@ -169,6 +169,12 @@ class Affair(models.Model):
 
     def calculer_progression(self):
         """Retourne le pourcentage selon le jalon le plus avancé atteint."""
+        document_fields = {field.name for field in self.documents.model._meta.get_fields()}
+        if not {'type_document', 'valide'}.issubset(document_fields):
+            # Ces champs ne font pas partie du modèle Document actuel.
+            # Conserver la progression existante plutôt que de faire échouer chaque ajout.
+            return self.progression
+
         docs = self.documents.all()
         types = set(docs.values_list('type_document', flat=True))
         constitution_validee = docs.filter(
