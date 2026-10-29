@@ -127,7 +127,7 @@ const folderDetailsItem = computed<ItemDetails>(() => {
     createdAt: d.creation_date
       ? new Date(d.creation_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
       : undefined,
-    updatedAt: d.statut || 'En cours',
+    updatedAt: d.statut ? d.statut.replace(/_/g, ' ').toLowerCase() : 'en cours',
     isShared: false,
   };
 });

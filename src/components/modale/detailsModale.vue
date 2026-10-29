@@ -64,7 +64,7 @@
               </div>
               <div class="detail-row">
                 <span class="label">Modifié le</span>
-                <span class="value">{{ item.updatedAt || 'Aujourd\'hui à 14:30' }}</span>
+                <span class="value">{{ formatValue(item.updatedAt) }}</span>
               </div>
               <div class="detail-row">
                 <span class="label">Accès</span>
@@ -76,7 +76,7 @@
           </div>
 
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="closeModal">Fermer</button>
+            <button class="btn btn-close-modal btn-secondary" @click="closeModal">Fermer</button>
             <button class="btn btn-primary" @click="handlePrimaryAction">
               {{ item.isFolder ? 'Ouvrir le dossier' : 'Télécharger' }}
             </button>
@@ -89,7 +89,6 @@
 </template>
 
 <script setup lang="ts">
-// ⚡️ CORRECTION ICI : Ajout de watch et onUnmounted pour gérer le scroll
 import { watch, onUnmounted } from 'vue';
 
 export interface ItemDetails {
@@ -138,6 +137,29 @@ const handlePrimaryAction = () => {
 const getInitials = (name: string): string => {
   if (!name) return 'D';
   return name.split(' ').map(part => part[0]).join('').substring(0, 2).toUpperCase();
+};
+
+const formatValue = (val?: string): string => {
+  if (!val) return 'Aujourd\'hui à 14:30';
+  if (val.toUpperCase() === 'EN_COURS') {
+    return 'en cours';
+  }
+  if (val.includes('_')) {
+    return val.replace(/_/g, ' ').toLowerCase();
+  }
+  const statusMap: Record<string, string> = {
+    NOUVEAU: 'nouveau',
+    EN_COURS: 'en cours',
+    EN_ATTENTE: 'en attente',
+    BLOQUE: 'bloqué',
+    TERMINE: 'terminé',
+    CLOTURE: 'clôturé',
+    ANNULE: 'annulé'
+  };
+  if (statusMap[val]) {
+    return statusMap[val];
+  }
+  return val;
 };
 
 // ⚡️ CORRECTION ICI : Bloquer/Débloquer le scroll du fond
@@ -227,6 +249,7 @@ onUnmounted(() => {
 .close-btn {
     background: transparent;
     border: none;
+    outline: none;
     font-size: 1.75rem;
     cursor: pointer;
     color: #9ca3af;
@@ -234,7 +257,9 @@ onUnmounted(() => {
     padding: 0;
     transition: color 0.2s ease;
 }
-.close-btn:hover { color: #ef4444; }
+.close-btn:hover { color: #4b5563; }
+.close-btn:focus,
+.close-btn:focus-visible { outline: none; }
 .preview-banner {
     background: #f9fafb;
     border: 1px solid #f3f4f6;
@@ -275,10 +300,38 @@ onUnmounted(() => {
 .status-pill.shared { background-color: #fef3c7; color: #92400e; }
 .status-pill.private { background-color: #f3f4f6; color: #4b5563; }
 .modal-footer { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
-.btn { flex: 1; padding: 0.65rem 1rem; border-radius: 10px; font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none; transition: all 0.2s ease; }
-.btn-secondary { background-color: #f3f4f6; color: #4b5563; }
-.btn-secondary:hover { background-color: #e5e7eb; }
-.btn-primary { background-color: #2563eb; color: white; }
+.btn { flex: 1; padding: 0.65rem 1rem; border-radius: 10px; font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none; outline: none; box-shadow: none; transition: all 0.2s ease; }
+.btn-secondary,
+.btn-close-modal {
+    background-color: #f3f4f6 !important;
+    color: #4b5563 !important;
+    border: 1px solid #e5e7eb !important;
+    outline: none !important;
+    box-shadow: none !important;
+    --btn-color: transparent;
+    --btn-border: #e5e7eb;
+    --btn-bg: #f3f4f6;
+    --btn-fg: #4b5563;
+    --btn-shadow: none;
+    --btn-inset: none;
+}
+.btn-secondary:hover,
+.btn-close-modal:hover {
+    background-color: #e5e7eb !important;
+    color: #1f2937 !important;
+    border-color: #d1d5db !important;
+    --btn-border: #d1d5db;
+    --btn-bg: #e5e7eb;
+}
+.btn-secondary:focus,
+.btn-secondary:focus-visible,
+.btn-close-modal:focus,
+.btn-close-modal:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: #d1d5db !important;
+}
+.btn-primary { background-color: #2563eb; color: white; border: none; }
 .btn-primary:hover { background-color: #1d4ed8; }
 
 @media (min-width: 1024px) {
