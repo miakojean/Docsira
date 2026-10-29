@@ -208,6 +208,31 @@ class DocumentQuerySet(models.QuerySet):
                 affair.recalculer_progression()
         return result
 
+
+def document_upload_path(instance, filename):
+    """Place new documents in the client directory associated with the affair."""
+    media_root = os.path.abspath(settings.MEDIA_ROOT)
+    client_directory = os.path.abspath(instance.affair.path_affair) if instance.affair.path_affair else ""
+
+    try:
+        is_inside_media_root = (
+            client_directory
+            and os.path.normcase(os.path.commonpath([media_root, client_directory]))
+            == os.path.normcase(media_root)
+        )
+    except ValueError:
+        is_inside_media_root = False
+
+    if is_inside_media_root:
+        relative_directory = os.path.relpath(client_directory, media_root)
+    else:
+        # Fallback for legacy affairs without a valid stored path.
+        client_folder = instance.affair.client.creer_nom_dossier_securise()
+        relative_directory = os.path.join("dossiers_clients", client_folder)
+
+    safe_filename = os.path.basename(filename.replace("\\", "/"))
+    return os.path.join(relative_directory, safe_filename).replace("\\", "/")
+
 class Document(models.Model):
     """
         Modèle pour gérer les documents liés à une affaire
@@ -220,7 +245,7 @@ class Document(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     affair = models.ForeignKey(Affair, on_delete=models.CASCADE, related_name='documents', verbose_name=_("Affaire"))
     title = models.CharField(_("Titre du document"), max_length=200)
-    file = models.FileField(_("Fichier"), upload_to='documents/%Y/%m/%d/')
+    file = models.FileField(_("Fichier"), upload_to=document_upload_path)
     uploaded_at = models.DateTimeField(_("Date de téléchargement"), auto_now_add=True)
 
     # Évolution du dossier : liaison avec le document dont celui-ci découle

@@ -165,7 +165,6 @@ const fileColorClass = computed(() => {
 .file-item { 
     padding: 0.5rem 0.75rem; 
     border-radius: 12px; 
-    border: 1px solid transparent; 
     transition: all 0.2s ease; 
     cursor: pointer; 
     background-color: #ffffff; 
