@@ -104,7 +104,7 @@
             v-for="doc in documents"
             :key="doc.id"
             :document="doc"
-            @open="openDocument"
+            @open="openDocDetails"
             @preview="openDocument"
             @details="openDocDetails"
             @download="downloadDocument"
@@ -115,7 +115,6 @@
         </div>
 
         <!-- Footer identique à Mon Espace avec switcher de vue -->
-        <footerSection :view="view" @update:view="view = $event" />
       </div>
 
       <!-- Input invisible pour sélectionner des fichiers sur le disque (fallback) -->
@@ -193,12 +192,23 @@
         </Transition>
       </Teleport>
 
-      <!-- MODALE DE DÉTAILS DU DOCUMENT -->
+      <!-- MODALE DE DÉTAILS DU DOCUMENT 
       <detailsModale
         :isOpen="isDetailsOpen"
         :item="docDetailsItem"
         @close="isDetailsOpen = false"
         @action="onDetailsAction"
+      /> -->
+
+      <detail-modale
+        :isOpen="isDetailsOpen"
+        :file="docForDetails || {}"
+        :folder-name="dossier?.title || ''"
+        @close="isDetailsOpen = false"
+        @share="openCollaboratorSettings"
+        @download="downloadDetailsDocument"
+        @edit="renameDetailsDocument"
+        @delete="deleteDetailsDocument"
       />
 
       <!-- MODALE DE SUPPRESSION -->
@@ -225,11 +235,9 @@ import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialo
 import { readFile, writeFile } from '@tauri-apps/plugin-fs';
 import sidebar from '../../components/navbar/sidebar.vue';
 import affairTree from '../../components/navbar/affairTree.vue';
-import footerSection from '../../components/layout/footerSection.vue';
 import myfileCards from '../../components/cards/myfileCards.vue'
-import fileCards from '../../components/cards/fileCards.vue';
 import deleteModale from '../../components/modale/deleteModale.vue';
-import detailsModale, { type ItemDetails } from '../../components/modale/detailsModale.vue';
+import detailModale from '../../components/modale/detailModale.vue'
 import { useClientDossierStore, type Dossier } from '../../stores/dossierStore';
 import { useDocumentStore, type DossierDocument } from '../../stores/documentStore';
 
@@ -241,8 +249,6 @@ const docStore = useDocumentStore();
 const affairId = computed(() => String(route.params.id));
 const dossier = ref<Dossier | null>(null);
 
-// Vue par défaut en 'list', avec possibilité de basculer en 'grid'
-const view = ref<'list' | 'grid'>('list');
 const isDraggingOver = ref(false);
 const diskFileInputRef = ref<HTMLInputElement | null>(null);
 
@@ -367,19 +373,19 @@ async function typedBlob(doc: DossierDocument) {
 }
 
 async function openDocument(doc: DossierDocument) {
-    const ext = (doc.extension || '').toLowerCase();
-    const isImg = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext);
-    const isPdf = ext === 'pdf';
+  const ext = (doc.extension || '').toLowerCase();
+  const isImg = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext);
+  const isPdf = ext === 'pdf';
 
-    if (!isImg && !isPdf) {
-        return downloadDocument(doc);
-    }
+  if (!isImg && !isPdf) {
+    return downloadDocument(doc);
+  }
 
-    const blob = await typedBlob(doc);
-        if (!blob) {
-            docStore.errorMessage = 'Impossible de charger le document pour la visualisation.';
-        return;
-    }
+  const blob = await typedBlob(doc);
+    if (!blob) {
+      docStore.errorMessage = 'Impossible de charger le document pour la visualisation.';
+    return;
+  }
 
   closePreview();
   preview.value = {
@@ -431,55 +437,32 @@ async function confirmRename() {
 const isDetailsOpen = ref(false);
 const docForDetails = ref<DossierDocument | null>(null);
 
-function formatSize(bytes?: number) {
-  if (!bytes || bytes <= 0) return '0 Ko';
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(1)} Ko`;
-  return `${(kb / 1024).toFixed(1)} Mo`;
-}
-
-function formatDate(iso?: string) {
-  if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
-
-const docDetailsItem = computed<ItemDetails>(() => {
-  const doc = docForDetails.value;
-  if (!doc) {
-    return { isFolder: false, name: 'Document' };
-  }
-  return {
-    isFolder: false,
-    name: doc.title || doc.file_name || 'Document',
-    path: `Dossier: ${dossier.value?.title || 'Dossier'} / ${doc.file_name || ''}`,
-    size: formatSize(doc.size),
-    owner: dossier.value?.client?.nom_complet || 'Cabinet',
-    createdAt: formatDate(doc.uploaded_at),
-    updatedAt: doc.version && doc.version > 1 ? `Version ${doc.version}` : 'Version originale (v1)',
-    isShared: false,
-  };
-});
-
 function openDocDetails(doc: DossierDocument) {
   docForDetails.value = doc;
   isDetailsOpen.value = true;
 }
 
-function onDetailsAction() {
-  if (docForDetails.value) {
-    isDetailsOpen.value = false;
-    downloadDocument(docForDetails.value);
-  }
+function openCollaboratorSettings() {
+  isDetailsOpen.value = false;
+  router.push('/dashboard/settings/collaborators');
+}
+
+function downloadDetailsDocument() {
+  const selected = docForDetails.value;
+  isDetailsOpen.value = false;
+  if (selected) void downloadDocument(selected);
+}
+
+function renameDetailsDocument() {
+  const selected = docForDetails.value;
+  isDetailsOpen.value = false;
+  if (selected) openRename(selected);
+}
+
+function deleteDetailsDocument() {
+  const selected = docForDetails.value;
+  isDetailsOpen.value = false;
+  if (selected) openDelete(selected);
 }
 
 // ---------- Suppression ----------
