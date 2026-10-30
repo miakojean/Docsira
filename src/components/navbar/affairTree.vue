@@ -30,7 +30,7 @@
         <button
           type="button"
           class="tree-row"
-          :class="{ active: d.id === currentId }"
+          :class="{ active: d.id === currentId && currentFolderId === null }"
           @click="goTo(d)"
         >
           <svg
@@ -49,9 +49,25 @@
           <span class="row-count">{{ d.id === currentId ? documents.length : (d.documents_count ?? 0) }}</span>
         </button>
 
-        <!-- Documents du dossier ouvert -->
-        <ul v-if="d.id === currentId && documents.length" class="tree-children">
-          <li v-for="doc in documents" :key="doc.id" class="tree-child">
+        <!-- Sous-dossiers et documents du dossier ouvert -->
+        <ul v-if="d.id === currentId" class="tree-children">
+          <!-- Sous-dossiers de la racine (dépliables) -->
+          <affairTreeFolderItem
+            v-for="sf in rootSubfolders"
+            :key="sf.id"
+            :folder="sf"
+            :allSubfolders="subfolders || []"
+            :allDocuments="documents"
+            :docFolderMap="folderStore.docFolderMap"
+            :currentFolderId="currentFolderId"
+            :expandedFolderIds="expandedFolderIds"
+            @selectFolder="onSelectFolder"
+            @openDocument="emit('openDocument', $event)"
+            @toggleFolder="toggleFolder"
+          />
+
+          <!-- Documents de la racine (toujours visibles !) -->
+          <li v-for="doc in rootDocuments" :key="doc.id" class="tree-child">
             <button type="button" class="tree-row child" :title="doc.title" @click="emit('openDocument', doc)">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="row-icon" :class="extClass(doc.extension)">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -83,25 +99,80 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useClientDossierStore, type Dossier } from '../../stores/dossierStore';
 import type { DossierDocument } from '../../stores/documentStore';
+import { useAffairFolderStore, type AffairSubfolder } from '../../stores/affairFolderStore';
+import affairTreeFolderItem from './affairTreeFolderItem.vue';
 
-const props = defineProps<{
-  currentId: string;
-  documents: DossierDocument[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    currentId: string;
+    documents: DossierDocument[];
+    subfolders?: AffairSubfolder[];
+    currentFolderId?: string | null;
+  }>(),
+  {
+    subfolders: () => [],
+    currentFolderId: null,
+  }
+);
 
 const emit = defineEmits<{
   openDocument: [doc: DossierDocument];
+  selectFolder: [folderId: string | null];
 }>();
 
 const router = useRouter();
 const store = useClientDossierStore();
+const folderStore = useAffairFolderStore();
 
 const query = ref('');
 const tab = ref<'folders' | 'files'>('folders');
+const expandedFolderIds = ref<Set<string>>(new Set());
+
+// Sous-dossiers de premier niveau (racine)
+const rootSubfolders = computed(() => {
+  return (props.subfolders || []).filter((sf) => !sf.parentId);
+});
+
+// Documents situés à la racine (non assignés à un sous-dossier)
+const rootDocuments = computed(() => {
+  const subfolderIds = new Set((props.subfolders || []).map((sf) => sf.id));
+  return props.documents.filter((doc) => {
+    const assignedFolderId = folderStore.docFolderMap[doc.id];
+    return !assignedFolderId || !subfolderIds.has(assignedFolderId);
+  });
+});
+
+// Quand on navigue dans un sous-dossier, on le déplie automatiquement ainsi que sa lignée parente
+watch(
+  () => props.currentFolderId,
+  (newId) => {
+    if (newId) {
+      const path = folderStore.getFolderPath(newId);
+      for (const p of path) {
+        expandedFolderIds.value.add(p.id);
+      }
+      expandedFolderIds.value.add(newId);
+    }
+  },
+  { immediate: true }
+);
+
+function toggleFolder(folderId: string) {
+  if (expandedFolderIds.value.has(folderId)) {
+    expandedFolderIds.value.delete(folderId);
+  } else {
+    expandedFolderIds.value.add(folderId);
+  }
+}
+
+function onSelectFolder(folderId: string) {
+  emit('selectFolder', folderId);
+  expandedFolderIds.value.add(folderId);
+}
 
 const filteredDossiers = computed(() => {
   const q = query.value.trim().toLowerCase();
@@ -118,7 +189,11 @@ const filteredDocuments = computed(() => {
 });
 
 function goTo(d: Dossier) {
-  if (d.id !== props.currentId) router.push(`/dashboard/affairs/${d.id}`);
+  if (d.id !== props.currentId) {
+    router.push(`/dashboard/affairs/${d.id}`);
+  } else {
+    emit('selectFolder', null);
+  }
 }
 
 function extClass(ext: string) {
@@ -130,6 +205,7 @@ function extClass(ext: string) {
 
 onMounted(() => {
   if (store.allDossiers.length === 0) store.fetchAllDossiers();
+  if (!folderStore.isLoaded) folderStore.loadStore();
 });
 </script>
 
@@ -253,7 +329,8 @@ onMounted(() => {
 
 .tree-row.active {
   background: #e9ebee;
-  font-weight: 500;
+  font-weight: 600;
+  color: #2563eb;
 }
 
 .row-icon {
@@ -311,11 +388,11 @@ onMounted(() => {
   position: relative;
 }
 
-.tree-children:not(.flat) .tree-child::before {
+.tree-children:not(.flat) > .tree-child::before {
   content: '';
   position: absolute;
   left: -0.4rem;
-  top: 50%;
+  top: 1rem;
   width: 0.5rem;
   border-top: 1px solid #d1d5db;
 }
