@@ -218,6 +218,9 @@ jwt_secret.txt
 # Files testing
 *.png 
 *.xlsx
+*.docx
+.doc
+.pptx
 
 # Migrations files
 *.json

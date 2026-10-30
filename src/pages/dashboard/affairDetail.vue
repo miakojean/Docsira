@@ -211,7 +211,7 @@
             v-for="doc in currentDocuments"
             :key="doc.id"
             :document="doc"
-            @open="openDocument"
+            @open="openDocDetails"
             @preview="openDocument"
             @details="openDocDetails"
             @detail="openDocDetails"
@@ -224,7 +224,6 @@
         </div>
 
         <!-- Footer identique à Mon Espace avec switcher de vue -->
-        <footerSection :view="view" @update:view="view = $event" />
       </div>
 
       <!-- Input invisible pour sélectionner des fichiers sur le disque (fallback) -->
@@ -302,7 +301,6 @@
         </Transition>
       </Teleport>
 
-      <!-- MODALE DE DÉTAILS DU DOCUMENT -->
       <detailsModale
         :isOpen="isDetailsOpen"
         :item="docDetailsItem"
@@ -411,6 +409,129 @@
         @action="onDetailsAction"
       />
 
+      <detail-modale
+        :isOpen="isDetailsOpen"
+        :file="docForDetails || {}"
+        :folder-name="dossier?.title || ''"
+        @close="isDetailsOpen = false"
+        @share="openCollaboratorSettings"
+        @download="downloadDetailsDocument"
+        @edit="renameDetailsDocument"
+        @delete="deleteDetailsDocument"
+      />
+
+      <!-- MODALE DE CRÉATION / RENOMMAGE DE SOUS-DOSSIER -->
+      <renameModale
+        :isOpen="isFolderModalOpen"
+        :title="folderModalMode === 'create' ? 'Nouveau sous-dossier' : 'Renommer le sous-dossier'"
+        :isFolder="true"
+        :currentName="folderModalName"
+        @close="isFolderModalOpen = false"
+        @rename="confirmSaveFolder"
+      />
+
+      <!-- MODALE DE SUPPRESSION DE SOUS-DOSSIER -->
+      <deleteModale
+        :isOpen="isDeleteFolderOpen"
+        :isLoading="false"
+        :isSuccess="false"
+        :itemName="folderToDelete?.name || 'ce sous-dossier'"
+        :isFolder="true"
+        title="Supprimer le sous-dossier"
+        description="Êtes-vous sûr de vouloir supprimer définitivement ce sous-dossier ?"
+        subtext="Les documents présents dans ce dossier seront replacés à la racine de l'affaire."
+        @close="isDeleteFolderOpen = false"
+        @delete="confirmDeleteFolder"
+      />
+
+      <!-- MODALE POUR DÉPLACER UN DOCUMENT VERS UN SOUS-DOSSIER -->
+      <Teleport to="body">
+        <Transition name="modal-fade">
+          <div v-if="isMoveDocModalOpen && docToMove" class="modal-backdrop" @click.self="isMoveDocModalOpen = false">
+            <div class="modal-box">
+              <div class="modal-box-header">
+                <h3 class="modal-box-title">Déplacer le document</h3>
+                <button type="button" class="modal-box-close" @click="isMoveDocModalOpen = false">&times;</button>
+              </div>
+              <div class="modal-box-body">
+                <p class="destination-hint">
+                  Sélectionnez l'emplacement de destination pour <strong>{{ docToMove.title || docToMove.file_name }}</strong> :
+                </p>
+
+                <div class="folder-destination-list">
+                  <label
+                    class="destination-option"
+                    :class="{ selected: targetFolderIdForMove === null }"
+                  >
+                    <input
+                      type="radio"
+                      name="destFolder"
+                      :value="null"
+                      v-model="targetFolderIdForMove"
+                    />
+                    <div class="dest-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="size-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                      </svg>
+                    </div>
+                    <div class="dest-label">
+                      <strong>Racine de l'affaire</strong>
+                      <span>Emplacement principal de l'affaire</span>
+                    </div>
+                  </label>
+
+                  <label
+                    v-for="sf in subfolders"
+                    :key="sf.id"
+                    class="destination-option"
+                    :class="{ selected: targetFolderIdForMove === sf.id }"
+                  >
+                    <input
+                      type="radio"
+                      name="destFolder"
+                      :value="sf.id"
+                      v-model="targetFolderIdForMove"
+                    />
+                    <div class="dest-icon folder">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="size-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+                      </svg>
+                    </div>
+                    <div class="dest-label">
+                      <strong>{{ sf.name }}</strong>
+                      <span>Sous-dossier</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+              <div class="modal-box-footer">
+                <button type="button" class="btn btn-secondary" @click="isMoveDocModalOpen = false">Annuler</button>
+                <button type="button" class="btn btn-primary" @click="confirmMoveDoc">Déplacer ici</button>
+              </div>
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
+
+      <!-- MODALE DE DÉTAILS DU DOCUMENT 
+      <detailsModale
+        :isOpen="isDetailsOpen"
+        :item="docDetailsItem"
+        @close="isDetailsOpen = false"
+        @action="onDetailsAction"
+      /> -->
+
+      <detail-modale
+        :isOpen="isDetailsOpen"
+        :file="docForDetails || {}"
+        :folder-name="dossier?.title || ''"
+        @close="isDetailsOpen = false"
+        @share="openCollaboratorSettings"
+        @download="downloadDetailsDocument"
+        @edit="renameDetailsDocument"
+        @delete="deleteDetailsDocument"
+      />
+
       <!-- MODALE DE SUPPRESSION -->
       <deleteModale
         :isOpen="isDeleteOpen"
@@ -440,7 +561,7 @@ import folderCards from '../../components/cards/folderCards.vue';
 import myfileCards from '../../components/cards/myfileCards.vue';
 import renameModale from '../../components/modale/renameModale.vue';
 import deleteModale from '../../components/modale/deleteModale.vue';
-import detailsModale, { type ItemDetails } from '../../components/modale/detailsModale.vue';
+import detailModale from '../../components/modale/detailModale.vue'
 import { useClientDossierStore, type Dossier } from '../../stores/dossierStore';
 import { useDocumentStore, type DossierDocument } from '../../stores/documentStore';
 import { useAffairFolderStore, type AffairSubfolder } from '../../stores/affairFolderStore';
@@ -454,8 +575,6 @@ const folderStore = useAffairFolderStore();
 const affairId = computed(() => String(route.params.id));
 const dossier = ref<Dossier | null>(null);
 
-// Vue par défaut en 'list', avec possibilité de basculer en 'grid'
-const view = ref<'list' | 'grid'>('list');
 const isDraggingOver = ref(false);
 const diskFileInputRef = ref<HTMLInputElement | null>(null);
 
@@ -714,7 +833,13 @@ async function openDocument(doc: DossierDocument) {
   const ext = (doc.extension || '').toLowerCase();
   const isImg = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext);
   const isPdf = ext === 'pdf';
+  const ext = (doc.extension || '').toLowerCase();
+  const isImg = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext);
+  const isPdf = ext === 'pdf';
 
+  if (!isImg && !isPdf) {
+    return downloadDocument(doc);
+  }
   if (!isImg && !isPdf) {
     return downloadDocument(doc);
   }
@@ -775,13 +900,21 @@ async function confirmRename() {
 const isDetailsOpen = ref(false);
 const docForDetails = ref<DossierDocument | null>(null);
 
-function formatSize(bytes?: number) {
-  if (!bytes || bytes <= 0) return '0 Ko';
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(1)} Ko`;
-  return `${(kb / 1024).toFixed(1)} Mo`;
+function openDocDetails(doc: DossierDocument) {
+  docForDetails.value = doc;
+  isDetailsOpen.value = true;
 }
 
+function openCollaboratorSettings() {
+  isDetailsOpen.value = false;
+  router.push('/dashboard/settings/collaborators');
+}
+
+function downloadDetailsDocument() {
+  const selected = docForDetails.value;
+  isDetailsOpen.value = false;
+  if (selected) void downloadDocument(selected);
+}
 function formatDate(iso?: string) {
   if (!iso) return '';
   try {
@@ -820,16 +953,16 @@ const docDetailsItem = computed<ItemDetails>(() => {
   };
 });
 
-function openDocDetails(doc: DossierDocument) {
-  docForDetails.value = doc;
-  isDetailsOpen.value = true;
+function renameDetailsDocument() {
+  const selected = docForDetails.value;
+  isDetailsOpen.value = false;
+  if (selected) openRename(selected);
 }
 
-function onDetailsAction() {
-  if (docForDetails.value) {
-    isDetailsOpen.value = false;
-    downloadDocument(docForDetails.value);
-  }
+function deleteDetailsDocument() {
+  const selected = docForDetails.value;
+  isDetailsOpen.value = false;
+  if (selected) openDelete(selected);
 }
 
 // ---------- Suppression ----------
