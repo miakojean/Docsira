@@ -35,30 +35,6 @@
         </div>
 
         <div class="header-actions">
-          <!-- Switcher Liste / Grille dans le header -->
-          <div class="view-toggle" role="group" aria-label="Mode d'affichage">
-            <button
-              type="button"
-              class="view-btn"
-              :class="{ active: view === 'list' }"
-              title="Afficher en liste"
-              @click="view = 'list'"
-            >
-              <span class="view-icon">☷</span>
-              <span class="view-label">Liste</span>
-            </button>
-            <button
-              type="button"
-              class="view-btn"
-              :class="{ active: view === 'grid' }"
-              title="Afficher en grille"
-              @click="view = 'grid'"
-            >
-              <span class="view-icon">▦</span>
-              <span class="view-label">Grille</span>
-            </button>
-          </div>
-
           <!-- Bouton Ajouter un document -->
         <button
             type="button"
@@ -122,21 +98,20 @@
         </div>
 
         <!-- LISTE / GRILLE DES FICHIERS -->
-        <div v-else class="files-content-area">
-            <ul class="file-list" :class="`file-list--${view}`">
-                <fileCards
-                    v-for="doc in documents"
-                    :key="doc.id"
-                    :document="doc"
-                    :view="view"
-                    @open="openDocument"
-                    @preview="openDocument"
-                    @details="openDocDetails"
-                    @download="downloadDocument"
-                    @rename="openRename"
-                    @delete="openDelete"
-                />
-            </ul>
+        <div v-else class="files-content-area file-list--grid">
+      
+          <myfileCards 
+            v-for="doc in documents"
+            :key="doc.id"
+            :document="doc"
+            @open="openDocument"
+            @preview="openDocument"
+            @details="openDocDetails"
+            @download="downloadDocument"
+            @rename="openRename"
+            @delete="openDelete"
+          />
+
         </div>
 
         <!-- Footer identique à Mon Espace avec switcher de vue -->
@@ -251,6 +226,7 @@ import { readFile, writeFile } from '@tauri-apps/plugin-fs';
 import sidebar from '../../components/navbar/sidebar.vue';
 import affairTree from '../../components/navbar/affairTree.vue';
 import footerSection from '../../components/layout/footerSection.vue';
+import myfileCards from '../../components/cards/myfileCards.vue'
 import fileCards from '../../components/cards/fileCards.vue';
 import deleteModale from '../../components/modale/deleteModale.vue';
 import detailsModale, { type ItemDetails } from '../../components/modale/detailsModale.vue';
@@ -895,7 +871,7 @@ onUnmounted(() => {
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
-  padding: 1.25rem 1.5rem;
+  padding: 0.75rem;
 }
 
 .file-list {

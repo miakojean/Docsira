@@ -1,6 +1,8 @@
 import tempfile
+import os
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.conf import settings
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APITestCase
@@ -54,6 +56,9 @@ class AffairDocumentsApiTests(APITestCase):
 		second = Document.objects.get(affair=self.affair, relation=Document.Relation.ADDED)
 		self.assertIsNone(first.parent)
 		self.assertEqual(second.parent_id, first.id)
+		expected_directory = os.path.relpath(self.affair.path_affair, settings.MEDIA_ROOT).replace("\\", "/")
+		self.assertEqual(os.path.dirname(first.file.name), expected_directory)
+		self.assertEqual(os.path.dirname(second.file.name), expected_directory)
 		self.affair.refresh_from_db()
 		self.assertEqual(self.affair.statut, "EN_COURS")
 
