@@ -35,30 +35,6 @@
         </div>
 
         <div class="header-actions">
-          <!-- Switcher Liste / Grille dans le header -->
-          <div class="view-toggle" role="group" aria-label="Mode d'affichage">
-            <button
-              type="button"
-              class="view-btn"
-              :class="{ active: view === 'list' }"
-              title="Afficher en liste"
-              @click="view = 'list'"
-            >
-              <span class="view-icon">☷</span>
-              <span class="view-label">Liste</span>
-            </button>
-            <button
-              type="button"
-              class="view-btn"
-              :class="{ active: view === 'grid' }"
-              title="Afficher en grille"
-              @click="view = 'grid'"
-            >
-              <span class="view-icon">▦</span>
-              <span class="view-label">Grille</span>
-            </button>
-          </div>
-
           <!-- Bouton Ajouter un document -->
         <button
             type="button"
