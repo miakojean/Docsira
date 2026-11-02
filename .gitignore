@@ -221,6 +221,7 @@ jwt_secret.txt
 *.docx
 .doc
 .pptx
+*.pdf
 
 # Migrations files
 *.json
