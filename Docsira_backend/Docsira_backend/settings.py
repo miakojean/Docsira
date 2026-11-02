@@ -61,7 +61,8 @@ INSTALLED_APPS = [
     # Applications locales
     'account',
     'Client',
-    'affairs'
+    'affairs',
+    'sira'
 ]
 
 REST_FRAMEWORK = {

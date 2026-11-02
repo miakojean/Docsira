@@ -9,6 +9,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 # Relation 
 from account.models import CustomUser, Collaborator
 from Client.models import Client
+from sira.models import SiraCategory, SiraFolderHistory
 # Create your models here.
 
 class Affair(models.Model):
@@ -167,29 +168,33 @@ class Affair(models.Model):
         except Exception as e:
             print(f"❌ Erreur création dossier client: {e}")
 
-    def calculer_progression(self):
-        """Retourne le pourcentage selon le jalon le plus avancé atteint."""
-        document_fields = {field.name for field in self.documents.model._meta.get_fields()}
-        if not {'type_document', 'valide'}.issubset(document_fields):
-            # Ces champs ne font pas partie du modèle Document actuel.
-            # Conserver la progression existante plutôt que de faire échouer chaque ajout.
-            return self.progression
+    def calculer_progression_sira(self):
+        """
+        Calcule la progression selon les 5 catégories SIRA :
+        - Identification : 45%
+        - Constitution : 60%
+        - Procédures : 75%
+        - Livrables : 90%
+        - Clôture : 100%
+        """
+        if self.statut in ['CLOTURE', 'TERMINE']:
+            return 100
 
         docs = self.documents.all()
-        types = set(docs.values_list('type_document', flat=True))
-        constitution_validee = docs.filter(
-            type_document='CONSTITUTION', valide=True
-        ).exists()
+        categories = set(docs.values_list('category', flat=True))
 
-        if 'LIVRABLES' in types:
+        if 'CLOTURE' in categories or self.statut == 'CLOTURE':
             return 100
-        if 'OPERATIONS' in types:
-            return 95
-        if constitution_validee:
+        if 'LIVRABLES' in categories:
+            return 90
+        if 'PROCEDURES' in categories:
+            return 75
+        if 'CONSTITUTION' in categories:
             return 60
-        if 'IDENTIFICATION' in types:
+        if 'IDENTIFICATION' in categories:
             return 45
-        return 10
+        
+        return 10 # Valeur par défaut à la création
 
     def recalculer_progression(self):
         """Met à jour la progression sans repasser par save() (évite la logique de référence/dossier physique)."""
@@ -256,6 +261,14 @@ class Document(models.Model):
     relation = models.CharField(_("Type de liaison"), max_length=10, choices=Relation.choices, default=Relation.INITIAL)
     version = models.PositiveIntegerField(_("Version"), default=1)
 
+    category = models.CharField(
+        _("Catégorie SIRA"), 
+        max_length=30, 
+        choices=SiraCategory.choices, 
+        default=SiraCategory.IDENTIFICATION
+    )
+    valide = models.BooleanField(_("Document validé"), default=False)
+
     # Position sur l'espace de travail (null = disposition automatique)
     pos_x = models.FloatField(_("Position X"), null=True, blank=True)
     pos_y = models.FloatField(_("Position Y"), null=True, blank=True)
@@ -269,20 +282,29 @@ class Document(models.Model):
         return f"{self.title} ({self.affair.reference_affair})"
 
     def save(self, *args, **kwargs):
-        # Si le document change d'affaire, on recalcule aussi l'ancienne
-        ancienne_affair_id = None
-        if self.pk:
-            ancienne_affair_id = (
-                Document.objects.filter(pk=self.pk)
-                .values_list('affair_id', flat=True)
-                .first()
+        is_new = self.pk is None
+        old_progression = self.affair.progression
+        
+        super().save(*args, **kwargs)
+        
+        # Recalcul de la progression via SIRA
+        new_progression = self.affair.calculer_progression_sira()
+        
+        if old_progression != new_progression or is_new:
+            self.affair.progression = new_progression
+            self.affair.save(update_fields=['progression'])
+            
+            # Enregistrement automatique dans le module d'historique SIRA
+            SiraFolderHistory.objects.create(
+                affair_id=self.affair.id,
+                previous_progression=old_progression,
+                new_progression=new_progression,
+                action_type="AJOUT_DOCUMENT" if is_new else "MAJ_DOCUMENT",
+                document_title=self.title,
+                category=self.category,
+                author=str(self.affair.collaborator) if self.affair.collaborator else "Système",
+                details=f"Ajout/Mise à jour du document '{self.title}' dans la catégorie {self.category}."
             )
-
-        with transaction.atomic():
-            super().save(*args, **kwargs)
-            self.affair.recalculer_progression()
-            if ancienne_affair_id and ancienne_affair_id != self.affair_id:
-                Affair.objects.get(pk=ancienne_affair_id).recalculer_progression()
 
     def delete(self, *args, **kwargs):
         affair = self.affair
