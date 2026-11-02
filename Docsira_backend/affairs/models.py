@@ -15,16 +15,47 @@ from sira.models import SiraCategory, SiraFolderHistory
 class Affair(models.Model):
 
     TYPE_DOSSIER_CHOICES = [
+        # 1. Constitution, Vie Sociale & Restructuration
         ('CONSTITUTION', 'Constitution de société'),
         ('MODIFICATION', 'Modification statutaire'),
-        ('DISSOLUTION', 'Dissolution/Liquidation'),
-        ('CONTENTIEUX', 'Contentieux'),
-        ('CONSEIL', 'Conseil juridique'),
-        ('CONTRAT', 'Rédaction de contrat'),
-        ('AUDIT', 'Audit juridique'),
-        ('PROPRIETE_INTELLECTUELLE', 'Propriété intellectuelle'),
-        ('FUSION_ACQUISITION', 'Fusion/Acquisition'),
-        ('RECOUVREMENT', 'Recouvrement de créances'),
+        ('DISSOLUTION', 'Dissolution / Liquidation'),
+        ('TRANSFORMATION', 'Transformation de société'),
+        ('FUSION_ACQUISITION', 'Fusion / Acquisition (M&A)'),
+        ('SECRETARIAT_JURIDIQUE', 'Secrétariat juridique annuel (AGO/AGE)'),
+        
+        # 2. Comptabilité, Tenue & Révision (Spécial Comptabilité)
+        ('COMPTABILITE_TENUE', 'Tenue comptable mensuelle / périodique'),
+        ('REVISION_COMPTABLE', 'Révision et arrêté des comptes annuels'),
+        ('ETABLISSEMENT_ETATS_FINANCIERS', 'Établissement des états financiers (Bilan, Compte de résultat)'),
+        ('CONSOLIDATION_COMPTABLE', 'Consolidation des comptes'),
+        ('GESTION_PAIE', 'Gestion de la paie et déclarations sociales'),
+
+        # 3. Fiscalité & Déclarations (Compta & Droit)
+        ('FISCALITE_ENTREPRISE', 'Fiscalité des entreprises (Déclarations fiscales)'),
+        ('AUDIT_FISCAL', 'Audit et optimisation fiscale'),
+        ('ASSISTANCE_CONTROLE_FISCAL', 'Assistance lors d\'un contrôle fiscal ou social'),
+
+        # 4. Contrats, Partenariats & Immobilier
+        ('CONTRAT', 'Rédaction et négociation de contrats'),
+        ('PARTENARIAT', 'Protocole d\'accord / Partenariat stratégique'),
+        ('BAIL_COMMERCIAL', 'Bail commercial / Professionnel'),
+
+        # 5. Contentieux, Recouvrement & Procédures
+        ('CONTENTIEUX', 'Contentieux judiciaire (Affaires & Financier)'),
+        ('ARBITRAGE_MEDIATION', 'Arbitrage et Médiation'),
+        ('RECOUVREMENT', 'Recouvrement de créances et voies d\'exécution'),
+        ('PROCEDURE_COLLECTIVE', 'Procédures collectives (Redressement / Liquidation judiciaire)'),
+
+        # 6. Conseil & Audit Global
+        ('CONSEIL', 'Conseil juridique et stratégique'),
+        ('AUDIT_JURIDIQUE', 'Audit juridique et d\'acquisition (Due Diligence)'),
+        ('DROIT_SOCIAL', 'Droit social et relations de travail'),
+
+        # 7. Propriété Intellectuelle & Numérique
+        ('PROPRIETE_INTELLECTUELLE', 'Propriété intellectuelle (Marques, Brevets)'),
+        ('CONFORMITE_RGPD', 'Conformité réglementaire (RGPD / Protection des données)'),
+
+        # 8. Divers
         ('AUTRE', 'Autre'),
     ]
 
@@ -105,16 +136,47 @@ class Affair(models.Model):
         if not self.reference_affair:
             year = timezone.now().year
             type_prefixes = {
+                # Constitution, Vie Sociale & Restructuration
                 'CONSTITUTION': 'CONST',
                 'MODIFICATION': 'MODIF',
                 'DISSOLUTION': 'DISS',
-                'CONTENTIEUX': 'CONT',
-                'CONSEIL': 'CONS',
-                'CONTRAT': 'CNTR',
-                'AUDIT': 'AUD',
-                'PROPRIETE_INTELLECTUELLE': 'PI',
+                'TRANSFORMATION': 'TRANS',
                 'FUSION_ACQUISITION': 'MA',
+                'SECRETARIAT_JURIDIQUE': 'SEC',
+                
+                # Comptabilité, Tenue & Révision
+                'COMPTABILITE_TENUE': 'COMP',
+                'REVISION_COMPTABLE': 'REV',
+                'ETABLISSEMENT_ETATS_FINANCIERS': 'EF',
+                'CONSOLIDATION_COMPTABLE': 'CC',
+                'GESTION_PAIE': 'PAIE',
+
+                # Fiscalité & Déclarations
+                'FISCALITE_ENTREPRISE': 'FISC',
+                'AUDIT_FISCAL': 'AUDF',
+                'ASSISTANCE_CONTROLE_FISCAL': 'CTRL',
+
+                # Contrats, Partenariats & Immobilier
+                'CONTRAT': 'CNTR',
+                'PARTENARIAT': 'PART',
+                'BAIL_COMMERCIAL': 'BAIL',
+
+                # Contentieux, Recouvrement & Procédures
+                'CONTENTIEUX': 'CONT',
+                'ARBITRAGE_MEDIATION': 'ARBIT',
                 'RECOUVREMENT': 'REC',
+                'PROCEDURE_COLLECTIVE': 'PROC',
+
+                # Conseil & Audit Global
+                'CONSEIL': 'CONS',
+                'AUDIT_JURIDIQUE': 'AUD',
+                'DROIT_SOCIAL': 'SOC',
+
+                # Propriété Intellectuelle & Numérique
+                'PROPRIETE_INTELLECTUELLE': 'PI',
+                'CONFORMITE_RGPD': 'RGPD',
+
+                # Divers
                 'AUTRE': 'AUT',
             }
             prefix = type_prefixes.get(self.type_affair, 'DOS')
