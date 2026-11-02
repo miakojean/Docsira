@@ -55,7 +55,15 @@ import { ref, computed, watch, onUnmounted } from 'vue';
 import { useClientDossierStore } from '../../stores/dossierStore';
 import { useClientStore, type ClientListItem } from '../../stores/clientStore';
 
-const props = defineProps<{ isOpen: boolean }>();
+const props = withDefaults(
+  defineProps<{
+    isOpen: boolean;
+    defaultClient?: ClientListItem | null;
+  }>(),
+  {
+    defaultClient: null,
+  }
+);
 const emit = defineEmits(['close', 'created']);
 
 const dossierStore = useClientDossierStore();
@@ -91,7 +99,7 @@ watch(() => props.isOpen, (open) => {
   if (open) {
     title.value = '';
     search.value = '';
-    selectedClient.value = null;
+    selectedClient.value = props.defaultClient ?? null;
     dossierStore.errorMessage = '';
     dossierStore.fieldErrors = {};
     if (clientStore.clients.length === 0) clientStore.fetchClients();

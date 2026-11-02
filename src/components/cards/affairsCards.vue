@@ -115,11 +115,11 @@
 
     <!-- Informations sous le dossier -->
     <div class="folder-info">
-      <p class="folder-client" :title="dossier ? displayClient : displayTitle">
-        {{ dossier ? displayClient : displayTitle }}
+      <p class="folder-client" :title="displayTitle">
+        {{ displayTitle }}
       </p>
       <p class="files-count">
-        {{ displayFilesCount }} {{ displayFilesCount > 1 ? 'Files' : 'File' }}
+        {{ displaySubtitle }}
       </p>
     </div>
 
@@ -142,7 +142,22 @@
         :class="['dropbox--' + menuPositionX]"
         @click.stop
       >
-        <ul>
+        <ul v-if="isClientCard">
+          <li @click="onAction('goTo')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+            </svg>
+            <span>Ouvrir</span>
+          </li>
+          <li @click="onAction('addDossier')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            <span>Nouveau dossier</span>
+          </li>
+        </ul>
+
+        <ul v-else>
           <li @click="onAction('goTo')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
@@ -205,18 +220,24 @@ const props = withDefaults(
   defineProps<{
     dossier?: Dossier | null;
     title?: string;
+    subtitle?: string;
     content?: string;
     progress?: number;
     filesCount?: number;
     color?: string;
+    isClientCard?: boolean;
+    previewExtensions?: string[];
   }>(),
   {
     dossier: null,
-    title: 'Onboarding',
-    content: 'Onboarding',
+    title: '',
+    subtitle: '',
+    content: '',
     progress: undefined,
     filesCount: undefined,
     color: undefined,
+    isClientCard: false,
+    previewExtensions: () => [],
   }
 );
 
@@ -231,6 +252,7 @@ const emit = defineEmits([
   'download',
   'archive',
   'delete',
+  'addDossier',
 ]);
 
 const isOpen = ref<boolean>(false);
@@ -238,24 +260,43 @@ const cardRef = ref<HTMLElement | null>(null);
 const menuPositionX = ref<'left' | 'right' | 'inner-right'>('right');
 
 const displayTitle = computed(() => {
-  return props.dossier?.title || props.title;
-});
-
-const displayClient = computed(() => {
-  if (!props.dossier) return '';
-  return props.dossier.client?.nom_complet || props.dossier.title || 'Aucun client';
+  if (props.isClientCard) {
+    return props.title || props.dossier?.client?.nom_complet || 'Client';
+  }
+  return props.dossier?.title || props.title || 'Dossier';
 });
 
 const displayFilesCount = computed(() => {
   if (props.filesCount !== undefined) return props.filesCount;
   if (props.dossier) return props.dossier.documents_count ?? 0;
-  return 15;
+  return 0;
+});
+
+const displaySubtitle = computed(() => {
+  if (props.subtitle) return props.subtitle;
+  if (props.isClientCard) {
+    const count = props.filesCount ?? 0;
+    return `${count} ${count > 1 ? 'dossiers' : 'dossier'}`;
+  }
+  const count = displayFilesCount.value;
+  const countLabel = `${count} ${count > 1 ? 'fichiers' : 'fichier'}`;
+  if (props.dossier?.reference_affair) {
+    return `${props.dossier.reference_affair} · ${countLabel}`;
+  }
+  return countLabel;
 });
 
 // Cartes de fichiers affichées en haut du dossier
 const papers = computed(() => {
+  if (props.isClientCard) {
+    const exts = (props.previewExtensions ?? []).filter(Boolean).slice(0, 2);
+    if (!exts.length && (props.filesCount ?? 0) > 0) {
+      return [{ label: 'DOC', cls: 'is-word' }, { label: 'PDF', cls: 'is-pdf' }];
+    }
+    return exts.map((ext) => describeExtension(ext));
+  }
   if (displayFilesCount.value <= 0) return [];
-  const exts = (props.dossier?.documents_preview ?? []).slice(0, 2);
+  const exts = (props.dossier?.documents_preview ?? []).filter(Boolean).slice(0, 2);
   const list = exts.length ? exts : ['', 'pdf'];
   return list.map((ext) => describeExtension(ext));
 });
@@ -271,7 +312,7 @@ function describeExtension(ext: string) {
 
 const effectiveProgress = computed(() => {
   if (props.progress !== undefined) {
-    return Math.max(0, Math.min(100, props.progress));
+    return Math.max(0, Math.min(100, Math.round(props.progress)));
   }
   if (props.dossier) {
     switch (props.dossier.statut) {
@@ -291,7 +332,7 @@ const effectiveProgress = computed(() => {
         return 40;
     }
   }
-  return 60;
+  return 0;
 });
 
 // Calculs pour le cercle SVG de progression
@@ -306,9 +347,9 @@ const progressDashOffset = computed(() => {
 const progressColor = computed(() => {
   if (props.color) return props.color;
   const pct = effectiveProgress.value;
-  if (pct >= 60) return '#22c55e'; // Vert (comme le 60% de l'image)
-  if (pct >= 30) return '#0ea5e9'; // Bleu/Teal (comme le 35% de l'image)
-  return '#3b82f6'; // Bleu (comme le 15% de l'image)
+  if (pct >= 60) return '#22c55e';
+  if (pct >= 30) return '#0ea5e9';
+  return '#3b82f6';
 });
 
 function toggleMenu() {
@@ -343,7 +384,8 @@ type CardAction =
   | 'link'
   | 'download'
   | 'archive'
-  | 'delete';
+  | 'delete'
+  | 'addDossier';
 
 function onAction(action: CardAction) {
   isOpen.value = false;

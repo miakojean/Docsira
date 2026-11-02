@@ -100,6 +100,12 @@
             <button class="btn" type="button" @click="mode === 'add' ? (mode = 'list') : $emit('close')">
               {{ mode === 'add' ? 'Annuler' : 'Fermer' }}
             </button>
+            <button v-if="mode === 'list' && client" class="btn btn-secondary" type="button" @click="goToWorkspace" title="Ouvrir ce client dans le Workspace">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="size-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z" />
+              </svg>
+              Voir dans Workspace
+            </button>
             <button v-if="mode === 'list'" class="btn btn-primary" type="button" @click="openAdd">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -151,7 +157,7 @@ const props = defineProps<{
   client: ClientListItem | null;
 }>();
 
-defineEmits(['close']);
+const emit = defineEmits(['close']);
 
 const dossierStore = useClientDossierStore();
 const router = useRouter();
@@ -159,6 +165,13 @@ const router = useRouter();
 function openDossier(d: Dossier) {
   document.body.style.overflow = '';
   router.push(`/dashboard/affairs/${d.id}`);
+}
+
+function goToWorkspace() {
+  if (!props.client) return;
+  document.body.style.overflow = '';
+  emit('close');
+  router.push({ path: '/dashboard/affairs', query: { client: props.client.id } });
 }
 const clientStore = useClientStore();
 
@@ -385,6 +398,8 @@ onUnmounted(() => { document.body.style.overflow = ''; });
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary { background: var(--primary-color, #2563eb); color: #fff; }
 .btn-primary:hover:not(:disabled) { background: var(--primary-color-dark, #1d4ed8); }
+.btn-secondary { background: #eff6ff; color: var(--primary-color, #2563eb); border: 1px solid #bfdbfe; }
+.btn-secondary:hover { background: #dbeafe; }
 
 .size-4 { width: 1rem; height: 1rem; }
 .size-5 { width: 1.25rem; height: 1.25rem; }

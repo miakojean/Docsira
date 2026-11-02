@@ -38,7 +38,7 @@
 <script setup lang="ts">
 // Utilisation de script setup pour moderniser le composant
 const emit = defineEmits(['add']);
-const props = withDefaults(
+withDefaults(
     defineProps<{
         title?: string,
         mainText?: string,

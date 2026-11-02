@@ -47,10 +47,10 @@ import mainButton from '../buttons/mainButton.vue';
 const props = withDefaults(
   defineProps<{
     isOpen: boolean;
-    modaleTitle: string,
-    title: string,
-    subtitle: string,
-    actionText: string
+    modaleTitle?: string;
+    title?: string;
+    subtitle?: string;
+    actionText?: string;
   }>(),
   {
     isOpen: false,

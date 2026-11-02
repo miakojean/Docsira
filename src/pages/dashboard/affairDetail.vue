@@ -6,6 +6,7 @@
     <!-- Arborescence des dossiers et documents -->
     <affairTree
       :currentId="affairId"
+      :currentDossier="dossier"
       :documents="documents"
       :subfolders="subfolders"
       :currentFolderId="currentFolderId"
@@ -27,7 +28,7 @@ import affairDetailSection from '../../components/sections/workspace/affairDetai
 import { useAffairDocuments } from '../../composables/useAffairDocuments';
 
 const affair = useAffairDocuments();
-const { affairId, documents, subfolders, currentFolderId, openDocument } = affair;
+const { affairId, documents, subfolders, currentFolderId, openDocument, dossier } = affair;
 </script>
 
 <style scoped>

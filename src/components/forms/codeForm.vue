@@ -46,7 +46,7 @@ import errorMessage from '../tools/errorMessage.vue';
 // On définit les événements pour communiquer avec le parent (la page de login/auth)
 const emit = defineEmits(['verify', 'resend']);
 
-const props = defineProps<{
+defineProps<{
   isLoading?: boolean;
 }>();
 

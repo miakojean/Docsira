@@ -48,11 +48,10 @@
 import BaseInput from '../../BaseInput/BaseInput.vue'
 import folderCards from '../../cards/folderCards.vue'
 import featuresCard from '../../cards/featuresCards.vue'
-import { Customer, useAuthStore } from '../../../stores/authStore'
-import { load } from "@tauri-apps/plugin-store"
+import { useAuthStore } from '../../../stores/authStore'
 
 import { useRouter } from 'vue-router'
-import { onMounted, ref } from 'vue'
+import { onMounted } from 'vue'
 export default {
 
   components:{
@@ -64,15 +63,6 @@ export default {
 
     const router = useRouter();
     const authStore = useAuthStore();
-
-    const user = ref<Customer>({
-      id: undefined,
-      email: "",
-      first_name: "",
-      last_name: "",
-      username: "",
-      password: "",
-    })
 
     onMounted(async () => {
         // Si le profil n'est pas déjà en mémoire (ex: reload de page),
