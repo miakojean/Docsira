@@ -27,16 +27,19 @@
       <features-card
         title="Workspace"
         content="Prenez part aux projets de l'équipe. Consultez la progression et les tâches en cours."
+        :image="workspaceSvg"
         @click="()=> {router.push('/dashboard/affairs')}"
       />
       <features-card
         title="Mon espace"
         content="Consultez votre espace personnel et accédez à vos documents."
+        :image="mySpaceSvg"
         @click="()=> {router.push('/dashboard/mySpace')}"
       />
       <features-card
         title="Archives"
         content="Accéder à tous vos documents archivés en quelques clics"
+        :image="archiveSvg"
         @click="()=>{router.push('/dashboard/archives')}"
       />
     </div>
@@ -49,6 +52,9 @@ import BaseInput from '../../BaseInput/BaseInput.vue'
 import folderCards from '../../cards/folderCards.vue'
 import featuresCard from '../../cards/featuresCards.vue'
 import { useAuthStore } from '../../../stores/authStore'
+import workspaceSvg from '../../../assets/assets/svg/undraw_shared-workspace_6y9d.svg'
+import archiveSvg from '../../../assets/assets/svg/undraw_file-manager_ivlr.svg'
+import mySpaceSvg from '../../../assets/assets/svg/undraw_out-of-office_sae8.svg'
 
 import { useRouter } from 'vue-router'
 import { onMounted } from 'vue'
@@ -75,6 +81,9 @@ export default {
     return{
       router,
       authStore,
+      workspaceSvg,
+      mySpaceSvg,
+      archiveSvg,
     }
 
   }
@@ -111,10 +120,12 @@ export default {
 
 .actions{
   width: 100%;
-  max-width: 900px;
+  max-width: 960px;
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
+  align-items: stretch;
+  gap: 1.25rem;
+  padding: 0 1rem;
 }
 
 </style>

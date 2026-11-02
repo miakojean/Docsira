@@ -2,6 +2,13 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import { api } from "../services/api";
 
+export type SiraCategory =
+  | 'IDENTIFICATION'
+  | 'CONSTITUTION'
+  | 'PROCEDURES'
+  | 'LIVRABLES'
+  | 'CLOTURE';
+
 /** Document renvoyé par /affairs/<id>/documents/ (DocumentSerializer). */
 export interface DossierDocument {
   id: string;
@@ -16,6 +23,8 @@ export interface DossierDocument {
   parent: string | null;
   relation: DocumentRelation;
   version: number;
+  category?: SiraCategory;
+  valide?: boolean;
   pos_x: number | null;
   pos_y: number | null;
 }
@@ -51,13 +60,14 @@ export const useDocumentStore = defineStore("documents", () => {
   }
 
   /** Envoie des fichiers choisis sur le disque dur de l'utilisateur. */
-  async function uploadDocuments(affairId: string, files: File[]) {
+  async function uploadDocuments(affairId: string, files: File[], category?: SiraCategory) {
     if (files.length === 0) return false;
     isUploading.value = true;
     errorMessage.value = "";
     try {
       const form = new FormData();
       for (const file of files) form.append("files", file, file.name);
+      if (category) form.append("category", category);
 
       const response = await api(`/affairs/${affairId}/documents/`, "POST", form);
       const data = await response.json().catch(() => null);
@@ -171,6 +181,20 @@ export const useDocumentStore = defineStore("documents", () => {
     }
   }
 
+  /** Met à jour la catégorie SIRA d'un document */
+  async function updateDocumentCategory(id: string, category: SiraCategory) {
+    try {
+      const response = await api(`/affairs/documents/${id}/`, "PATCH", { category });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) return false;
+      documents.value = documents.value.map((d) => (d.id === id ? { ...d, category: data.category } : d));
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  }
+
   return {
     documents,
     isLoading,
@@ -182,6 +206,7 @@ export const useDocumentStore = defineStore("documents", () => {
     moveDocument,
     renameDocument,
     deleteDocument,
+    updateDocumentCategory,
     fetchFileBlob,
   };
 });

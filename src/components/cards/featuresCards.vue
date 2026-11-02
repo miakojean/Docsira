@@ -1,37 +1,44 @@
 <template>
   <div class="card">
+    <div v-if="image || $slots.illustration" class="card__illustration">
+      <slot name="illustration">
+        <img :src="image" :alt="title" class="card__image" />
+      </slot>
+    </div>
+
     <div class="card__header">
-        <button class="card__badge">
-            {{ title }}
-        </button>
+      <button class="card__badge" type="button">
+        {{ title }}
+      </button>
     </div>
     
     <div class="card__body">
-        <p class="card__text">
-            {{ content }}
-        </p>
+      <p class="card__text">
+        {{ content }}
+      </p>
     </div>
 
     <div class="card__action">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="card__arrow">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-        </svg>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="card__arrow">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+      </svg>
     </div>
   </div>
 </template>
 
-<script setup>
-// Props dynamiques pour la réutilisabilité
-defineProps({
-  title: {
-    type: String,
-    default: 'Dossiers'
-  },
-  content: {
-    type: String,
-    default: 'Lorem ipsum, dolor sit amet consectetur adipisicing elit. Harum cum eligendi.'
+<script setup lang="ts">
+withDefaults(
+  defineProps<{
+    title?: string;
+    content?: string;
+    image?: string;
+  }>(),
+  {
+    title: 'Dossiers',
+    content: '',
+    image: '',
   }
-})
+);
 </script>
 
 <style scoped>
@@ -44,19 +51,22 @@ defineProps({
     /* Largeur et respiration */
     width: 100%;
     max-width: 280px; 
-    padding: 1.5rem;
+    padding: 1.25rem;
+    padding-bottom: 2.25rem;
     
     /* Structure */
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.85rem;
     
     /* Design Premium */
     background: #ffffff;
-    border-radius: 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
     
     /* Transition douce globale */
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     
     /* ⚡️ CRUCIAL : Nécessaire pour positionner l'action à l'intérieur */
     position: relative; 
@@ -65,36 +75,71 @@ defineProps({
     cursor: pointer;
 }
 
-/* Ombre douce par défaut */
-.card {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
 /* --- Effet Hover global sur la carte --- */
 .card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.08);
+    border-color: #cbd5e1;
 }
 
+/* --- Illustration SVG --- */
+.card__illustration {
+    width: 100%;
+    height: 125px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: background-color 0.25s ease;
+}
+
+.card:hover .card__illustration {
+    background: #f1f5f9;
+}
+
+.card__image {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card:hover .card__image {
+    transform: scale(1.06);
+}
 
 /* --- Stylisation des éléments existants --- */
+.card__header {
+    display: flex;
+    align-items: center;
+}
+
 .card__badge {
-    padding: 0.4rem 1.2rem;
+    padding: 0.35rem 1rem;
     background: var(--primary-color);
     color: #ffffff;
     border: none;
     border-radius: 999px;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 600;
     letter-spacing: 0.3px;
     cursor: pointer;
 }
 
+.card__body {
+    flex: 1;
+}
+
 .card__text {
     margin: 0;
     color: #4b5563; /* Gris doux */
-    font-size: 0.95rem;
-    line-height: 1.5;
+    font-size: 0.9rem;
+    line-height: 1.45;
 }
 
 /* --- ⚡️ Stylisation de la NOUVELLE Action --- */

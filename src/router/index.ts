@@ -1,4 +1,5 @@
 import { createWebHistory, createRouter, type RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '../stores/authStore'
 
 const routes: RouteRecordRaw[] = [
   { path: '/', name: 'index', redirect: '/dashboard' },
@@ -24,4 +25,15 @@ const routes: RouteRecordRaw[] = [
 export const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+router.beforeEach((to, from) => {
+  if (to.path !== from.path) {
+    try {
+      const authStore = useAuthStore()
+      authStore.clearMessages()
+    } catch {
+      // Ignorer si Pinia n'est pas encore initialisé
+    }
+  }
 })

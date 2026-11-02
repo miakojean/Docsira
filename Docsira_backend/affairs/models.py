@@ -198,10 +198,13 @@ class Affair(models.Model):
 
     def recalculer_progression(self):
         """Met à jour la progression sans repasser par save() (évite la logique de référence/dossier physique)."""
+        new_prog = self.calculer_progression_sira()
         Affair.objects.filter(pk=self.pk).update(
-            progression=self.calculer_progression(),
+            progression=new_prog,
             last_activiation_date=timezone.now(),  # update() ne déclenche pas auto_now
         )
+        self.progression = new_prog
+        return new_prog
 
 class DocumentQuerySet(models.QuerySet):
     def delete(self):
@@ -278,6 +281,8 @@ class Document(models.Model):
         verbose_name = _("Document")
         verbose_name_plural = _("Documents")
 
+    objects = DocumentQuerySet.as_manager()
+
     def __str__(self):
         return f"{self.title} ({self.affair.reference_affair})"
 
@@ -308,7 +313,23 @@ class Document(models.Model):
 
     def delete(self, *args, **kwargs):
         affair = self.affair
+        old_progression = affair.progression
+        doc_title = self.title
+        doc_category = self.category
+        author_name = str(affair.collaborator) if affair.collaborator else "Système"
+
         with transaction.atomic():
             result = super().delete(*args, **kwargs)
-            affair.recalculer_progression()
+            new_progression = affair.recalculer_progression()
+
+            SiraFolderHistory.objects.create(
+                affair_id=affair.id,
+                previous_progression=old_progression,
+                new_progression=new_progression,
+                action_type="SUPPRESSION_DOCUMENT",
+                document_title=doc_title,
+                category=doc_category,
+                author=author_name,
+                details=f"Suppression du document '{doc_title}' ({doc_category})."
+            )
         return result

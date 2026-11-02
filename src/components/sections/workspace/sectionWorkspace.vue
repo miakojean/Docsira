@@ -8,50 +8,8 @@
     />
 
     <div v-if="store.allDossiers.length > 0" class="content-container">
-
-      <!-- ========================================== -->
-      <!-- VUE DOSSIERS D'UN CLIENT SPÉCIFIQUE       -->
-      <!-- ========================================== -->
-      <div v-if="currentClient" class="client-view-container flex flex-col gap-3">
-        <!-- Barre de navigation du client (Breadcrumb + bouton retour + bouton ajouter) -->
-        <div class="client-folder-header">
-          <div class="breadcrumb-nav">
-            <button
-              type="button"
-              class="back-pill-btn"
-              @click="closeClientFolder"
-              title="Retour à tous les clients"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-              </svg>
-              <span>Tous les clients</span>
-            </button>
-            <span class="breadcrumb-separator">/</span>
-            <div class="breadcrumb-client-info">
-              <span class="breadcrumb-client-name">{{ currentClient.nom_complet }}</span>
-              <span v-if="currentClient.reference_client && currentClient.reference_client !== 'GÉNÉRAL'" class="breadcrumb-client-ref">
-                {{ currentClient.reference_client }}
-              </span>
-            </div>
-          </div>
-
-          <div class="header-right-actions">
-            <button
-              type="button"
-              class="btn-create-dossier"
-              @click="openAddForCurrentClient"
-              title="Créer un nouveau dossier pour ce client"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              <span>Nouveau dossier</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Filtres par statut pour les dossiers du client -->
+      <div class="workspace-view-container flex flex-col gap-3">
+        <!-- Filtres par statut -->
         <div class="filters">
           <button
             v-for="f in filters"
@@ -64,10 +22,10 @@
           </button>
         </div>
 
-        <!-- Grille des dossiers du client courant -->
-        <div v-if="filteredClientDossiers.length > 0" class="dossiers-grid">
+        <!-- Grille de tous les dossiers de tous les clients directement -->
+        <div v-if="filteredDossiers.length > 0" class="dossiers-grid">
           <affairsCards
-            v-for="d in filteredClientDossiers"
+            v-for="d in filteredDossiers"
             :key="d.id"
             :dossier="d"
             :isClientCard="false"
@@ -82,53 +40,8 @@
 
         <div v-else class="flex-1 w-full flex justify-center items-center">
           <emptyCards
-            :title="currentClient.nom_complet"
-            mainText="Aucun dossier ne correspond à vos critères."
-            subtitle="Vérifiez vos filtres ou ajoutez un nouveau dossier pour ce client."
-            btnLabel="Nouveau dossier"
-            @add="openAddForCurrentClient"
-          />
-        </div>
-      </div>
-
-      <!-- ========================================== -->
-      <!-- VUE RACINE : UNE SEULE CARTE PAR CLIENT   -->
-      <!-- ========================================== -->
-      <div v-else class="clients-view-container flex flex-col gap-3">
-        <!-- Filtres par statut -->
-        <div class="filters">
-          <button
-            v-for="f in filters"
-            :key="f.value"
-            class="filter-chip"
-            :class="{ active: statutFilter === f.value }"
-            @click="statutFilter = f.value"
-          >
-            {{ f.label }}
-          </button>
-        </div>
-
-        <!-- Grille des cartes dossiers clients -->
-        <div v-if="filteredClientGroups.length > 0" class="dossiers-grid">
-          <affairsCards
-            v-for="group in filteredClientGroups"
-            :key="group.client.id"
-            :isClientCard="true"
-            :title="group.client.nom_complet"
-            :subtitle="formatGroupSubtitle(group)"
-            :filesCount="group.dossiers.length"
-            :progress="group.averageProgress"
-            :previewExtensions="group.previewExtensions"
-            @goTo="openClientFolder(group.client)"
-            @open="openClientFolder(group.client)"
-            @addDossier="openAddForClient(group.client)"
-          />
-        </div>
-
-        <div v-else class="flex-1 w-full flex justify-center items-center">
-          <emptyCards
             title="Workspace"
-            mainText="Aucun dossier client ne correspond à votre recherche."
+            mainText="Aucun dossier ne correspond à votre recherche."
             subtitle="Vérifiez l'orthographe ou changez de filtre."
             :showAddButton="false"
           />
@@ -141,7 +54,7 @@
       <emptyCards
         title="Workspace"
         mainText="Vous n'avez aucun dossier."
-        subtitle="Créez votre premier dossier et rattachez-le à un client."
+        subtitle="Créez votre premier dossier pour commencer à travailler."
         btnLabel="Ajouter un dossier"
         @add="openAddRoot"
       />
@@ -157,7 +70,6 @@
 
     <addDossierModale
       :isOpen="isAddOpen"
-      :defaultClient="clientForAddDossier"
       @close="isAddOpen = false"
       @created="onCreated"
     />
@@ -206,22 +118,10 @@ import deleteModale from '../../modale/deleteModale.vue';
 import detailsModale, { type ItemDetails } from '../../modale/detailsModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
 import { useClientDossierStore, type Dossier } from '../../../stores/dossierStore';
-import type { ClientListItem } from '../../../stores/clientStore';
-
-interface ClientGroup {
-  client: ClientListItem;
-  dossiers: Dossier[];
-  totalFiles: number;
-  averageProgress: number;
-  previewExtensions: string[];
-}
 
 const store = useClientDossierStore();
 const router = useRouter();
 const route = useRoute();
-
-const currentClient = ref<ClientListItem | null>(null);
-const clientForAddDossier = ref<ClientListItem | null>(null);
 
 const isAddOpen = ref(false);
 const isSuccess = ref(false);
@@ -249,164 +149,28 @@ const filters = [
   { value: 'CLOTURE', label: 'Clôturés' },
 ];
 
-function getDossierProgress(d: Dossier): number {
-  switch (d.statut) {
-    case 'TERMINE':
-    case 'CLOTURE':
-      return 100;
-    case 'EN_COURS':
-      return 60;
-    case 'EN_ATTENTE':
-      return 35;
-    case 'NOUVEAU':
-      return 15;
-    case 'BLOQUE':
-    case 'ANNULE':
-      return 0;
-    default:
-      return 40;
-  }
-}
-
-// Regroupement de tous les dossiers par client (une seule carte par client)
-const clientGroups = computed<ClientGroup[]>(() => {
-  const map = new Map<string, ClientGroup>();
-
-  for (const d of store.allDossiers) {
-    const clientId = d.client?.id || '__sans_client__';
-    const clientData: ClientListItem = d.client || {
-      id: '__sans_client__',
-      reference_client: 'GÉNÉRAL',
-      nom_complet: 'Dossiers généraux',
-      nom: 'Général',
-      prenoms: '',
-      raison_sociale: '',
-      telephone_1: '',
-      telephone_2: '',
-      email: '',
-      adresse: '',
-      ville: '',
-      commune: '',
-      charge_de_clientele: null,
-      date_creation: '',
-      date_premier_contact: null,
-      type_client: 'PERSONNE_PHYSIQUE',
-      statut: 'ACTIF',
-    };
-
-    if (!map.has(clientId)) {
-      map.set(clientId, {
-        client: clientData,
-        dossiers: [],
-        totalFiles: 0,
-        averageProgress: 0,
-        previewExtensions: [],
-      });
-    }
-
-    const group = map.get(clientId)!;
-    group.dossiers.push(d);
-    group.totalFiles += d.documents_count ?? 0;
-
-    if (d.documents_preview) {
-      for (const ext of d.documents_preview) {
-        if (ext && !group.previewExtensions.includes(ext) && group.previewExtensions.length < 2) {
-          group.previewExtensions.push(ext);
-        }
-      }
-    }
-  }
-
-  const result: ClientGroup[] = [];
-  for (const group of map.values()) {
-    if (group.dossiers.length > 0) {
-      const sum = group.dossiers.reduce((acc, d) => acc + getDossierProgress(d), 0);
-      group.averageProgress = Math.round(sum / group.dossiers.length);
-    }
-    result.push(group);
-  }
-
-  return result;
-});
-
-// Groupes de clients filtrés pour la vue racine
-const filteredClientGroups = computed(() => {
+// Tous les dossiers filtrés directement
+const filteredDossiers = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
   const filter = statutFilter.value;
 
-  return clientGroups.value.filter((g) => {
-    // Statut : le groupe doit comporter au moins un dossier correspondant au filtre
-    const matchesStatut =
-      filter === 'ALL' || g.dossiers.some((d) => d.statut === filter);
-    if (!matchesStatut) return false;
-
-    // Recherche sur le nom/ref du client ou sur le titre/ref de l'un de ses dossiers
-    if (!q) return true;
-
-    const matchesClient = [g.client.nom_complet, g.client.reference_client, g.client.email]
-      .some((v) => (v || '').toLowerCase().includes(q));
-    if (matchesClient) return true;
-
-    const matchesDossier = g.dossiers.some((d) =>
-      [d.title, d.reference_affair].some((v) => (v || '').toLowerCase().includes(q))
-    );
-    return matchesDossier;
-  });
-});
-
-// Groupe du client actuellement ouvert
-const currentClientGroup = computed(() => {
-  if (!currentClient.value) return null;
-  return clientGroups.value.find((g) => g.client.id === currentClient.value!.id) ?? null;
-});
-
-// Dossiers filtrés à l'intérieur du dossier du client
-const filteredClientDossiers = computed(() => {
-  if (!currentClient.value) return [];
-  const group = currentClientGroup.value;
-  const dossiers = group ? group.dossiers : [];
-  const q = searchQuery.value.trim().toLowerCase();
-  const filter = statutFilter.value;
-
-  return dossiers.filter((d) => {
+  return store.allDossiers.filter((d) => {
+    // Statut
     const matchesStatut = filter === 'ALL' || d.statut === filter;
     if (!matchesStatut) return false;
+
+    // Recherche par titre de dossier, référence, type d'affaire ou nom/référence du client
     if (!q) return true;
-    return [d.title, d.reference_affair].some((v) =>
+
+    const clientName = d.client?.nom_complet || '';
+    const clientRef = d.client?.reference_client || '';
+    return [d.title, d.reference_affair, d.type_affair, clientName, clientRef].some((v) =>
       (v || '').toLowerCase().includes(q)
     );
   });
 });
 
-function formatGroupSubtitle(group: ClientGroup): string {
-  const count = group.dossiers.length;
-  return `${count} ${count > 1 ? 'dossiers' : 'dossier'}`;
-}
-
-function openClientFolder(client: ClientListItem) {
-  currentClient.value = client;
-  router.replace({ query: { ...route.query, client: client.id } });
-}
-
-function closeClientFolder() {
-  currentClient.value = null;
-  const q = { ...route.query };
-  delete q.client;
-  router.replace({ query: q });
-}
-
 function openAddRoot() {
-  clientForAddDossier.value = null;
-  isAddOpen.value = true;
-}
-
-function openAddForCurrentClient() {
-  clientForAddDossier.value = currentClient.value;
-  isAddOpen.value = true;
-}
-
-function openAddForClient(client: ClientListItem) {
-  clientForAddDossier.value = client;
   isAddOpen.value = true;
 }
 
@@ -447,7 +211,7 @@ function onDetailsAction() {
 function onCreated() {
   isAddOpen.value = false;
   successTitle.value = "Dossier créé avec succès";
-  successSubtitle.value = "Le dossier a été rattaché au client.";
+  successSubtitle.value = "Le dossier est maintenant disponible dans votre Workspace.";
   isSuccess.value = true;
 }
 
@@ -483,32 +247,15 @@ async function confirmDelete() {
   }
 }
 
-// Synchroniser avec route.query.client pour ouvrir directement un client (ex: depuis espace client)
+// Initialisation recherche si paramètre dans l'URL
 watch(
-  () => route.query.client,
-  (clientId) => {
-    if (clientId && typeof clientId === 'string') {
-      const found = clientGroups.value.find((g) => g.client.id === clientId);
-      if (found) {
-        currentClient.value = found.client;
-      }
-    } else if (!clientId) {
-      currentClient.value = null;
+  () => route.query.q,
+  (newQ) => {
+    if (typeof newQ === 'string') {
+      searchQuery.value = newQ;
     }
   },
   { immediate: true }
-);
-
-watch(
-  clientGroups,
-  (groups) => {
-    if (route.query.client && typeof route.query.client === 'string') {
-      const found = groups.find((g) => g.client.id === route.query.client);
-      if (found) {
-        currentClient.value = found.client;
-      }
-    }
-  }
 );
 
 onMounted(() => {
@@ -532,102 +279,8 @@ onMounted(() => {
   overflow-y: auto;
 }
 
-/* En-tête lorsqu'on est dans le dossier d'un client */
-.client-folder-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.6rem 0.85rem;
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.breadcrumb-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.back-pill-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.4rem 0.75rem;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: #374151;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.back-pill-btn:hover {
-  background: #e5e7eb;
-  color: #111827;
-}
-
-.breadcrumb-separator {
-  color: #9ca3af;
-  font-size: 0.9rem;
-}
-
-.breadcrumb-client-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.breadcrumb-client-name {
-  font-weight: 600;
-  color: #111827;
-  font-size: 1rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.breadcrumb-client-ref {
-  background: #eff6ff;
-  color: var(--primary-color, #005792);
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.15rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid rgba(0, 87, 146, 0.15);
-}
-
-.header-right-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.btn-create-dossier {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.9rem;
-  background: var(--primary-color, #005792);
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-create-dossier:hover {
-  background: var(--primary-color-dark, #005380);
+.workspace-view-container {
+  width: 100%;
 }
 
 .filters {

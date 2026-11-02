@@ -3,25 +3,28 @@
     <!-- Barre latérale -->
     <sidebar :defaultReduced="true" />
 
-    <!-- Arborescence des dossiers et documents -->
+    <!-- Arborescence des dossiers et documents + Suivi SIRA -->
     <affairTree
       :currentId="affairId"
       :currentDossier="dossier"
       :documents="documents"
       :subfolders="subfolders"
       :currentFolderId="currentFolderId"
+      :activeTab="activeTreeTab"
+      @update:activeTab="activeTreeTab = $event"
       @openDocument="openDocument"
       @selectFolder="currentFolderId = $event"
     />
 
     <!-- Contenu principal -->
     <main class="main-content">
-      <affairDetailSection :affair="affair" />
+      <affairDetailSection :affair="affair" @showSira="activeTreeTab = 'sira'" />
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import sidebar from '../../components/navbar/sidebar.vue';
 import affairTree from '../../components/navbar/affairTree.vue';
 import affairDetailSection from '../../components/sections/workspace/affairDetailSection.vue';
@@ -29,6 +32,8 @@ import { useAffairDocuments } from '../../composables/useAffairDocuments';
 
 const affair = useAffairDocuments();
 const { affairId, documents, subfolders, currentFolderId, openDocument, dossier } = affair;
+
+const activeTreeTab = ref<'folders' | 'sira'>('folders');
 </script>
 
 <style scoped>

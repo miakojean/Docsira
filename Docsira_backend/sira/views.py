@@ -6,6 +6,11 @@ from rest_framework.pagination import PageNumberPagination
 from .models import SiraFolderHistory
 from .serializers import SiraFolderHistorySerializer
 
+class SiraHistoryPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class SiraHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -13,8 +18,7 @@ class SiraHistoryView(APIView):
         """Récupère l'historique complet de versionnage d'un dossier donné"""
         histories = SiraFolderHistory.objects.filter(affair_id=affair_id)
         
-        paginator = PageNumberPagination()
-        paginator.page_size = 10
+        paginator = SiraHistoryPagination()
         paginated_histories = paginator.paginate_queryset(histories, request)
         
         serializer = SiraFolderHistorySerializer(paginated_histories, many=True)

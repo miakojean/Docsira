@@ -13,13 +13,15 @@
           <div class="header-title-row">
             <h1 class="page-title">{{ dossier?.title || 'Dossier' }}</h1>
           </div>
-          <p v-if="dossier" class="page-subtitle">
+          <div v-if="dossier" class="page-subtitle-row">
             <span class="ref-text">{{ dossier.reference_affair }}</span>
-          </p>
+            <span class="sub-sep">•</span>
+          </div>
         </div>
       </div>
 
       <div class="header-actions">
+
         <!-- Bouton Nouveau sous-dossier -->
         <button
           type="button"
@@ -38,8 +40,8 @@
           type="button"
           class="add-btn"
           :disabled="docStore.isUploading"
-          title="Ajouter un document depuis votre ordinateur"
-          @click="pickFromDisk"
+          title="Ajouter un document et choisir sa catégorie SIRA"
+          @click="openUploadDocModal()"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -127,7 +129,7 @@
 
       <!-- ÉTAT VIDE -->
       <div v-else-if="isEmptyCurrentView" class="empty-state-wrapper">
-        <div class="empty-state" @click="pickFromDisk">
+        <div class="empty-state" @click="openUploadDocModal()">
           <div class="empty-icon-circle">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.3" stroke="currentColor" class="size-12 empty-icon">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -145,7 +147,7 @@
               type="button"
               class="empty-cta-btn"
               :disabled="docStore.isUploading"
-              @click="pickFromDisk"
+              @click="openUploadDocModal()"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
@@ -259,6 +261,7 @@
       @download="downloadDetailsDocument"
       @edit="renameDetailsDocument"
       @delete="deleteDetailsDocument"
+      @changeCategory="changeDocumentCategory($event.doc, $event.category)"
     />
 
     <deleteModale
@@ -273,6 +276,18 @@
       @close="isDeleteOpen = false"
       @delete="confirmDelete"
     />
+
+    <!-- Modale d'ajout de document avec choix direct de la catégorie SIRA -->
+    <uploadDocModale
+      :isOpen="isUploadDocModalOpen"
+      :dossier="dossier"
+      :targetFolderName="currentFolder?.name"
+      :initialFiles="filesForUpload"
+      :isUploading="docStore.isUploading"
+      :errorMessage="docStore.errorMessage"
+      @close="closeUploadDocModal"
+      @upload="handleUploadDocs"
+    />
   </div>
 </template>
 
@@ -285,10 +300,15 @@ import detailModale from '../../modale/detailModale.vue';
 import filePreviewModale from '../../modale/filePreviewModale.vue';
 import renameDocModale from '../../modale/renameDocModale.vue';
 import moveDocModale from '../../modale/moveDocModale.vue';
+import uploadDocModale from '../../modale/uploadDocModale.vue';
 import type { AffairDocumentsController } from '../../../composables/useAffairDocuments';
 
 const props = defineProps<{
   affair: AffairDocumentsController;
+}>();
+
+defineEmits<{
+  (e: 'showSira'): void;
 }>();
 
 const {
@@ -322,7 +342,6 @@ const {
   confirmMoveDoc,
   onDocDropOnFolder,
   goBack,
-  pickFromDisk,
   onDiskFileInputChange,
   onDropFiles,
   preview,
@@ -344,10 +363,32 @@ const {
   isDeleting,
   openDelete,
   confirmDelete,
+  changeDocumentCategory,
+  isUploadDocModalOpen,
+  filesForUpload,
+  openUploadDocModal,
+  closeUploadDocModal,
+  handleUploadDocs,
 } = props.affair;
 </script>
 
 <style scoped>
+.page-subtitle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+  flex-wrap: wrap;
+}
+
+.sub-sep {
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+
+.sira-badge-chevron {
+  color: #93c5fd;
+}
 .affair-detail-section {
   display: flex;
   flex-direction: column;

@@ -12,6 +12,7 @@ export interface Dossier {
   statut: string;
   creation_date: string;
   client: ClientListItem | null;
+  progression?: number;
   documents_count?: number;
   /** Extensions des derniers documents (max 3), pour l'aperçu du dossier. */
   documents_preview?: string[];

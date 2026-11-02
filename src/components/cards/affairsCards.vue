@@ -51,7 +51,7 @@
       </div>
 
       <!-- Rabat avant avec découpe courbée (style maquette) -->
-      <div class="folder-front" :title="effectiveProgress + '% complété'">
+      <div class="folder-front" :title="shouldShowProgress ? `${effectiveProgress}% complété · ${progressMilestone}` : displayTitle">
         <svg
           class="folder-front__svg"
           viewBox="0 0 210 125"
@@ -83,8 +83,12 @@
         </svg>
       </div>
 
-      <!-- Cercle de progression dans le coin inférieur droit -->
-      <div class="folder-progress-circle" :title="effectiveProgress + '% complété'">
+      <!-- Cercle de progression dans le coin inférieur droit (uniquement sur les dossiers) -->
+      <div
+        v-if="shouldShowProgress"
+        class="folder-progress-circle"
+        :title="`${effectiveProgress}% complété · ${progressMilestone}`"
+      >
         <svg viewBox="0 0 44 44" class="progress-ring">
           <!-- Anneau de fond -->
           <circle
@@ -223,6 +227,7 @@ const props = withDefaults(
     subtitle?: string;
     content?: string;
     progress?: number;
+    showProgress?: boolean;
     filesCount?: number;
     color?: string;
     isClientCard?: boolean;
@@ -234,6 +239,7 @@ const props = withDefaults(
     subtitle: '',
     content: '',
     progress: undefined,
+    showProgress: undefined,
     filesCount: undefined,
     color: undefined,
     isClientCard: false,
@@ -280,10 +286,12 @@ const displaySubtitle = computed(() => {
   }
   const count = displayFilesCount.value;
   const countLabel = `${count} ${count > 1 ? 'fichiers' : 'fichier'}`;
-  if (props.dossier?.reference_affair) {
-    return `${props.dossier.reference_affair} · ${countLabel}`;
+  const parts: string[] = [];
+  if (props.dossier?.client?.nom_complet) {
+    parts.push(props.dossier.client.nom_complet);
   }
-  return countLabel;
+  parts.push(countLabel);
+  return parts.join(' · ');
 });
 
 // Cartes de fichiers affichées en haut du dossier
@@ -310,29 +318,41 @@ function describeExtension(ext: string) {
   return { label: '', cls: 'is-default' };
 }
 
+const shouldShowProgress = computed(() => {
+  if (props.showProgress !== undefined) {
+    return props.showProgress;
+  }
+  // Ne jamais afficher la progression sur les cartes clients, uniquement sur les dossiers liés
+  return !props.isClientCard;
+});
+
 const effectiveProgress = computed(() => {
   if (props.progress !== undefined) {
     return Math.max(0, Math.min(100, Math.round(props.progress)));
   }
   if (props.dossier) {
-    switch (props.dossier.statut) {
-      case 'TERMINE':
-      case 'CLOTURE':
-        return 100;
-      case 'EN_COURS':
-        return 60;
-      case 'EN_ATTENTE':
-        return 35;
-      case 'NOUVEAU':
-        return 15;
-      case 'BLOQUE':
-      case 'ANNULE':
-        return 0;
-      default:
-        return 40;
+    // 1. Progression calculée selon les 5 jalons SIRA
+    if (typeof props.dossier.progression === 'number') {
+      return Math.max(0, Math.min(100, Math.round(props.dossier.progression)));
     }
+    // 2. Statut clôturé ou terminé
+    if (['CLOTURE', 'TERMINE'].includes(props.dossier.statut || '')) {
+      return 100;
+    }
+    // 3. Valeur initiale SIRA
+    return 10;
   }
   return 0;
+});
+
+const progressMilestone = computed(() => {
+  const pct = effectiveProgress.value;
+  if (pct >= 100) return 'Clôture (100%)';
+  if (pct >= 90) return 'Livrables (90%)';
+  if (pct >= 75) return 'Procédures (75%)';
+  if (pct >= 60) return 'Constitution (60%)';
+  if (pct >= 45) return 'Identification (45%)';
+  return 'Création (10%)';
 });
 
 // Calculs pour le cercle SVG de progression
@@ -347,9 +367,12 @@ const progressDashOffset = computed(() => {
 const progressColor = computed(() => {
   if (props.color) return props.color;
   const pct = effectiveProgress.value;
-  if (pct >= 60) return '#22c55e';
-  if (pct >= 30) return '#0ea5e9';
-  return '#3b82f6';
+  if (pct >= 100) return '#22c55e'; // 100% Clôture
+  if (pct >= 90) return '#10b981';  // 90% Livrables
+  if (pct >= 75) return '#f59e0b';  // 75% Procédures
+  if (pct >= 60) return '#6366f1';  // 60% Constitution
+  if (pct >= 45) return '#0ea5e9';  // 45% Identification
+  return '#3b82f6';                 // 10% Création
 });
 
 function toggleMenu() {

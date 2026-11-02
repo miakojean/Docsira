@@ -62,7 +62,7 @@
             :isLoading="isDeleting"
             :isSuccess="isDeleteSuccess"
             title="Retirer le collaborateur"
-            :description="`Êtes-vous sûr de vouloir retirer le collaborateur <strong>${collaboratorToDelete}</strong> ?`"
+            :description="`Êtes-vous sûr de vouloir retirer le collaborateur ${collaboratorToDelete}?`"
             subtext="Attention, cette action supprimera tous ses accès à vos dossiers et fichiers partagés."
             successTitle="Collaborateur retiré"
             successSubtitle="Le collaborateur a été retiré avec succès et n'a plus accès à vos données."

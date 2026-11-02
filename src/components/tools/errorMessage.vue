@@ -33,19 +33,9 @@ export default {
     width: 100%;
     max-width: 350px;
     border-radius: 0.5rem;
-    border: none;
-    background: #f70776;
-    color: #fff;
+    color: #f70707;
     font-size: 1rem;
-    cursor: pointer;
     transition: 0.2s ease-in-out;
-}
-
-.main-error:hover{
-    background: #c3195d;
-    color: #fff;
-    transition: 0.1s ease-in;
-    border: none;
 }
 
 </style>

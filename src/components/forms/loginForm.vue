@@ -32,7 +32,7 @@
 
         <div class="divider-form"></div>
 
-        <p>Pas de compte? <span class="link-to-register"><RouterLink to='/register'>Créez-en un ici</RouterLink></span></p>
+        <p>Pas de compte? <RouterLink to='/register'><span class="link-to-register">Créez-en un ici</span></RouterLink></p>
 
         <exitButton label="Sortir" @click="exit" type="button" v-if="!credentials.username && !credentials.password"/>
 
@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router'; // 1. Import du router
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useAuthStore, type Customer } from '../../stores/authStore';
@@ -126,8 +126,11 @@ const exit = async () => {
 };
 
 onMounted(() => {
-    authStore.message.errorMessage = "";
-    authStore.message.succesMessage = "";
+    authStore.clearMessages();
+});
+
+onUnmounted(() => {
+    authStore.clearMessages();
 });
 </script>
 
@@ -139,13 +142,18 @@ form h3{
     font-weight: 500;
 }
 
-.link-to-register{
+.link-to-register,
+.link-to-register a,
+a .link-to-register {
     color: var(--primary-color);
     cursor: pointer;
     font-weight: 600;
+    transition: color 0.15s ease;
 }
 
-.link-to-register:hover {
+.link-to-register:hover,
+.link-to-register a:hover,
+a:hover .link-to-register {
     color: var(--secondary-color);
     text-decoration: underline;
 }

@@ -1,9 +1,9 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { open as openDialog, save as saveDialog } from '@tauri-apps/plugin-dialog';
-import { readFile, writeFile } from '@tauri-apps/plugin-fs';
+import { save as saveDialog } from '@tauri-apps/plugin-dialog';
+import { writeFile } from '@tauri-apps/plugin-fs';
 import { useClientDossierStore, type Dossier } from '../stores/dossierStore';
-import { useDocumentStore, type DossierDocument } from '../stores/documentStore';
+import { useDocumentStore, type DossierDocument, type SiraCategory } from '../stores/documentStore';
 import { useAffairFolderStore, type AffairSubfolder } from '../stores/affairFolderStore';
 import type { PreviewData } from '../components/modale/filePreviewModale.vue';
 
@@ -139,11 +139,6 @@ export function useAffairDocuments() {
     txt: 'text/plain',
   };
 
-  function extOf(name: string) {
-    const i = name.lastIndexOf('.');
-    return i === -1 ? '' : name.slice(i + 1).toLowerCase();
-  }
-
   function goBack() {
     router.push('/dashboard/affairs');
   }
@@ -158,49 +153,25 @@ export function useAffairDocuments() {
     }
   }
 
-  // ---------- Sélection et Import de fichiers ----------
-  async function pickFromDisk() {
-    try {
-      const selected = await openDialog({
-        multiple: true,
-        directory: false,
-        title: 'Choisir des documents sur votre ordinateur',
-      });
-      if (!selected) return;
-      const paths = Array.isArray(selected) ? selected : [selected];
-      if (paths.length > 0) {
-        await importPaths(paths);
-      }
-    } catch (error) {
-      console.warn('openDialog non disponible, passage par le sélecteur HTML :', error);
-      if (diskFileInputRef.value) {
-        diskFileInputRef.value.value = '';
-        diskFileInputRef.value.click();
-      }
-    }
+  // ---------- Sélection et Import de fichiers avec catégorie SIRA ----------
+  const isUploadDocModalOpen = ref(false);
+  const filesForUpload = ref<File[]>([]);
+
+  function openUploadDocModal(files?: File[]) {
+    filesForUpload.value = files && files.length > 0 ? [...files] : [];
+    isUploadDocModalOpen.value = true;
   }
 
-  async function importPaths(paths: string[]) {
-    if (paths.length === 0) return;
-    const files: File[] = [];
-    for (const path of paths) {
-      try {
-        const bytes = await readFile(path);
-        const name = path.split(/[\\/]/).pop() || 'document';
-        files.push(new File([bytes], name, { type: mimeByExt[extOf(name)] || 'application/octet-stream' }));
-      } catch (error) {
-        console.error(`Lecture impossible du fichier : ${path}`, error);
-      }
-    }
-    if (files.length === 0) {
-      if (diskFileInputRef.value) {
-        diskFileInputRef.value.value = '';
-        diskFileInputRef.value.click();
-      }
-      return;
-    }
+  function closeUploadDocModal() {
+    isUploadDocModalOpen.value = false;
+    filesForUpload.value = [];
+  }
+
+  async function handleUploadDocs({ files, category }: { files: File[]; category: SiraCategory }) {
+    if (files.length === 0) return;
     const prevDocIds = new Set(docStore.documents.map((d) => d.id));
-    if (await docStore.uploadDocuments(affairId.value, files)) {
+    const success = await docStore.uploadDocuments(affairId.value, files, category);
+    if (success) {
       if (currentFolderId.value) {
         for (const d of docStore.documents) {
           if (!prevDocIds.has(d.id)) {
@@ -209,24 +180,20 @@ export function useAffairDocuments() {
         }
       }
       await refreshDossier();
+      closeUploadDocModal();
     }
+  }
+
+  function pickFromDisk() {
+    openUploadDocModal();
   }
 
   async function onDiskFileInputChange(event: Event) {
     const target = event.target as HTMLInputElement;
     const files = Array.from(target.files ?? []);
     target.value = '';
-    if (files.length === 0) return;
-    const prevDocIds = new Set(docStore.documents.map((d) => d.id));
-    if (await docStore.uploadDocuments(affairId.value, files)) {
-      if (currentFolderId.value) {
-        for (const d of docStore.documents) {
-          if (!prevDocIds.has(d.id)) {
-            folderStore.assignDocToFolder(d.id, currentFolderId.value);
-          }
-        }
-      }
-      await refreshDossier();
+    if (files.length > 0) {
+      openUploadDocModal(files);
     }
   }
 
@@ -236,17 +203,7 @@ export function useAffairDocuments() {
     if (!dt) return;
     const files = Array.from(dt.files);
     if (files.length > 0) {
-      const prevDocIds = new Set(docStore.documents.map((d) => d.id));
-      if (await docStore.uploadDocuments(affairId.value, files)) {
-        if (currentFolderId.value) {
-          for (const d of docStore.documents) {
-            if (!prevDocIds.has(d.id)) {
-              folderStore.assignDocToFolder(d.id, currentFolderId.value);
-            }
-          }
-        }
-        await refreshDossier();
-      }
+      openUploadDocModal(files);
     }
   }
 
@@ -351,6 +308,24 @@ export function useAffairDocuments() {
     if (selected) openDelete(selected);
   }
 
+  // ---------- Modal SIRA Suivi & Historique ----------
+  const isSiraModalOpen = ref(false);
+
+  function openSiraModal() {
+    isSiraModalOpen.value = true;
+  }
+
+  function closeSiraModal() {
+    isSiraModalOpen.value = false;
+  }
+
+  async function changeDocumentCategory(doc: DossierDocument, category: any) {
+    const ok = await docStore.updateDocumentCategory(doc.id, category);
+    if (ok) {
+      await refreshDossier();
+    }
+  }
+
   // ---------- Suppression Document ----------
   const isDeleteOpen = ref(false);
   const docToDelete = ref<DossierDocument | null>(null);
@@ -438,6 +413,12 @@ export function useAffairDocuments() {
     pickFromDisk,
     onDiskFileInputChange,
     onDropFiles,
+    // Modale import document avec catégorie SIRA
+    isUploadDocModalOpen,
+    filesForUpload,
+    openUploadDocModal,
+    closeUploadDocModal,
+    handleUploadDocs,
     // Preview / download
     preview,
     openDocument,
@@ -461,6 +442,11 @@ export function useAffairDocuments() {
     isDeleting,
     openDelete,
     confirmDelete,
+    // SIRA Avancement & Traçabilité
+    isSiraModalOpen,
+    openSiraModal,
+    closeSiraModal,
+    changeDocumentCategory,
   };
 }
 

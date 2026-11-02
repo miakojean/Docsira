@@ -260,6 +260,11 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  function clearMessages() {
+    message.value.errorMessage = "";
+    message.value.succesMessage = "";
+  }
+
   return {
     router,
     isLoading,
@@ -276,6 +281,7 @@ export const useAuthStore = defineStore("auth", () => {
     addCollaborator,
     fetchCollaborators,
     removeCollaborator,
-    ChangePassword
+    ChangePassword,
+    clearMessages
   };
 });

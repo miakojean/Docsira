@@ -114,6 +114,17 @@
       <div class="file-name">
         <span :title="document.title || document.file_name">{{ document.title || document.file_name }}</span>
       </div>
+
+      <!-- Badge Catégorie SIRA -->
+      <div v-if="siraMeta" class="sira-tag-row">
+        <span
+          class="sira-tag"
+          :style="{ color: siraMeta.color, backgroundColor: siraMeta.bg, borderColor: siraMeta.border }"
+          :title="`Palier SIRA : ${siraMeta.label} (${siraMeta.threshold}%)`"
+        >
+          {{ siraMeta.label }}
+        </span>
+      </div>
     </div>
 
     <div class="divider"></div>
@@ -134,6 +145,7 @@
 
 <script lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { getSiraCategoryMeta } from '../../stores/siraStore';
 
 type FileKind = 'pdf' | 'word' | 'excel' | 'image' | 'other';
 
@@ -194,18 +206,37 @@ export default {
       window.removeEventListener('click', onWindowClick);
     });
 
+    const siraMeta = computed(() => {
+      return getSiraCategoryMeta(props.document?.category || 'IDENTIFICATION');
+    });
+
     return {
       isMenuOpen,
       fileKind,
       formatSize,
       emitAction,
       onDragStart,
+      siraMeta,
     };
   },
 };
 </script>
 
 <style scoped>
+.sira-tag-row {
+  display: flex;
+  justify-content: center;
+  margin-top: -0.2rem;
+}
+
+.sira-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  letter-spacing: 0.02em;
+}
 .my-file-cards,
 .my-file-cards * {
   box-sizing: border-box;

@@ -35,13 +35,23 @@ class AffairView(BaseFirmView):
         if affair_id:
             try:
                 # Filtrage unifié basé sur la Firme[cite: 3]
-                affair = Affair.objects.get(id=affair_id, firm=firm)
+                affair = (
+                    Affair.objects
+                    .select_related('client', 'firm', 'collaborator')
+                    .prefetch_related('documents')
+                    .get(id=affair_id, firm=firm)
+                )
                 serializer = AffairSerializer(affair)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except Affair.DoesNotExist:
                 return Response({"error": "Affair not found."}, status=status.HTTP_404_NOT_FOUND)
         else:
-            affairs = Affair.objects.filter(firm=firm)
+            affairs = (
+                Affair.objects
+                .filter(firm=firm)
+                .select_related('client', 'firm', 'collaborator')
+                .prefetch_related('documents')
+            )
             client_id = request.query_params.get('client')
             if client_id:
                 affairs = affairs.filter(client_id=client_id)
@@ -120,15 +130,19 @@ class AffairDocumentsView(BaseFirmView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        category = request.data.get("category")
         serializers = []
         for uploaded_file in files:
             file_name = os.path.basename(uploaded_file.name.replace("\\", "/"))
             title = os.path.splitext(file_name)[0].strip() or file_name
-            serializer = DocumentSerializer(data={
+            doc_data = {
                 "affair": str(affair.pk),
                 "title": title[:200],
                 "file": uploaded_file,
-            })
+            }
+            if category:
+                doc_data["category"] = category
+            serializer = DocumentSerializer(data=doc_data)
             if not serializer.is_valid():
                 return Response(
                     {"files": serializer.errors},
@@ -168,7 +182,8 @@ class DocumentView(BaseFirmView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def get(self, request, doc_id=None):
+    def get(self, request, document_id=None, doc_id=None):
+        doc_id = document_id or doc_id
         firm = self.get_firm(request.user)
 
         if doc_id:
@@ -189,3 +204,32 @@ class DocumentView(BaseFirmView):
             paginated_documents = paginator.paginate_queryset(documents, request)
             serializer = DocumentSerializer(paginated_documents, many=True)
             return paginator.get_paginated_response(serializer.data)
+
+    def patch(self, request, document_id=None, doc_id=None):
+        doc_id = document_id or doc_id
+        if not doc_id:
+            return Response({"error": "ID de document requis."}, status=status.HTTP_400_BAD_REQUEST)
+        firm = self.get_firm(request.user)
+        try:
+            document = Document.objects.get(id=doc_id, affair__firm=firm)
+        except Document.DoesNotExist:
+            return Response({"error": "Document introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = DocumentSerializer(document, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, document_id=None, doc_id=None):
+        doc_id = document_id or doc_id
+        if not doc_id:
+            return Response({"error": "ID de document requis."}, status=status.HTTP_400_BAD_REQUEST)
+        firm = self.get_firm(request.user)
+        try:
+            document = Document.objects.get(id=doc_id, affair__firm=firm)
+        except Document.DoesNotExist:
+            return Response({"error": "Document introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        document.delete()
+        return Response({"message": "Document supprimé."}, status=status.HTTP_204_NO_CONTENT)

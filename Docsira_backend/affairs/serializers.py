@@ -37,6 +37,16 @@ class AffairSerializer(serializers.ModelSerializer):
             for d in docs
         ]
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # S'assure que la progression SIRA est toujours calculée dynamiquement et à jour
+        sira_prog = instance.calculer_progression_sira()
+        data['progression'] = sira_prog
+        if instance.progression != sira_prog:
+            Affair.objects.filter(pk=instance.pk).update(progression=sira_prog)
+            instance.progression = sira_prog
+        return data
+
     class Meta:
         model = Affair
         fields = '__all__'
@@ -48,12 +58,13 @@ class DocumentSerializer(serializers.ModelSerializer):
     extension = serializers.SerializerMethodField()
     size = serializers.SerializerMethodField()
     download_url = serializers.SerializerMethodField()
+    file = serializers.FileField(required=False)
 
     class Meta:
         model = Document
         fields = ['id', 'affair', 'title', 'file', 'file_name', 'extension', 'size',
                   'download_url', 'uploaded_at', 'parent', 'relation', 'version',
-                  'pos_x', 'pos_y']
+                  'category', 'valide', 'pos_x', 'pos_y']
         read_only_fields = ['file_name', 'extension', 'size', 'download_url',
                             'parent', 'relation', 'version']
 

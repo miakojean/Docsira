@@ -63,7 +63,7 @@
             <div class="icon-container">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="success-badge">
                 <path d="M12 2L14.8 4.2L18.2 3.8L19.4 7.1L22.4 8.7L21 12L22.4 15.3L19.4 16.9L18.2 20.2L14.8 19.8L12 22L9.2 19.8L5.8 20.2L4.6 16.9L1.6 15.3L3 12L1.6 8.7L4.6 7.1L5.8 3.8L9.2 4.2L12 2Z" fill="#dcfce7"/>
-                <path d="M8 12.5L10.5 15L16 9" stroke="#111827" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M8 12.5L10.5 15L16 9" stroke="#005792" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </div>
 

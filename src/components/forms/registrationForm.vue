@@ -27,6 +27,14 @@
             :errorMessage="errorMessage.passwordError"
         />
 
+        <BaseInput
+            label="Confirmer mot de passe"
+            placeholder="Confirmez votre mot de passe"
+            type="password"
+            v-model="confirmPassword"
+            :errorMessage="errorMessage.confirmPasswordError"
+        />
+
         <mainButton type="submit" label="Commencer" :isLoading="authStore.isLoading"/>
 
         <errorMessage
@@ -38,7 +46,7 @@
 
         <p>Déjà un compte? <RouterLink to='/login'> <span class="link-to-login">se connecter ici</span></RouterLink> </p>
 
-        <exitButton label="Sortir" @click="exit" type="button" v-if="!credentials.username && !credentials.email && !credentials.password"/>
+        <exitButton label="Sortir" @click="exit" type="button" v-if="!credentials.username && !credentials.email && !credentials.password && !confirmPassword"/>
 
         <div class="credits-policy flex justify-center items-center">
             <p>
@@ -53,7 +61,7 @@
 <script lang="ts">
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 
 import { useAuthStore, type Customer } from '../../stores/authStore';
 
@@ -86,10 +94,13 @@ export default {
             email: ""
         })
 
+        const confirmPassword = ref("");
+
         const errorMessage = ref({
-            usernameError:"",
-            passwordError:"",
+            usernameError: "",
+            passwordError: "",
             emailError: "",
+            confirmPasswordError: "",
         })
 
         const succesMessage = ref("");
@@ -105,10 +116,11 @@ export default {
         function isValid() :boolean {
             let valid = true;
 
-            // Réinitialiser les messages d'erreur (optionnel)
+            // Réinitialiser les messages d'erreur
             errorMessage.value.usernameError = "";
             errorMessage.value.passwordError = "";
             errorMessage.value.emailError = "";
+            errorMessage.value.confirmPasswordError = "";
 
             if (credentials.value.username.trim() === "") {
                 errorMessage.value.usernameError = "Entrer le nom d'utilisateur";
@@ -116,7 +128,7 @@ export default {
             }
 
             if (credentials.value.email.trim() === "") {
-                errorMessage.value.emailError = "Entrer une email valide";
+                errorMessage.value.emailError = "Entrer un email valide";
                 valid = false;
             }
 
@@ -125,7 +137,15 @@ export default {
                 valid = false;
             }
 
-              return valid;
+            if (confirmPassword.value.trim() === "") {
+                errorMessage.value.confirmPasswordError = "Confirmer le mot de passe";
+                valid = false;
+            } else if (confirmPassword.value !== credentials.value.password) {
+                errorMessage.value.confirmPasswordError = "Les mots de passe ne correspondent pas";
+                valid = false;
+            }
+
+            return valid;
         }
 
         // Actions
@@ -147,10 +167,19 @@ export default {
             await getCurrentWindow().close();
         }
 
+        onMounted(() => {
+            authStore.clearMessages();
+        });
+
+        onUnmounted(() => {
+            authStore.clearMessages();
+        });
+
         return {
             router,
             authStore,
             credentials,
+            confirmPassword,
             errorMessage,
             usePassword,
             setPassword,
