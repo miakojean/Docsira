@@ -11,7 +11,7 @@
 
         <div class="header-info">
           <div class="header-title-row">
-            <h1 class="page-title">{{ dossier?.title || 'Dossier' }}</h1>
+            <h3 class="page-title">{{ dossier?.title || 'Dossier' }}</h3>
           </div>
           <div v-if="dossier" class="page-subtitle-row">
             <span class="ref-text">{{ dossier.reference_affair }}</span>
@@ -454,8 +454,8 @@ const {
 
 .page-title {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 500;
   color: #111827;
   white-space: nowrap;
   overflow: hidden;

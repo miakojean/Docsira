@@ -13,7 +13,7 @@
 
           <div class="header-info">
             <div class="header-line">
-              <h1 class="page-title">{{ dossier?.title || 'Dossier' }}</h1>
+              <h3 class="page-title">{{ dossier?.title || 'Dossier' }}</h3>
               <span v-if="dossier" class="badge" :class="dossier.statut.toLowerCase()">
                 {{ statutLabels[dossier.statut] || dossier.statut }}
               </span>
@@ -1068,7 +1068,7 @@ onUnmounted(() => {
 .page-title {
   margin: 0;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 400;
   color: #0f172a;
   letter-spacing: -0.02em;
 }
