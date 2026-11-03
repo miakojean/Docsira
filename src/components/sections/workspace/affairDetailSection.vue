@@ -195,6 +195,7 @@
           @delete="openDelete"
           @move="openMoveDocModal(doc)"
         />
+
       </div>
     </div>
 
@@ -302,6 +303,7 @@ import renameDocModale from '../../modale/renameDocModale.vue';
 import moveDocModale from '../../modale/moveDocModale.vue';
 import uploadDocModale from '../../modale/uploadDocModale.vue';
 import type { AffairDocumentsController } from '../../../composables/useAffairDocuments';
+import PaginatorVue from '../../tools/Paginator.vue';
 
 const props = defineProps<{
   affair: AffairDocumentsController;

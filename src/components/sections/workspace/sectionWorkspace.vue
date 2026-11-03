@@ -36,6 +36,8 @@
             @rename="openEdit(d)"
             @delete="openDelete(d)"
           />
+          <!-- <paginator/> -->
+          
         </div>
 
         <div v-else class="flex-1 w-full flex justify-center items-center">
@@ -117,6 +119,9 @@ import editDossierModale from '../../modale/editDossierModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 import detailsModale, { type ItemDetails } from '../../modale/detailsModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
+
+import Paginator from '../../tools/Paginator.vue';
+
 import { useClientDossierStore, type Dossier } from '../../../stores/dossierStore';
 
 const store = useClientDossierStore();
