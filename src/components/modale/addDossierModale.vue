@@ -36,6 +36,37 @@
             <p v-if="dossierStore.fieldErrors.title" class="error-text">{{ dossierStore.fieldErrors.title }}</p>
           </div>
 
+          <div class="field">
+            <label class="field-label" for="new-dossier-type">Type de dossier</label>
+            <div class="select-wrapper">
+              <select
+                id="new-dossier-type"
+                v-model="typeAffair"
+                class="select-input"
+              >
+                <optgroup
+                  v-for="group in DOSSIER_TYPE_GROUPS"
+                  :key="group.category"
+                  :label="group.category"
+                >
+                  <option
+                    v-for="opt in group.options"
+                    :key="opt.value"
+                    :value="opt.value"
+                  >
+                    {{ opt.label }}
+                  </option>
+                </optgroup>
+              </select>
+              <div class="select-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+              </div>
+            </div>
+            <p v-if="dossierStore.fieldErrors.type_affair" class="error-text">{{ dossierStore.fieldErrors.type_affair }}</p>
+          </div>
+
           <p v-if="dossierStore.errorMessage" class="error-text">{{ dossierStore.errorMessage }}</p>
 
           <div class="modal-footer">
@@ -54,6 +85,7 @@
 import { ref, computed, watch, onUnmounted } from 'vue';
 import { useClientDossierStore } from '../../stores/dossierStore';
 import { useClientStore, type ClientListItem } from '../../stores/clientStore';
+import { DOSSIER_TYPE_GROUPS } from '../../helpers/dossierTypes';
 
 const props = withDefaults(
   defineProps<{
@@ -70,6 +102,7 @@ const dossierStore = useClientDossierStore();
 const clientStore = useClientStore();
 
 const title = ref('');
+const typeAffair = ref('CONSTITUTION');
 const search = ref('');
 const selectedClient = ref<ClientListItem | null>(null);
 
@@ -82,7 +115,7 @@ const matchingClients = computed(() => {
 });
 
 const canSubmit = computed(() =>
-  !!selectedClient.value && title.value.trim().length > 0 && !dossierStore.isLoading
+  !!selectedClient.value && title.value.trim().length > 0 && !!typeAffair.value && !dossierStore.isLoading
 );
 
 async function submit() {
@@ -90,6 +123,7 @@ async function submit() {
   const ok = await dossierStore.addDossier({
     title: title.value.trim(),
     client_id: selectedClient.value.id,
+    type_affair: typeAffair.value,
   });
   if (ok) emit('created');
 }
@@ -99,6 +133,7 @@ watch(() => props.isOpen, (open) => {
   if (open) {
     title.value = '';
     search.value = '';
+    typeAffair.value = 'CONSTITUTION';
     selectedClient.value = props.defaultClient ?? null;
     dossierStore.errorMessage = '';
     dossierStore.fieldErrors = {};
@@ -126,11 +161,40 @@ onUnmounted(() => { document.body.style.overflow = ''; });
 
 .field { display: flex; flex-direction: column; gap: 0.4rem; }
 .field-label { font-size: 0.8rem; font-weight: 600; color: #6b7280; }
-.text-input {
+.text-input,
+.select-input {
   width: 100%; box-sizing: border-box; padding: 0.7rem 0.9rem; border: 1px solid #e5e7eb; border-radius: 10px;
   font-size: 0.9rem; outline: none; background: #f9fafb; color: #111827; transition: border-color 0.2s, box-shadow 0.2s;
 }
-.text-input:focus { border-color: var(--primary-color, #2563eb); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); background: #fff; }
+.text-input:focus,
+.select-input:focus { border-color: var(--primary-color, #2563eb); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); background: #fff; }
+
+.select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.select-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+.select-input:hover {
+  border-color: #cbd5e1;
+  background: #fff;
+}
+.select-icon {
+  position: absolute;
+  right: 0.85rem;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
 
 .selected-client {
   display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;

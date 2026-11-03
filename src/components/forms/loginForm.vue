@@ -1,6 +1,11 @@
 <template>
     <form class="form-ui" @submit.prevent="login">
-        <h3>Se connecter</h3>
+        <div class="logo-container">
+            <img :src="logoUrl" alt="DocSira Logo" class="login-logo" />
+            <h3>Se connecter</h3>
+        </div>
+
+        
 
         <BaseInput
             label="Entrer email/username"
@@ -54,6 +59,7 @@ import BaseInput from '../BaseInput/BaseInput.vue';
 import mainButton from '../buttons/mainButton.vue';
 import exitButton from '../buttons/exitButton.vue';
 import errorMessage from '../tools/errorMessage.vue';
+import logoUrl from '../../assets/assets/svg/LOGO2.png';
 
 const emit = defineEmits(['handleLogin']);
 const authStore = useAuthStore();
@@ -135,9 +141,22 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.logo-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.login-logo {
+    height: 60px;
+    max-width: 220px;
+    width: auto;
+    object-fit: contain;
+}
+
 /* Ton CSS existant */
 form h3{
-    margin-bottom: 1rem;
     font-size: 1.5rem;
     font-weight: 500;
 }

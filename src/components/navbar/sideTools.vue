@@ -258,11 +258,11 @@ export default {
     font-size: 0.8rem;
   }
   .nav-item:hover {
-    background-color: var(--primary-color);
+    background-color: #063657;
     color: #ffffff;
   }
   .nav-item.active {
-    background-color: var(--primary-color);
+    background-color: #063657;
     color: #ffffff;
   }
   .nav-item.active .icon {

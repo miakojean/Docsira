@@ -15,7 +15,7 @@
           </div>
           <div v-if="dossier" class="page-subtitle-row">
             <span class="ref-text">{{ dossier.reference_affair }}</span>
-            <span class="sub-sep">•</span>
+            <span v-if="dossier.type_affair" class="type-badge">{{ getDossierTypeLabel(dossier.type_affair) }}</span>
           </div>
         </div>
       </div>
@@ -301,6 +301,7 @@ import filePreviewModale from '../../modale/filePreviewModale.vue';
 import renameDocModale from '../../modale/renameDocModale.vue';
 import moveDocModale from '../../modale/moveDocModale.vue';
 import uploadDocModale from '../../modale/uploadDocModale.vue';
+import { getDossierTypeLabel } from '../../../helpers/dossierTypes';
 import type { AffairDocumentsController } from '../../../composables/useAffairDocuments';
 
 const props = defineProps<{
@@ -379,11 +380,6 @@ const {
   gap: 0.5rem;
   margin-top: 0.2rem;
   flex-wrap: wrap;
-}
-
-.sub-sep {
-  color: #cbd5e1;
-  font-size: 0.8rem;
 }
 
 .sira-badge-chevron {
@@ -474,6 +470,26 @@ const {
 .ref-text {
   font-weight: 600;
   color: #4b5563;
+  font-size: 0.82rem;
+}
+
+.page-subtitle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--primary-color-dark, #005380);
+  background: rgba(0, 87, 146, 0.08);
+  border: 1px solid rgba(0, 87, 146, 0.18);
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
 }
 
 /* === ACTIONS D'EN-TÊTE === */

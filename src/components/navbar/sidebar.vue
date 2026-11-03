@@ -2,10 +2,10 @@
   <aside class="sidebar" :class="{ 'is-reduced': isReduced }">
     <!-- LOGO -->
     <div class="logo hidden-mobile">
-      <!-- Icône affichée lorsque la sidebar est réduite -->
-
-      <!-- Texte affiché lorsque la sidebar est ouverte -->
-      <span class="logo-text" v-if="!isReduced">DocSira</span>
+      <div class="logo-brand" v-if="!isReduced" @click="router.push('/dashboard')" title="DocSira">
+        <img :src="logoUrl" alt="DocSira Logo" class="sidebar-logo" />
+        <span class="logo-text">DocSira</span>
+      </div>
 
       <!-- Bouton de bascule (toujours visible) -->
       <svg
@@ -132,6 +132,7 @@ import { ref } from 'vue';
 // @ts-ignore vue-router is provided by the application's bundler.
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/authStore';
+import logoUrl from '../../assets/assets/svg/LOGO2.png';
 
 
 export default {
@@ -163,7 +164,8 @@ export default {
       router,
       route,
       toggleReduce,
-      goToAuth
+      goToAuth,
+      logoUrl
     };
   }
 }
@@ -288,6 +290,27 @@ export default {
     align-items: center;
     justify-content: space-between;
     padding: 0 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .logo-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    min-width: 0;
+  }
+
+  .sidebar-logo {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+
+  .sidebar-logo:hover {
+    transform: scale(1.05);
   }
 
   .logo svg{
@@ -296,15 +319,18 @@ export default {
 
   .sidebar.is-reduced .logo {
     justify-content: center;
+    align-items: center;
     padding: 0;
-    gap: 0.5rem;
+    width: 100%;
   }
+
   .logo-text {
     font-weight: 700;
     font-size: 1.25rem;
     color: var(--primary-color);
     letter-spacing: -0.02em;
-    margin: 1rem;
+    margin: 0;
+    white-space: nowrap;
   }
   .logo-icon {
     width: 32px;
