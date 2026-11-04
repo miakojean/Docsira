@@ -20,7 +20,7 @@
 
           <!-- Liste des dossiers du client -->
           <div v-if="mode === 'list'" class="modal-body">
-            <div v-if="dossierStore.isLoading && dossiers.length === 0" class="state-text">Chargement des dossiers...</div>
+            <div v-if="dossierStore.isLoading && dossiers.length === 0" class="state-text"><LogoLoader size="md" label="Chargement des dossiers..." /></div>
 
             <div v-else-if="dossiers.length === 0" class="empty-state">
               <div class="empty-icon">
@@ -182,6 +182,7 @@ import { useClientStore, type ClientListItem } from '../../stores/clientStore';
 import { DOSSIER_TYPE_GROUPS, getDossierTypeLabel } from '../../helpers/dossierTypes';
 import editDossierModale from './editDossierModale.vue';
 import deleteModale from './deleteModale.vue';
+import LogoLoader from '../tools/LogoLoader.vue';
 
 const props = defineProps<{
   isOpen: boolean;

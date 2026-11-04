@@ -123,7 +123,7 @@
     >
       <!-- État de chargement initial -->
       <div v-if="docStore.isLoading" class="loading-state">
-        <div class="spinner"></div>
+        <LogoLoader size="lg" />
         <p>Chargement des documents du dossier...</p>
       </div>
 
@@ -301,6 +301,7 @@ import filePreviewModale from '../../modale/filePreviewModale.vue';
 import renameDocModale from '../../modale/renameDocModale.vue';
 import moveDocModale from '../../modale/moveDocModale.vue';
 import uploadDocModale from '../../modale/uploadDocModale.vue';
+import LogoLoader from '../../tools/LogoLoader.vue';
 import { getDossierTypeLabel } from '../../../helpers/dossierTypes';
 import type { AffairDocumentsController } from '../../../composables/useAffairDocuments';
 

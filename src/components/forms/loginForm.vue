@@ -59,7 +59,7 @@ import BaseInput from '../BaseInput/BaseInput.vue';
 import mainButton from '../buttons/mainButton.vue';
 import exitButton from '../buttons/exitButton.vue';
 import errorMessage from '../tools/errorMessage.vue';
-import logoUrl from '../../assets/assets/svg/LOGO2.png';
+import logoUrl from '../../assets/assets/svg/LOGO2.svg';
 
 const emit = defineEmits(['handleLogin']);
 const authStore = useAuthStore();
@@ -149,7 +149,7 @@ onUnmounted(() => {
 }
 
 .login-logo {
-    height: 60px;
+    height: 40px;
     max-width: 220px;
     width: auto;
     object-fit: contain;

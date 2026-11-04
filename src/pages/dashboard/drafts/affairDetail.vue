@@ -101,7 +101,7 @@
           <p v-if="docStore.errorMessage" class="error-banner">{{ docStore.errorMessage }}</p>
 
           <div v-if="docStore.isLoading && documents.length === 0" class="state-text">
-            <div class="spinner"></div>
+            <LogoLoader size="lg" />
             Chargement de l'espace des documents...
           </div>
 
@@ -358,6 +358,7 @@ import { readFile, writeFile } from '@tauri-apps/plugin-fs';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import sidebar from '../../../components/navbar/sidebar.vue';
 import deleteModale from '../../../components/modale/deleteModale.vue';
+import LogoLoader from '../../../components/tools/LogoLoader.vue';
 import { useClientDossierStore, type Dossier } from '../../../stores/dossierStore';
 import { useDocumentStore, type DossierDocument } from '../../../stores/documentStore';
 

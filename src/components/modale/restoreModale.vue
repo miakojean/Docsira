@@ -9,7 +9,7 @@
                 <h3 class="">Traitement en cours</h3>
             </div>
             <div class="modal-body text-center" style="align-items: center; justify-content: center; min-height: 150px; display: flex; flex-direction: column;">
-                <div class="spinner"></div>
+                <LogoLoader size="md" />
                 <p style="margin-top: 1rem; color: #6b7280; font-size: 0.95rem;">Veuillez patienter...</p>
             </div>
           </template>
@@ -89,6 +89,7 @@
 <script setup lang="ts">
 import { watch, onUnmounted } from 'vue';
 import mainButton from '../buttons/mainButton.vue';
+import LogoLoader from '../tools/LogoLoader.vue';
 
 const props = withDefaults(
   defineProps<{

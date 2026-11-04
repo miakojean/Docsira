@@ -7,12 +7,17 @@
         @click="$emit('click')"
     >
         <span v-if="!isLoading">{{ label }}</span>
-        <span v-else class="loading loading-spinner loading-md"></span>
+        <LogoLoader v-else size="sm" :inline="true" />
     </button>
 </template>
 
 <script>
+import LogoLoader from '../tools/LogoLoader.vue';
+
 export default {
+    components: {
+        LogoLoader
+    },
     emits: ['click'],
     props: {
         isLoading: { type: Boolean, default: false },
@@ -24,6 +29,9 @@ export default {
 
 <style scoped>
 .main-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 0.8rem;
     width: 100%;
     max-width: 200px;

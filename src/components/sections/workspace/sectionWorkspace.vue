@@ -50,7 +50,11 @@
     </div>
 
     <!-- ÉTAT VIDE GLOBAL DU CABINET -->
-    <div v-else-if="!store.isLoading" class="h-full w-full flex justify-center items-center">
+    <div v-else-if="store.isLoading" class="h-full w-full flex justify-center items-center">
+      <LogoLoader size="lg" label="Chargement des dossiers..." />
+    </div>
+
+    <div v-else class="h-full w-full flex justify-center items-center">
       <emptyCards
         title="Workspace"
         mainText="Vous n'avez aucun dossier."
@@ -117,6 +121,7 @@ import editDossierModale from '../../modale/editDossierModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 import detailsModale, { type ItemDetails } from '../../modale/detailsModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
+import LogoLoader from '../../tools/LogoLoader.vue';
 import { useClientDossierStore, type Dossier } from '../../../stores/dossierStore';
 
 const store = useClientDossierStore();

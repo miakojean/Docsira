@@ -132,7 +132,7 @@ import { ref } from 'vue';
 // @ts-ignore vue-router is provided by the application's bundler.
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/authStore';
-import logoUrl from '../../assets/assets/svg/LOGO2.png';
+import logoUrl from '../../assets/assets/svg/LOGO2.svg';
 
 
 export default {
@@ -302,8 +302,8 @@ export default {
   }
 
   .sidebar-logo {
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     object-fit: contain;
     flex-shrink: 0;
     transition: transform 0.2s ease;

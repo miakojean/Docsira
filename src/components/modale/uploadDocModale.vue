@@ -135,10 +135,7 @@
               :disabled="selectedFiles.length === 0 || isUploading"
               @click="submitUpload"
             >
-              <svg v-if="isUploading" class="animate-spin size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-              </svg>
+              <LogoLoader v-if="isUploading" size="xs" :inline="true" />
               <span>
                 {{ isUploading ? 'Importation en cours...' : `Importer ${selectedFiles.length > 0 ? `(${selectedFiles.length})` : ''}` }}
               </span>
@@ -165,6 +162,7 @@ import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { readFile } from '@tauri-apps/plugin-fs';
 import type { Dossier } from '../../stores/dossierStore';
 import type { SiraCategory } from '../../stores/documentStore';
+import LogoLoader from '../tools/LogoLoader.vue';
 
 const props = withDefaults(
   defineProps<{

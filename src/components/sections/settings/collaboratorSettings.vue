@@ -35,6 +35,10 @@
             </div>
         </div>
 
+        <div v-else-if="authStore.isLoading && !isOpen && !isDeleteModalOpen" class="h-full w-full flex justify-center items-center">
+            <LogoLoader size="lg" label="Chargement des collaborateurs..." />
+        </div>
+
         <div v-else class="h-full w-full flex justify-center items-center">
             <emptyCards :showAddButton="isOwner" @add="handleAdd"/>
         </div>
@@ -78,6 +82,7 @@ import emptyCards from '../../cards/emptyCards.vue';
 import PendingCollaboratorCard from '../../cards/PendingCollaboratorCard.vue';
 import CollaboratorCard from '../../cards/CollaboratorCard.vue';
 import inviteModale from '../../modale/inviteModale.vue';
+import LogoLoader from '../../tools/LogoLoader.vue';
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '../../../stores/authStore';
 import SuccesModale from '../../modale/succesModale.vue';
