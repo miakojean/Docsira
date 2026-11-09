@@ -171,8 +171,13 @@ function shareClient(client: any) {
   console.log("Partager client", client.id);
 }
 
-function archiveClient(client: any) {
-  console.log("Archiver client", client.id);
+async function archiveClient(client: any) {
+  const ok = await clientStore.archiveClient(client.id);
+  if (ok) {
+    successTitle.value = "Client archivé";
+    successSubtitle.value = "Le client a été transféré dans les archives du cabinet.";
+    isSuccess.value = true;
+  }
 }
 
 function deleteClient(client: any) {

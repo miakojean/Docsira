@@ -35,6 +35,7 @@
               @details="openDetails(d)"
               @edit="openEdit(d)"
               @rename="openEdit(d)"
+              @archive="handleArchiveDossier(d)"
               @delete="openDelete(d)"
             />
           </div>
@@ -256,6 +257,15 @@ function onUpdated() {
   successTitle.value = "Dossier mis à jour";
   successSubtitle.value = "Les informations du dossier ont été modifiées avec succès.";
   isSuccess.value = true;
+}
+
+async function handleArchiveDossier(d: Dossier) {
+  const ok = await store.archiveDossier(d.id);
+  if (ok) {
+    successTitle.value = "Dossier archivé";
+    successSubtitle.value = "Le dossier a été transféré dans les archives du cabinet.";
+    isSuccess.value = true;
+  }
 }
 
 function openDelete(d: Dossier) {

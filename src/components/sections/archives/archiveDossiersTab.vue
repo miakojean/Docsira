@@ -1,10 +1,10 @@
 <template>
   <div class="archive-tab-content">
-    <div v-if="dossierStore.isLoading && dossierStore.allDossiers.length === 0" class="loader-area">
-      <LogoLoader size="lg" label="Chargement des dossiers..." />
+    <div v-if="dossierStore.isLoading && dossierStore.archivedDossiers.length === 0" class="loader-area">
+      <LogoLoader size="lg" label="Chargement des dossiers archivés..." />
     </div>
 
-    <div v-else-if="dossierStore.allDossiers.length > 0" class="content-container">
+    <div v-else-if="dossierStore.archivedDossiers.length > 0" class="content-container">
       <!-- Filtres par statut -->
       <div class="filters">
         <button
@@ -31,6 +31,7 @@
             @details="openDossierDetails(d)"
             @edit="openDossierEdit(d)"
             @rename="openDossierEdit(d)"
+            @unarchive="handleUnarchive(d)"
             @delete="openDossierDelete(d)"
           />
         </div>
@@ -56,7 +57,7 @@
     <div v-else class="empty-area">
       <emptyCards
         title="Dossiers archivés"
-        mainText="Aucun dossier disponible."
+        mainText="Aucun dossier archivé."
         subtitle="Vos dossiers archivés apparaîtront ici."
         :showAddButton="false"
       />
@@ -103,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import affairsCards from '../../cards/affairsCards.vue';
 import emptyCards from '../../cards/emptyCards.vue';
@@ -148,7 +149,7 @@ const filteredDossiers = computed(() => {
   const q = props.searchQuery.trim().toLowerCase();
   const filter = dossierStatutFilter.value;
 
-  return dossierStore.allDossiers.filter((d) => {
+  return dossierStore.archivedDossiers.filter((d) => {
     const matchesStatut = filter === 'ALL' || d.statut === filter;
     if (!matchesStatut) return false;
     if (!q) return true;
@@ -186,7 +187,7 @@ const dossierDetailsItem = computed<ItemDetails>(() => {
   return {
     isFolder: true,
     name: d.title,
-    path: d.reference_affair ? `Dossier / ${d.reference_affair}` : '/Archives/Docsira',
+    path: d.reference_affair ? `Archives / ${d.reference_affair}` : '/Archives/Docsira',
     size: `${d.documents_count ?? 0} document(s)`,
     fileCount: d.documents_count ?? 0,
     owner: d.client?.nom_complet || 'Client',
@@ -226,6 +227,15 @@ function onDossierUpdated() {
   isSuccess.value = true;
 }
 
+async function handleUnarchive(d: Dossier) {
+  const ok = await dossierStore.restoreDossier(d.id);
+  if (ok) {
+    successTitle.value = 'Dossier restauré';
+    successSubtitle.value = 'Le dossier a été retiré des archives et réintégré à votre espace de travail.';
+    isSuccess.value = true;
+  }
+}
+
 function openDossierDelete(d: Dossier) {
   dossierToDelete.value = d;
   isDeleteDossierSuccess.value = false;
@@ -245,6 +255,10 @@ async function confirmDeleteDossier() {
     }, 1200);
   }
 }
+
+onMounted(() => {
+  dossierStore.fetchArchivedDossiers();
+});
 </script>
 
 <style scoped>
@@ -310,4 +324,3 @@ async function confirmDeleteDossier() {
   padding-bottom: 1rem;
 }
 </style>
-

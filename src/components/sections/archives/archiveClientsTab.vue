@@ -1,10 +1,10 @@
 <template>
   <div class="archive-tab-content">
-    <div v-if="clientStore.isLoading && clientStore.clients.length === 0" class="loader-area">
-      <LogoLoader size="lg" label="Chargement des clients..." />
+    <div v-if="clientStore.isLoading && clientStore.archivedClients.length === 0" class="loader-area">
+      <LogoLoader size="lg" label="Chargement des clients archivés..." />
     </div>
 
-    <div v-else-if="clientStore.clients.length > 0" class="content-container">
+    <div v-else-if="clientStore.archivedClients.length > 0" class="content-container">
       <div v-if="filteredClients.length > 0" class="flex flex-col gap-4">
         <div class="clients-grid">
           <customerCard
@@ -14,6 +14,7 @@
             @view="viewClient"
             @edit="editClient"
             @folders="openClientFolders"
+            @unarchive="handleUnarchive"
             @delete="openClientDelete"
           />
         </div>
@@ -39,8 +40,8 @@
     <div v-else class="empty-area">
       <emptyCards
         title="Clients archivés"
-        mainText="Aucun client disponible."
-        subtitle="Vos fiches clients apparaîtront ici."
+        mainText="Aucun client archivé."
+        subtitle="Vos fiches clients archivées apparaîtront ici."
         :showAddButton="false"
       />
     </div>
@@ -92,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import customerCard from '../../cards/customerCard.vue';
 import emptyCards from '../../cards/emptyCards.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
@@ -124,8 +125,8 @@ watch(() => props.searchQuery, () => {
 
 const filteredClients = computed(() => {
   const q = props.searchQuery.trim().toLowerCase();
-  if (!q) return clientStore.clients;
-  return clientStore.clients.filter((c) =>
+  if (!q) return clientStore.archivedClients;
+  return clientStore.archivedClients.filter((c) =>
     [c.nom_complet, c.reference_client, c.email, c.telephone_1, c.ville].some((v) =>
       (v || '').toLowerCase().includes(q)
     )
@@ -173,6 +174,15 @@ function onClientUpdated() {
   isSuccess.value = true;
 }
 
+async function handleUnarchive(client: any) {
+  const ok = await clientStore.restoreArchivedClient(client.id);
+  if (ok) {
+    successTitle.value = 'Client restauré';
+    successSubtitle.value = 'Le client a été retiré des archives et réintégré à vos clients actifs.';
+    isSuccess.value = true;
+  }
+}
+
 function openClientDelete(client: any) {
   clientToDelete.value = client;
   isDeleteClientSuccess.value = false;
@@ -188,6 +198,10 @@ async function confirmDeleteClient() {
     isDeleteClientSuccess.value = true;
   }
 }
+
+onMounted(() => {
+  clientStore.fetchArchivedClients();
+});
 </script>
 
 <style scoped>
@@ -224,4 +238,3 @@ async function confirmDeleteClient() {
   padding-bottom: 1rem;
 }
 </style>
-

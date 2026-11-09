@@ -16,6 +16,7 @@ export interface Dossier {
   documents_count?: number;
   /** Extensions des derniers documents (max 3), pour l'aperçu du dossier. */
   documents_preview?: string[];
+  is_archived?: boolean;
 }
 
 /** Récupère toutes les pages d'un endpoint DRF paginé (ou une simple liste). */
@@ -43,8 +44,10 @@ export interface DossierPayload {
 export const useClientDossierStore = defineStore("clientDossier", () => {
   // clientId -> dossiers du client
   const dossiersByClient = ref<Record<string, Dossier[]>>({});
-  // Tous les dossiers du cabinet (page workspace)
+  // Tous les dossiers actifs du cabinet (page workspace)
   const allDossiers = ref<Dossier[]>([]);
+  // Tous les dossiers archivés du cabinet (page archives)
+  const archivedDossiers = ref<Dossier[]>([]);
   const isLoading = ref(false);
   const errorMessage = ref("");
   const fieldErrors = ref<Record<string, string>>({});
@@ -69,6 +72,89 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
     }
   }
 
+  async function fetchArchivedDossiers() {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const items = await fetchAllPages("/affairs/archives/");
+      if (!items) {
+        errorMessage.value = "Impossible de charger les dossiers archivés";
+        return false;
+      }
+      archivedDossiers.value = items;
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function archiveDossier(id: string): Promise<boolean> {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/${id}/archive/`, "POST");
+      if (!response.ok) {
+        errorMessage.value = "Impossible d'archiver le dossier";
+        return false;
+      }
+
+      // Retirer des dossiers actifs
+      const found = allDossiers.value.find((d) => d.id === id);
+      allDossiers.value = allDossiers.value.filter((d) => d.id !== id);
+      for (const clientId of Object.keys(dossiersByClient.value)) {
+        dossiersByClient.value[clientId] = dossiersByClient.value[clientId].filter((d) => d.id !== id);
+      }
+
+      // Ajouter aux archives
+      if (found) {
+        archivedDossiers.value = [{ ...found, is_archived: true }, ...archivedDossiers.value];
+      } else {
+        await fetchArchivedDossiers();
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function restoreDossier(id: string): Promise<boolean> {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/${id}/archive/`, "DELETE");
+      if (!response.ok) {
+        errorMessage.value = "Impossible de restaurer le dossier";
+        return false;
+      }
+
+      // Retirer des archives
+      const found = archivedDossiers.value.find((d) => d.id === id);
+      archivedDossiers.value = archivedDossiers.value.filter((d) => d.id !== id);
+
+      // Ajouter aux dossiers actifs
+      if (found) {
+        allDossiers.value = [{ ...found, is_archived: false }, ...allDossiers.value];
+      } else {
+        await fetchAllDossiers();
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   async function fetchClientDossiers(clientId: string) {
     isLoading.value = true;
     errorMessage.value = "";
@@ -82,8 +168,6 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
         ...dossiersByClient.value,
         [clientId]: items,
       };
-      // Debugging
-      console.log("Dossier du client", dossiersByClient.value)
       return true;
     } catch (error) {
       console.error(error);
@@ -163,6 +247,12 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
         allDossiers.value[idx] = data;
       }
 
+      // Mise à jour dans archivedDossiers
+      const archIdx = archivedDossiers.value.findIndex((d) => d.id === id);
+      if (archIdx !== -1) {
+        archivedDossiers.value[archIdx] = data;
+      }
+
       // Mise à jour dans dossiersByClient
       for (const clientId of Object.keys(dossiersByClient.value)) {
         dossiersByClient.value[clientId] = dossiersByClient.value[clientId].filter((d) => d.id !== id);
@@ -193,6 +283,7 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
         return false;
       }
       allDossiers.value = allDossiers.value.filter((d) => d.id !== id);
+      archivedDossiers.value = archivedDossiers.value.filter((d) => d.id !== id);
       for (const clientId of Object.keys(dossiersByClient.value)) {
         dossiersByClient.value[clientId] = dossiersByClient.value[clientId].filter((d) => d.id !== id);
       }
@@ -209,10 +300,14 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
   return {
     dossiersByClient,
     allDossiers,
+    archivedDossiers,
     isLoading,
     errorMessage,
     fieldErrors,
     fetchAllDossiers,
+    fetchArchivedDossiers,
+    archiveDossier,
+    restoreDossier,
     fetchClientDossiers,
     fetchDossier,
     addDossier,

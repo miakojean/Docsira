@@ -5,7 +5,7 @@ import { api } from "../services/api";
 export type TypeClient = "PERSONNE_PHYSIQUE" | "PERSONNE_MORALE";
 export type StatutClient = "ACTIF" | "INACTIF" | "PROSPECT" | "ARCHIVE";
 
-// Correspond à ClientSerializer (le GET /Client renvoie un tableau brut)
+// Correspond à ClientSerializer
 export interface ClientListItem {
   id: string; // UUID
   reference_client: string;
@@ -69,6 +69,7 @@ async function fetchAllPages(url: string): Promise<ClientListItem[] | null> {
 export const useClientStore = defineStore("client", () => {
   const clients = ref<ClientListItem[]>([]);
   const trashClients = ref<ClientListItem[]>([]);
+  const archivedClients = ref<ClientListItem[]>([]);
   const isLoading = ref(false);
   const fieldErrors = ref<Record<string, string>>({});
   const errorMessage = ref("");
@@ -83,6 +84,26 @@ export const useClientStore = defineStore("client", () => {
         return false;
       }
       clients.value = items;
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function fetchArchivedClients() {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const items = await fetchAllPages("/Client/archives/");
+      if (!items) {
+        errorMessage.value = "Impossible de charger les clients archivés";
+        return false;
+      }
+      archivedClients.value = items;
       return true;
     } catch (error) {
       console.error(error);
@@ -113,12 +134,67 @@ export const useClientStore = defineStore("client", () => {
     }
   }
 
+  async function archiveClient(id: string): Promise<boolean> {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const response = await api(`/Client/${id}/archive/`, "POST");
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        errorMessage.value = data?.message || "Impossible d'archiver le client";
+        return false;
+      }
+
+      const found = clients.value.find((c) => c.id === id);
+      clients.value = clients.value.filter((c) => c.id !== id);
+      if (found) {
+        archivedClients.value = [{ ...found, statut: "ARCHIVE" }, ...archivedClients.value];
+      } else {
+        await fetchArchivedClients();
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function restoreArchivedClient(id: string): Promise<boolean> {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const response = await api(`/Client/${id}/archive/`, "DELETE");
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        errorMessage.value = data?.message || "Impossible de restaurer le client";
+        return false;
+      }
+
+      const found = archivedClients.value.find((c) => c.id === id);
+      archivedClients.value = archivedClients.value.filter((c) => c.id !== id);
+      if (found) {
+        clients.value = [{ ...found, statut: "ACTIF" }, ...clients.value];
+      } else {
+        await fetchClients();
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   async function addClient(payload: ClientPayload) {
     isLoading.value = true;
     errorMessage.value = "";
     fieldErrors.value = {};
     try {
-      // Les champs vides sont retirés pour ne pas violer les validateurs (dates, email...)
       const cleaned = Object.fromEntries(
         Object.entries(payload).filter(([, v]) => v !== "" && v !== null && v !== undefined),
       );
@@ -134,7 +210,6 @@ export const useClientStore = defineStore("client", () => {
           fieldErrors.value.non_field_errors || data?.message || "Création du client impossible";
         return false;
       }
-      // Ajout optimiste en tête de liste puis resynchronisation
       if (data?.client) clients.value.unshift(data.client);
       await fetchClients();
       return true;
@@ -171,8 +246,10 @@ export const useClientStore = defineStore("client", () => {
       const index = clients.value.findIndex(c => c.id === id);
       if (index !== -1 && data?.client) {
         clients.value[index] = data.client;
-      } else {
-        await fetchClients();
+      }
+      const archIndex = archivedClients.value.findIndex(c => c.id === id);
+      if (archIndex !== -1 && data?.client) {
+        archivedClients.value[archIndex] = data.client;
       }
       return true;
     } catch (error) {
@@ -195,6 +272,7 @@ export const useClientStore = defineStore("client", () => {
         return false;
       }
       clients.value = clients.value.filter(c => c.id !== id);
+      archivedClients.value = archivedClients.value.filter(c => c.id !== id);
       return true;
     } catch (error) {
       console.error(error);
@@ -247,5 +325,22 @@ export const useClientStore = defineStore("client", () => {
     }
   }
 
-  return { clients, trashClients, isLoading, fieldErrors, errorMessage, fetchClients, fetchTrashClients, addClient, updateClient, deleteClient, restoreClient, deleteClientPermanently };
+  return {
+    clients,
+    trashClients,
+    archivedClients,
+    isLoading,
+    fieldErrors,
+    errorMessage,
+    fetchClients,
+    fetchArchivedClients,
+    fetchTrashClients,
+    archiveClient,
+    restoreArchivedClient,
+    addClient,
+    updateClient,
+    deleteClient,
+    restoreClient,
+    deleteClientPermanently,
+  };
 });
