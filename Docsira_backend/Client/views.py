@@ -53,6 +53,8 @@ class ManageClient(APIView):
         
         users_to_include = get_firm_users(request.user)
         clients = Client.objects.filter(charge_de_clientele__in=users_to_include, is_deleted=is_trash)
+        if not is_trash:
+            clients = clients.exclude(statut='ARCHIVE')
 
         paginator = PageNumberPagination()
         paginator.page_size = 12
@@ -161,6 +163,53 @@ class ManageClient(APIView):
                 'message': 'Erreur interne du serveur',
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ArchivedClientsView(APIView):
+    """Liste paginée des clients archivés, hors corbeille."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        users_to_include = get_firm_users(request.user)
+        clients = Client.objects.filter(
+            charge_de_clientele__in=users_to_include,
+            statut='ARCHIVE',
+            is_deleted=False,
+        )
+        paginator = PageNumberPagination()
+        paginator.page_size = 12
+        page = paginator.paginate_queryset(clients, request)
+        serializer = ClientSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+
+class ClientArchiveView(APIView):
+    """Archive un client (POST) ou le restaure (DELETE), sans corbeille."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, client_id):
+        return self._set_archived(request, client_id, archived=True)
+
+    def delete(self, request, client_id):
+        return self._set_archived(request, client_id, archived=False)
+
+    def _set_archived(self, request, client_id, archived):
+        users_to_include = get_firm_users(request.user)
+        try:
+            client = Client.objects.get(
+                id=client_id,
+                charge_de_clientele__in=users_to_include,
+                is_deleted=False,
+            )
+        except Client.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Client non trouvé',
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        client.statut = 'ARCHIVE' if archived else 'ACTIF'
+        client.save(update_fields=['statut'])
+        message = 'Client archivé avec succès' if archived else 'Client restauré avec succès'
+        return Response({'success': True, 'message': message}, status=status.HTTP_200_OK)
 
 class RestoreClient(APIView):
     permission_classes = [IsAuthenticated]
