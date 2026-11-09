@@ -1,9 +1,10 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from .serializers import ClientSerializer
-from .models import Client
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
+from .serializers import ClientSerializer
+from .models import Client
 from account.models import CustomUser
 from django.db import transaction
 
@@ -53,9 +54,12 @@ class ManageClient(APIView):
         users_to_include = get_firm_users(request.user)
         clients = Client.objects.filter(charge_de_clientele__in=users_to_include, is_deleted=is_trash)
 
-        serializer = ClientSerializer(clients, many=True)
+        paginator = PageNumberPagination()
+        paginator.page_size = 12
+        paginated_clients = paginator.paginate_queryset(clients, request)
+        serializer = ClientSerializer(paginated_clients, many=True)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return paginator.get_paginated_response(serializer.data)
 
     def put(self, request, client_id, *args, **kwargs):
         try:

@@ -353,7 +353,7 @@ onMounted(async () => {
 .header-dossier-pill {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #2563eb;
+  color: var(--primary-color);
   background: #eff6ff;
   border: 1px solid #dbeafe;
   border-radius: 999px;
@@ -452,7 +452,7 @@ onMounted(async () => {
 
 .tab.active {
   background: #ffffff;
-  color: #1d4ed8;
+  color: var(--primary-color);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
@@ -532,7 +532,7 @@ onMounted(async () => {
 .tree-row.active {
   background: #e9ebee;
   font-weight: 600;
-  color: #2563eb;
+  color: var(--primary-color);
 }
 
 .row-icon {

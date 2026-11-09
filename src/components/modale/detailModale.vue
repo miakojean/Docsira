@@ -231,7 +231,10 @@ export default {
   height: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
+  justify-content: center;
+  align-items: center;
   flex-direction: column;
   gap: 1.5rem;
 }
@@ -258,6 +261,7 @@ export default {
 }
 
 .file-identity {
+  margin-top: 1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -335,6 +339,7 @@ export default {
 
 .file-actions {
   display: flex;
+  align-items: center;
   justify-content: space-around;
   margin-top: auto;
   padding-top: 1rem;
@@ -346,6 +351,7 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   cursor: pointer;
 }

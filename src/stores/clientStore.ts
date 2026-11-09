@@ -68,7 +68,7 @@ export const useClientStore = defineStore("client", () => {
       }
       const data = await response.json();
       // Le backend renvoie directement un tableau ; on garde une tolérance sur l'ancien format
-      clients.value = Array.isArray(data) ? data : (data?.clients ?? []);
+      clients.value = Array.isArray(data) ? data : (data?.results ?? []);
       return true;
     } catch (error) {
       console.error(error);

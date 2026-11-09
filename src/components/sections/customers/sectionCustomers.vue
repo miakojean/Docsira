@@ -1,6 +1,11 @@
 <template>
   <div class="main-section gap-2">
-    <headerNav title="Mes clients" :showToolsButton="true" @handleEvent="isOpen = true" v-model="searchQuery">
+    <headerNav 
+      title="Mes clients" 
+      :showToolsButton="true" 
+      @handleEvent="isOpen = true" 
+      v-model="searchQuery"
+    >
     </headerNav>
 
     <div v-if="clientStore.clients.length > 0" class="content-container">

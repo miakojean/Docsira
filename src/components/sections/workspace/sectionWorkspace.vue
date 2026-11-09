@@ -46,6 +46,8 @@
             :pageSize="pageSize"
             :hideOnSinglePage="false"
           />
+          <!-- <paginator/> -->
+          
         </div>
 
         <div v-else class="flex-1 w-full flex justify-center items-center">
