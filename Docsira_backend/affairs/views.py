@@ -48,7 +48,7 @@ class AffairView(BaseFirmView):
         else:
             affairs = (
                 Affair.objects
-                .filter(firm=firm)
+                .filter(firm=firm, is_archived=False)
                 .select_related('client', 'firm', 'collaborator')
                 .prefetch_related('documents')
             )
@@ -82,6 +82,47 @@ class AffairView(BaseFirmView):
             return Response({"message": "Affair deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Affair.DoesNotExist:
             return Response({"error": "Affair not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class ArchivedAffairsView(BaseFirmView):
+    """Liste paginée des dossiers archivés du cabinet connecté."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        affairs = (
+            Affair.objects
+            .filter(firm=self.get_firm(request.user), is_archived=True)
+            .select_related('client', 'firm', 'collaborator')
+            .prefetch_related('documents')
+        )
+        paginator = PageNumberPagination()
+        paginator.page_size = 10
+        page = paginator.paginate_queryset(affairs, request)
+        return paginator.get_paginated_response(AffairSerializer(page, many=True).data)
+
+
+class AffairArchiveView(BaseFirmView):
+    """Archive un dossier (POST) ou le restaure (DELETE), sans le supprimer."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, affair_id):
+        return self._set_archived(request, affair_id, archived=True)
+
+    def delete(self, request, affair_id):
+        return self._set_archived(request, affair_id, archived=False)
+
+    def _set_archived(self, request, affair_id, archived):
+        try:
+            affair = Affair.objects.get(
+                id=affair_id,
+                firm=self.get_firm(request.user),
+            )
+        except Affair.DoesNotExist:
+            return Response({"error": "Dossier introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        affair.is_archived = archived
+        affair.save(update_fields=['is_archived'])
+        message = "Dossier archivé avec succès." if archived else "Dossier restauré avec succès."
+        return Response({"success": True, "message": message}, status=status.HTTP_200_OK)
 
 # N'oubliez pas l'import si ce n'est pas déjà fait en haut de votre fichier :
 # from rest_framework.pagination import PageNumberPagination

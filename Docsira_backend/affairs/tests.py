@@ -87,3 +87,25 @@ class AffairDocumentsApiTests(APITestCase):
 		self.assertEqual(list_response.status_code, 403)
 		self.assertEqual(upload_response.status_code, 403)
 		self.assertFalse(Document.objects.filter(affair=self.affair).exists())
+
+	def test_archive_list_and_restore_affair(self):
+		archive_url = reverse("affair-archive", kwargs={"affair_id": self.affair.pk})
+		archive_list_url = reverse("affair-archives")
+
+		archive_response = self.client.post(archive_url)
+		self.assertEqual(archive_response.status_code, 200)
+		self.affair.refresh_from_db()
+		self.assertTrue(self.affair.is_archived)
+
+		archived_response = self.client.get(archive_list_url)
+		self.assertEqual(archived_response.status_code, 200)
+		self.assertEqual([item["id"] for item in archived_response.data["results"]], [str(self.affair.pk)])
+
+		active_response = self.client.get(reverse("affair-list"))
+		self.assertEqual(active_response.status_code, 200)
+		self.assertEqual(active_response.data["results"], [])
+
+		restore_response = self.client.delete(archive_url)
+		self.assertEqual(restore_response.status_code, 200)
+		self.affair.refresh_from_db()
+		self.assertFalse(self.affair.is_archived)
