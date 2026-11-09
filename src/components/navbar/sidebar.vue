@@ -302,8 +302,8 @@ export default {
   }
 
   .sidebar-logo {
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
     object-fit: contain;
     flex-shrink: 0;
     transition: transform 0.2s ease;

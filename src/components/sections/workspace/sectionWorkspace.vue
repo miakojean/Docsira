@@ -23,18 +23,28 @@
         </div>
 
         <!-- Grille de tous les dossiers de tous les clients directement -->
-        <div v-if="filteredDossiers.length > 0" class="dossiers-grid">
-          <affairsCards
-            v-for="d in filteredDossiers"
-            :key="d.id"
-            :dossier="d"
-            :isClientCard="false"
-            @goTo="openDossier(d)"
-            @open="openDossier(d)"
-            @details="openDetails(d)"
-            @edit="openEdit(d)"
-            @rename="openEdit(d)"
-            @delete="openDelete(d)"
+        <div v-if="filteredDossiers.length > 0" class="flex flex-col gap-4">
+          <div class="dossiers-grid">
+            <affairsCards
+              v-for="d in paginatedDossiers"
+              :key="d.id"
+              :dossier="d"
+              :isClientCard="false"
+              @goTo="openDossier(d)"
+              @open="openDossier(d)"
+              @details="openDetails(d)"
+              @edit="openEdit(d)"
+              @rename="openEdit(d)"
+              @delete="openDelete(d)"
+            />
+          </div>
+
+          <!-- Pagination -->
+          <Pagination
+            v-model="currentPage"
+            :totalItems="filteredDossiers.length"
+            :pageSize="pageSize"
+            :hideOnSinglePage="false"
           />
         </div>
 
@@ -122,6 +132,7 @@ import deleteModale from '../../modale/deleteModale.vue';
 import detailsModale, { type ItemDetails } from '../../modale/detailsModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
+import Pagination from '../../tools/Pagination.vue';
 import { useClientDossierStore, type Dossier } from '../../../stores/dossierStore';
 
 const store = useClientDossierStore();
@@ -134,6 +145,9 @@ const successTitle = ref('');
 const successSubtitle = ref('');
 const searchQuery = ref('');
 const statutFilter = ref('ALL');
+
+const currentPage = ref(1);
+const pageSize = ref(10);
 
 const isDetailsOpen = ref(false);
 const selectedDossier = ref<Dossier | null>(null);
@@ -173,6 +187,16 @@ const filteredDossiers = computed(() => {
       (v || '').toLowerCase().includes(q)
     );
   });
+});
+
+// Réinitialiser la page quand les filtres changent
+watch([searchQuery, statutFilter], () => {
+  currentPage.value = 1;
+});
+
+const paginatedDossiers = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  return filteredDossiers.value.slice(start, start + pageSize.value);
 });
 
 function openAddRoot() {
