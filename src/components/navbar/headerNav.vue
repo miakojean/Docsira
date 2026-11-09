@@ -4,7 +4,11 @@
             <h3>{{title}}</h3>
         </div>
         <div class="tools-frame flex items-center justify-center gap-4">
-            <BaseResearchInput :modelValue="modelValue" @update:modelValue="$emit('update:modelValue', $event)" />
+            <BaseResearchInput 
+                :modelValue="modelValue" 
+                :placeholder="resolvedPlaceholder"
+                @update:modelValue="$emit('update:modelValue', $event)" 
+            />
             <slot name="actions"></slot>
             <toolsButton v-if="showToolsButton" @handleEvent="$emit('handleEvent')"/>
         </div>
@@ -12,7 +16,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, computed } from 'vue';
 import BaseResearchInput from '../BaseInput/BaseResearchInput.vue';
 import toolsButton from '../buttons/toolsButton.vue';
 
@@ -30,6 +34,10 @@ export default defineComponent({
         modelValue: {
           type: String,
           default: ""
+        },
+        placeholder: {
+          type: String,
+          default: ""
         }
     },
     components:{
@@ -37,8 +45,19 @@ export default defineComponent({
         toolsButton
     },
     emits:['handleEvent', 'update:modelValue'],
-    setup() {
-        return {};
+    setup(props) {
+        const resolvedPlaceholder = computed(() => {
+            if (props.placeholder) return props.placeholder;
+            if (props.title === 'Workspace') return 'Rechercher un dossier...';
+            if (props.title === 'Mes clients') return 'Rechercher un client...';
+            if (props.title === 'Mes collaborateurs') return 'Rechercher un collaborateur...';
+            if (props.title === 'Corbeille') return 'Rechercher dans la corbeille...';
+            return 'Rechercher...';
+        });
+
+        return {
+            resolvedPlaceholder
+        };
     }
 });
 </script>

@@ -216,7 +216,9 @@ jwt_secret.txt
 *.rest
 
 # Files testing
-*.png 
+*.png
+!src/assets/**/*.png
+!public/**/*.png
 *.xlsx
 *.docx
 .doc

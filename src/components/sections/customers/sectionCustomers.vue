@@ -33,7 +33,11 @@
       </div>
     </div>
 
-    <div v-else-if="!clientStore.isLoading" class="h-full w-full flex justify-center items-center">
+    <div v-else-if="clientStore.isLoading" class="h-full w-full flex justify-center items-center">
+      <LogoLoader size="lg" label="Chargement des clients..." />
+    </div>
+
+    <div v-else class="h-full w-full flex justify-center items-center">
       <emptyCards
         title="Mes clients"
         mainText="Vous n'avez aucun client."
@@ -84,6 +88,7 @@ import clientDossiersModale from '../../modale/clientDossiersModale.vue';
 import editClientModale from '../../modale/editClientModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
+import LogoLoader from '../../tools/LogoLoader.vue';
 import { useClientStore } from '../../../stores/clientStore';
 
 const clientStore = useClientStore();

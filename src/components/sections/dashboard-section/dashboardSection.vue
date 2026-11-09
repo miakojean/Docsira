@@ -47,48 +47,26 @@
   </section>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import BaseInput from '../../BaseInput/BaseInput.vue'
-import folderCards from '../../cards/folderCards.vue'
 import featuresCard from '../../cards/featuresCards.vue'
 import { useAuthStore } from '../../../stores/authStore'
 import workspaceSvg from '../../../assets/assets/svg/undraw_shared-workspace_6y9d.svg'
 import archiveSvg from '../../../assets/assets/svg/undraw_file-manager_ivlr.svg'
 import mySpaceSvg from '../../../assets/assets/svg/undraw_out-of-office_sae8.svg'
 
-import { useRouter } from 'vue-router'
-import { onMounted } from 'vue'
-export default {
+const router = useRouter()
+const authStore = useAuthStore()
 
-  components:{
-    BaseInput,
-    folderCards,
-    featuresCard
-  },
-  setup(){
-
-    const router = useRouter();
-    const authStore = useAuthStore();
-
-    onMounted(async () => {
-        // Si le profil n'est pas déjà en mémoire (ex: reload de page),
-        // on le récupère via l'API grâce au token persisté.
-        if (!authStore.user.username) {
-          await authStore.fetchUserProfile();
-        }
-      });
-
-    return{
-      router,
-      authStore,
-      workspaceSvg,
-      mySpaceSvg,
-      archiveSvg,
-    }
-
+onMounted(async () => {
+  // Si le profil n'est pas déjà en mémoire (ex: reload de page),
+  // on le récupère via l'API grâce au token persisté.
+  if (!authStore.user?.username) {
+    await authStore.fetchUserProfile()
   }
-
-}
+})
 </script>
 
 <style scoped>

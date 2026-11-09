@@ -3,13 +3,17 @@
         <span v-if="!isLoading">
             {{ label }}
         </span>
-        <span class="loading loading-spinner loading-md" v-else></span>
+        <LogoLoader v-else size="sm" :inline="true" />
     </div>
 </template>
 
 <script>
-export default {
+import LogoLoader from './LogoLoader.vue';
 
+export default {
+    components: {
+        LogoLoader
+    },
     props:{
         isLoading:{
             type:Boolean,

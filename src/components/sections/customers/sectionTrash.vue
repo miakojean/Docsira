@@ -52,7 +52,11 @@
       </div>
     </div>
 
-    <div v-else-if="!clientStore.isLoading" class="h-full w-full flex justify-center items-center">
+    <div v-else-if="clientStore.isLoading" class="h-full w-full flex justify-center items-center">
+      <LogoLoader size="lg" label="Chargement de la corbeille..." />
+    </div>
+
+    <div v-else class="h-full w-full flex justify-center items-center">
       <emptyCards
         title="Corbeille"
         mainText="La corbeille est vide."
@@ -146,6 +150,7 @@ import restoreModale from '../../modale/restoreModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 import errorModale from '../../modale/errorModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
+import LogoLoader from '../../tools/LogoLoader.vue';
 import { useClientStore } from '../../../stores/clientStore';
 
 const clientStore = useClientStore();

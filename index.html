@@ -1,15 +1,60 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/src/assets/assets/svg/LOGO2.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="./src//assets//css/main.css">
-    <title>Tauri + Vue + Typescript App</title>
+    <link rel="stylesheet" href="./src/assets/css/main.css">
+    <title>DocSira</title>
+    <style>
+      #initial-boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.85rem;
+        background: radial-gradient(circle at 50% 45%, #ffffff 0%, #f1f5f9 100%);
+      }
+      #initial-boot-splash svg {
+        width: 116px;
+        height: 116px;
+        filter: drop-shadow(0 8px 20px rgba(12, 48, 108, 0.14));
+        animation: boot-levitate 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+      }
+      @keyframes boot-levitate {
+        0%, 100% { transform: translateY(0px) scale(1); }
+        50% { transform: translateY(-4px) scale(1.015); }
+      }
+    </style>
   </head>
 
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <!-- Splash instantané avant l'hydratation de Vue -->
+      <div id="initial-boot-splash">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="110 75 400 370" fill="none">
+          <path d="M 161 121 A 26 26 0 0 1 187 95 L 268 95 C 285 95 294 130 314 130 L 432 130 A 26 26 0 0 1 458 156 L 458 215 L 161 215 Z" fill="#2b7af1" />
+          <circle cx="201" cy="146" r="5.5" fill="#68a4f7" />
+          <rect x="218" y="141" width="46" height="10" rx="5" fill="#68a4f7" />
+          <rect x="195" y="165" width="228" height="46" rx="18" fill="#91c8ff" />
+          <path d="M 215 188 L 466 188 A 26 26 0 0 1 492 214 L 492 272 A 26 26 0 0 1 466 298 L 215 298 Z" fill="#2b7af1" />
+          <circle cx="397" cy="234.5" r="5.5" fill="#5df2de" />
+          <rect x="413" y="229.5" width="46" height="10" rx="5" fill="#5df2de" />
+          <path d="M 127 214 A 26 26 0 0 1 153 188 L 230 188 A 14 14 0 0 1 244 202 L 244 252 L 127 252 Z" fill="#0c306c" />
+          <path d="M 161 231 A 14 14 0 0 1 175 217 L 234 217 C 247 217 251 241 266 241 L 266 255 L 161 255 Z" fill="#91c8ff" />
+          <path d="M 127 241 L 354 241 A 24 24 0 0 1 378 265 L 378 422 L 153 422 A 26 26 0 0 1 127 396 Z" fill="#0c306c" />
+          <circle cx="166" cy="276.5" r="5.5" fill="#367ef4" />
+          <circle cx="189" cy="276.5" r="5.5" fill="#5ef2e0" />
+          <circle cx="211.5" cy="276.5" r="5.5" fill="#5ef2e0" />
+          <path d="M 264 322 A 24 24 0 0 1 288 298 L 466 298 A 26 26 0 0 0 492 272 L 492 396 A 26 26 0 0 1 466 422 L 290 422 A 26 26 0 0 1 264 396 Z" fill="#8ac5fd" />
+          <circle cx="305" cy="333.5" r="5.5" fill="#3180f8" />
+          <rect x="321" y="328.5" width="88" height="10" rx="5" fill="#e2f2ff" />
+        </svg>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

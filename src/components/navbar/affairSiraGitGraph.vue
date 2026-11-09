@@ -128,7 +128,7 @@
 
       <div v-if="isHistoryOpen" class="git-log-body">
         <div v-if="siraStore.isLoading" class="git-log-empty">
-          <span>Chargement des commits...</span>
+          <LogoLoader size="sm" label="Chargement des commits..." />
         </div>
         <div v-else-if="siraStore.histories.length === 0" class="git-log-empty">
           <span>Aucune modification enregistrée.</span>
@@ -158,6 +158,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import type { Dossier } from '../../stores/dossierStore';
 import type { DossierDocument } from '../../stores/documentStore';
 import { useSiraStore } from '../../stores/siraStore';
+import LogoLoader from '../tools/LogoLoader.vue';
 
 const props = withDefaults(
   defineProps<{

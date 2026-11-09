@@ -64,86 +64,77 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { useId, computed, ref } from 'vue'
 
-export default {
+defineOptions({
   name: 'BaseInput',
-  inheritAttrs: false,
-  props: {
-    modelValue: {
-      type: [String, Number],
-      default: ''
-    },
-    label: {
-      type: String,
-      default: ''
-    },
-    errorMessage: {
-      type: String,
-      default: ''
-    },
-    hint: {
-      type: String,
-      default: ''
-    },
-    id: {
-      type: String,
-      default: null
-    },
-    type: {
-      type: String,
-      default: 'text'
-    },
-    disabled: {
-      type: Boolean,
-      default: false
-    },
-    required: {
-      type: Boolean,
-      default: false
-    },
-    placeholder: {
-      type: String,
-      default: "Entrer votre nom"
-    },
-    showPasswordToggle: {
-      type: Boolean,
-      default: false
-    }
-  },
-  emits: ['update:modelValue', 'blur'],
-  setup(props, { emit }) {
-    const generatedId = useId();
-    const inputId = computed(() => props.id || `input-${generatedId}`);
+  inheritAttrs: false
+})
 
-    const isPasswordVisible = ref(false);
-
-    // Calcule le type d'input dynamiquement
-    const computedType = computed(() => {
-      if (props.showPasswordToggle) {
-        return isPasswordVisible.value ? 'text' : 'password';
-      }
-      return props.type;
-    });
-
-    const togglePasswordVisibility = () => {
-      isPasswordVisible.value = !isPasswordVisible.value;
-    };
-
-    const handleInput = (event) => {
-      emit('update:modelValue', event.target.value);
-    };
-
-    return {
-      inputId,
-      handleInput,
-      isPasswordVisible,
-      computedType,
-      togglePasswordVisibility
-    };
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string | number | null
+    label?: string
+    errorMessage?: string
+    hint?: string
+    id?: string
+    type?: string
+    disabled?: boolean
+    required?: boolean
+    placeholder?: string
+    showPasswordToggle?: boolean
+  }>(),
+  {
+    modelValue: '',
+    label: '',
+    errorMessage: '',
+    hint: '',
+    id: undefined,
+    type: 'text',
+    disabled: false,
+    required: false,
+    placeholder: 'Entrer votre nom',
+    showPasswordToggle: false
   }
-};
+)
+
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: string): void
+  (e: 'blur', event: FocusEvent): void
+}>()
+
+defineSlots<{
+  prepend?: (props: Record<string, never>) => any
+  append?: (props: Record<string, never>) => any
+}>()
+
+const inputRef = ref<HTMLInputElement | null>(null)
+const generatedId = useId()
+const inputId = computed(() => props.id || `input-${generatedId}`)
+
+const isPasswordVisible = ref(false)
+
+// Calcule le type d'input dynamiquement
+const computedType = computed(() => {
+  if (props.showPasswordToggle) {
+    return isPasswordVisible.value ? 'text' : 'password'
+  }
+  return props.type
+})
+
+const togglePasswordVisibility = () => {
+  isPasswordVisible.value = !isPasswordVisible.value
+}
+
+const handleInput = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  emit('update:modelValue', target.value)
+}
+
+defineExpose({
+  inputRef
+})
 </script>
 
 <style scoped>

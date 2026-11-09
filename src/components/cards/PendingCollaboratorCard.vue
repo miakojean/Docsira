@@ -31,12 +31,13 @@
 
     <button class="resend-btn" @click="$emit('resend', email)" :disabled="isLoading">
         <span v-if="!isLoading">Renvoyer l'invitation</span>
-        <span class="loading loading-spinner loading-md" v-else></span>
+        <LogoLoader v-else size="sm" :inline="true" />
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
+import LogoLoader from '../tools/LogoLoader.vue';
 defineProps({
     email: {
         type: String,

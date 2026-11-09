@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="110 75 400 370" fill="none">
+  <defs>
+    <!-- Halo lumineux cyan pour les indicateurs actifs -->
+    <filter id="logo2-cyan-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- 1. Dossier arrière (Bleu moyen) -->
+  <g id="layer-back-folder">
+    <path
+      d="M 161 121 A 26 26 0 0 1 187 95 L 268 95 C 285 95 294 130 314 130 L 432 130 A 26 26 0 0 1 458 156 L 458 210 L 161 210 Z"
+      fill="#2b7af1"
+    />
+    <!-- Indicateurs du dossier arrière -->
+    <circle cx="201" cy="146" r="5.5" fill="#68a4f7" />
+    <rect x="218" y="141" width="46" height="10" rx="5" fill="#68a4f7" />
+    <!-- Document interne supérieur -->
+    <rect x="195" y="165" width="228" height="42" rx="18" fill="#91c8ff" />
+  </g>
+
+  <!-- 2. Volet intermédiaire droit (Bleu moyen) -->
+  <g id="layer-mid-flap">
+    <path
+      d="M 215 188 L 466 188 A 26 26 0 0 1 492 214 L 492 272 A 26 26 0 0 1 466 298 L 215 298 Z"
+      fill="#2b7af1"
+    />
+    <!-- Indicateur lumineux cyan à droite -->
+    <g filter="url(#logo2-cyan-glow)">
+      <circle cx="397" cy="234.5" r="5.5" fill="#5df2de" />
+      <rect x="413" y="229.5" width="46" height="10" rx="5" fill="#5df2de" />
+    </g>
+  </g>
+
+  <!-- 3. Onglet supérieur du dossier bleu nuit + Intercalaire bleu clair gauche -->
+  <g id="layer-navy-tab">
+    <path
+      d="M 127 214 A 26 26 0 0 1 153 188 L 230 188 A 14 14 0 0 1 244 202 L 244 250 L 127 250 Z"
+      fill="#0c306c"
+    />
+    <path
+      d="M 161 231 A 14 14 0 0 1 175 217 L 234 217 C 247 217 251 241 266 241 L 266 252 L 161 252 Z"
+      fill="#91c8ff"
+    />
+  </g>
+
+  <!-- 4. Dossier principal avant-gauche (Bleu nuit profond) -->
+  <g id="layer-navy-body">
+    <path
+      d="M 127 241 L 354 241 A 24 24 0 0 1 378 265 L 378 422 L 153 422 A 26 26 0 0 1 127 396 Z"
+      fill="#0c306c"
+    />
+    <!-- 3 points de statut -->
+    <circle cx="166" cy="276.5" r="5.5" fill="#367ef4" />
+    <circle cx="189" cy="276.5" r="5.5" fill="#5ef2e0" filter="url(#logo2-cyan-glow)" />
+    <circle cx="211.5" cy="276.5" r="5.5" fill="#5ef2e0" filter="url(#logo2-cyan-glow)" />
+  </g>
+
+  <!-- 5. Carte avant-droite (Bleu ciel) -->
+  <g id="layer-front-card">
+    <path
+      d="M 264 322 A 24 24 0 0 1 288 298 L 466 298 A 26 26 0 0 0 492 272 L 492 396 A 26 26 0 0 1 466 422 L 290 422 A 26 26 0 0 1 264 396 Z"
+      fill="#8ac5fd"
+    />
+    <!-- Point bleu et barre blanche/glace -->
+    <circle cx="305" cy="333.5" r="5.5" fill="#3180f8" />
+    <rect x="321" y="328.5" width="88" height="10" rx="5" fill="#d2e9ff" />
+  </g>
+</svg>
+

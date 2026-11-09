@@ -20,7 +20,7 @@
 
           <!-- Liste des dossiers du client -->
           <div v-if="mode === 'list'" class="modal-body">
-            <div v-if="dossierStore.isLoading && dossiers.length === 0" class="state-text">Chargement des dossiers...</div>
+            <div v-if="dossierStore.isLoading && dossiers.length === 0" class="state-text"><LogoLoader size="md" label="Chargement des dossiers..." /></div>
 
             <div v-else-if="dossiers.length === 0" class="empty-state">
               <div class="empty-icon">
@@ -42,7 +42,7 @@
                 <div class="dossier-info">
                   <span class="dossier-name">{{ d.title }}</span>
                   <span class="dossier-meta">
-                    {{ d.reference_affair }} · {{ statutLabels[d.statut] || d.statut }}
+                    {{ d.reference_affair }} · {{ getDossierTypeLabel(d.type_affair) || statutLabels[d.statut] || d.statut }}
                     <span v-if="typeof d.progression === 'number'" class="sira-badge-tag">
                       {{ d.progression }}% SIRA
                     </span>
@@ -98,6 +98,37 @@
               <p v-if="dossierStore.fieldErrors.title" class="error-text">{{ dossierStore.fieldErrors.title }}</p>
             </div>
 
+            <div class="field">
+              <label class="field-label" for="client-dossier-type">Type de dossier</label>
+              <div class="select-wrapper">
+                <select
+                  id="client-dossier-type"
+                  v-model="typeAffair"
+                  class="select-input"
+                >
+                  <optgroup
+                    v-for="group in DOSSIER_TYPE_GROUPS"
+                    :key="group.category"
+                    :label="group.category"
+                  >
+                    <option
+                      v-for="opt in group.options"
+                      :key="opt.value"
+                      :value="opt.value"
+                    >
+                      {{ opt.label }}
+                    </option>
+                  </optgroup>
+                </select>
+                <div class="select-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </div>
+              </div>
+              <p v-if="dossierStore.fieldErrors.type_affair" class="error-text">{{ dossierStore.fieldErrors.type_affair }}</p>
+            </div>
+
             <p v-if="dossierStore.errorMessage" class="error-text">{{ dossierStore.errorMessage }}</p>
           </form>
 
@@ -148,8 +179,10 @@ import { ref, computed, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useClientDossierStore, type Dossier } from '../../stores/dossierStore';
 import { useClientStore, type ClientListItem } from '../../stores/clientStore';
+import { DOSSIER_TYPE_GROUPS, getDossierTypeLabel } from '../../helpers/dossierTypes';
 import editDossierModale from './editDossierModale.vue';
 import deleteModale from './deleteModale.vue';
+import LogoLoader from '../tools/LogoLoader.vue';
 
 const props = defineProps<{
   isOpen: boolean;
@@ -169,6 +202,7 @@ const clientStore = useClientStore();
 
 const mode = ref<'list' | 'add'>('list');
 const title = ref('');
+const typeAffair = ref('CONSTITUTION');
 const clientSearch = ref('');
 const selectedClient = ref<ClientListItem | null>(null);
 
@@ -203,12 +237,13 @@ const matchingClients = computed(() => {
 });
 
 const canSubmit = computed(() =>
-  !!selectedClient.value && title.value.trim().length > 0 && !dossierStore.isLoading
+  !!selectedClient.value && title.value.trim().length > 0 && !!typeAffair.value && !dossierStore.isLoading
 );
 
 function openAdd() {
   title.value = '';
   clientSearch.value = '';
+  typeAffair.value = 'CONSTITUTION';
   selectedClient.value = props.client;
   dossierStore.errorMessage = '';
   dossierStore.fieldErrors = {};
@@ -247,6 +282,7 @@ async function submit() {
   const ok = await dossierStore.addDossier({
     title: title.value.trim(),
     client_id: targetId,
+    type_affair: typeAffair.value,
   });
   if (ok) {
     // Si le dossier est rattaché à un autre client, on rafraîchit la liste du client courant
@@ -319,12 +355,41 @@ onUnmounted(() => { document.body.style.overflow = ''; });
 
 .field { display: flex; flex-direction: column; gap: 0.4rem; }
 .field-label { font-size: 0.8rem; font-weight: 600; color: #6b7280; }
-.text-input {
+.text-input,
+.select-input {
   width: 100%; box-sizing: border-box; padding: 0.7rem 0.9rem; border: 1px solid #e5e7eb;
   border-radius: 10px; font-size: 0.9rem; outline: none; background: #f9fafb; color: #111827;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.text-input:focus { border-color: var(--primary-color, #2563eb); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); background: #fff; }
+.text-input:focus,
+.select-input:focus { border-color: var(--primary-color, #2563eb); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); background: #fff; }
+
+.select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.select-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+.select-input:hover {
+  border-color: #cbd5e1;
+  background: #fff;
+}
+.select-icon {
+  position: absolute;
+  right: 0.85rem;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
 
 .selected-client {
   display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;

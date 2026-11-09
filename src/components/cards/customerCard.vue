@@ -1,53 +1,57 @@
 <template>
   <div class="customer-card" ref="cardRef" :class="{ 'card--active': isOpen }">
+    <!-- En-tête : Référence + Date & Menu -->
     <div class="card-header">
-      <span class="role">{{ client.type_client === 'PERSONNE_MORALE' ? 'Personne morale' : 'Personne physique' }}</span>
+      <span class="client-ref">{{ client.reference_client || 'SANS RÉF.' }}</span>
+
       <div class="header-right">
         <span class="time-container">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="clock-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon-xs">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
           </svg>
           {{ formatDate(client.date_creation) }}
         </span>
-        <button class="menu-trigger" @click.stop="toggleMenu">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-5">
+
+        <button class="menu-trigger" @click.stop="toggleMenu" aria-label="Options">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="icon-sm">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
           </svg>
         </button>
       </div>
     </div>
-    
+
+    <!-- Corps : Avatar + Infos -->
     <div class="card-body">
       <div class="avatar-container">
-        <div class="avatar-fallback">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6" v-if  ="client.type_client === 'PERSONNE_PHYSIQUE'" >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-          </svg>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6" v-else >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205 3 1m1.5.5-1.5-.5M6.75 7.364V3h-3v18m3-13.636 10.5-3.819" />
-          </svg>
-        </div>
+        <svg v-if="client.type_client === 'PERSONNE_PHYSIQUE'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="avatar-icon">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+        </svg>
+        <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="avatar-icon">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205 3 1m1.5.5-1.5-.5M6.75 7.364V3h-3v18m3-13.636 10.5-3.819" />
+        </svg>
       </div>
+
       <div class="info">
-        <h3 class="name">{{ client.nom_complet }}</h3>
-        <p class="email">{{ client.email }}</p>
-        <p class="email">{{ client.reference_client }}</p>
+        <h3 class="name" :title="client.nom_complet">{{ client.nom_complet }}</h3>
+        <p class="sub-info" :title="client.email">{{ client.email || 'Aucun e-mail' }}</p>
+        <p v-if="client.telephone" class="sub-info">{{ client.telephone }}</p>
       </div>
     </div>
-    
+
+    <!-- Actions : Bouton Voir dossier + Icône œil alignée sans bordure -->
     <div class="card-actions">
       <button class="primary-btn" @click.stop="$emit('folders', client)">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="icon-sm">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776" />
         </svg>
         Voir dossier
       </button>
-      <button class="secondary-btn" @click.stop="$emit('view', client)">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+
+      <button class="secondary-btn" @click.stop="$emit('view', client)" title="Voir les détails">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="icon-eye">
           <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
         </svg>
-        
       </button>
     </div>
 
@@ -61,28 +65,24 @@
       <div v-if="isOpen" class="dropbox" :class="['dropbox--' + menuPositionX, 'dropbox--' + menuPositionY]">
         <ul>
           <li @click.stop="() => { isOpen = false; $emit('view', client) }">
-             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
-             Voir
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon-xs"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+            Voir
           </li>
           <li @click.stop="() => { isOpen = false; $emit('edit', client) }">
-             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
-             Modifier
-          </li>
-          <li @click.stop="() => { isOpen = false; goToWorkspace() }">
-             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z" /></svg>
-             Workspace
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon-xs"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+            Modifier
           </li>
           <li @click.stop="() => { isOpen = false; $emit('share', client) }">
-             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" /></svg>
-             Partager
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon-xs"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" /></svg>
+            Partager
           </li>
           <li @click.stop="() => { isOpen = false; $emit('archive', client) }">
-             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>
-             Archiver
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon-xs"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>
+            Archiver
           </li>
           <li class="danger" @click.stop="() => { isOpen = false; $emit('delete', client) }">
-             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
-             Supprimer
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon-xs"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+            Supprimer
           </li>
         </ul>
       </div>
@@ -92,22 +92,13 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
 
-const props = defineProps({
+defineProps({
   client: {
     type: Object,
     required: true
   }
 });
-
-const router = useRouter();
-
-function goToWorkspace() {
-  if (props.client?.id) {
-    router.push({ path: '/dashboard/affairs', query: { client: props.client.id } });
-  }
-}
 
 const emit = defineEmits(['view', 'edit', 'share', 'archive', 'delete', 'folders']);
 
@@ -119,49 +110,37 @@ const menuPositionY = ref<'top' | 'bottom'>('top');
 function toggleMenu() {
   isOpen.value = !isOpen.value;
   if (isOpen.value && cardRef.value) {
-      const rect = cardRef.value.getBoundingClientRect();
+    const rect = cardRef.value.getBoundingClientRect();
+    const spaceOnRight = window.innerWidth - rect.right;
+    const spaceOnBottom = window.innerHeight - rect.top;
 
-      const spaceOnRight = window.innerWidth - rect.right;
-      const spaceOnBottom = window.innerHeight - rect.top;
-
-      if (spaceOnRight < 200) {
-          menuPositionX.value = 'left';
-      } else {
-          menuPositionX.value = 'right';
-      }
-
-      if (spaceOnBottom < 320) {
-          menuPositionY.value = 'bottom';
-      } else {
-          menuPositionY.value = 'top';
-      }
+    menuPositionX.value = spaceOnRight < 200 ? 'left' : 'right';
+    menuPositionY.value = spaceOnBottom < 320 ? 'bottom' : 'top';
   }
 }
 
 function formatDate(value: string) {
   if (!value) return '—';
   const d = new Date(value);
-  // Just show time like 7:23 PM to match the image or date ?
-  // Actually, standard clients have date_creation. Let's show date to make sense for a client.
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
-
 </script>
 
 <style scoped>
 .customer-card {
-  background-color: #fcfbfb;
-  border-radius: 20px;
-  padding: 1rem;
-  color: #ffffff;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 1.25rem;
+  color: var(--blues-color, #002945);
   font-family: 'Inter', system-ui, sans-serif;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 24px -6px rgba(0, 87, 146, 0.12);
+  border: 1px solid rgba(0, 87, 146, 0.12);
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
   position: relative;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  max-width: 350px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  max-width: 340px;
 }
 
 .card--active {
@@ -170,194 +149,197 @@ function formatDate(value: string) {
 
 .customer-card:hover,
 .customer-card.card--active {
-  transform: translateY(-4px);
-  box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px -6px rgba(0, 87, 146, 0.2);
+  border-color: rgba(0, 87, 146, 0.28);
 }
 
+/* --- En-tête --- */
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.85rem;
-  color: #7a7777;
-  font-weight: 400;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid rgba(0, 87, 146, 0.1);
 }
 
-.card-header .role{
-  background: var(--primary-color);
-  padding: 0.4rem 0.6rem;
-  color: #fff;
-  border-radius: 4px;
+.client-ref {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #063657;
+  text-transform: uppercase;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .time-container {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-}
-
-.clock-icon {
-  width: 16px;
-  height: 16px;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: #939393;
+  opacity: 0.8;
 }
 
 .menu-trigger {
   background: none;
   border: none;
-  color: var(--primary-color);
+  color: var(--primary-color, #005792);
   cursor: pointer;
-  padding: 0;
+  padding: 0.15rem;
   display: flex;
   align-items: center;
+  justify-content: center;
   transition: color 0.2s;
 }
 
 .menu-trigger:hover {
-  color: var(--primary-color);
+  color: var(--blues-color, #002945);
 }
 
-.size-5 {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
+/* --- Corps --- */
 .card-body {
-  width: 100%;
   display: flex;
-  align-items: left;
-  justify-content: left;
-  gap: 1rem;
+  align-items: center;
+  gap: 0.9rem;
 }
 
 .avatar-container {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: var(--primary-color-dark);
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background-color: #054068;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: #ffffff;
 }
 
-.avatar-fallback {
-  color: white;
-  font-weight: 600;
-  font-size: 1.2rem;
+.avatar-icon {
+  width: 24px;
+  height: 24px;
 }
 
 .info {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
 }
 
 .name {
   margin: 0;
-  font-size: 1.1rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  width: 100%;
-  text-align: left;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--blues-color, #002945);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.email {
+.sub-info {
   margin: 0;
-  color: #a8a8a8;
-  font-size: 0.8rem;
+  color: #595c5d;
+  opacity: 0.78;
+  font-size: 0.82rem;
   font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  justify-content: center;
 }
 
-/* Status colors mapped slightly to fit dark theme better if needed */
-.dot.actif { background-color: #a3e635; }
-.dot.inactif { background-color: #ef4444; }
-.dot.prospect { background-color: #60a5fa; }
-.dot.archive { background-color: #fbbf24; }
-
+/* --- Actions alignées --- */
 .card-actions {
   display: flex;
-  gap: 0.75rem;
-  margin-top: 0.25rem;
-}
-
-.primary-btn, .secondary-btn {
-  flex: 1;
-  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.7rem 1rem;
-  border-radius: 99px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s;
+  gap: 0.5rem;
 }
 
 .primary-btn {
-  background-color: var(--primary-color);
-  color: #fcfbfb;
+  flex: 1;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0 1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background-color: #063657;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
 .primary-btn:hover {
-  background-color: var(--primary-color-dark);
-  color: #fcfbfb;
+  background-color: var(--primary-color-dark, #005380);
 }
 
 .secondary-btn {
-  background-color: #e5e5e5;
-  color: #404040;
-  max-width: 50px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--primary-color, #005792);
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .secondary-btn:hover {
-  background-color: #f3f3f3;
-  color: #171717;
+  background-color: rgba(0, 87, 146, 0.08);
+  color: var(--blues-color, #002945);
 }
 
-.btn-icon {
-  width: 16px;
-  height: 16px;
+/* --- Icônes --- */
+.icon-xs {
+  width: 15px;
+  height: 15px;
+}
+
+.icon-sm {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-eye {
+  width: 21px;
+  height: 21px;
 }
 
 /* --- Dropbox --- */
 .dropbox {
-    position: absolute;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-    border: 1px solid #f3f4f6;
-    min-width: 170px;
-    z-index: 55;
-    overflow: hidden;
-    padding: 0.5rem;
+  position: absolute;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 41, 69, 0.18);
+  border: 1px solid rgba(0, 87, 146, 0.12);
+  min-width: 180px;
+  z-index: 55;
+  overflow: hidden;
+  padding: 0.4rem;
 }
 
-.dropbox--top {
-    top: 0;
-    bottom: auto;
-}
-.dropbox--bottom {
-    bottom: 0;
-    top: auto;
-}
-
-.dropbox--right {
-    left: calc(100% + 15px);
-    right: auto;
-}
-.dropbox--left {
-    right: calc(100% + 15px);
-    left: auto;
-}
+.dropbox--top { top: 0; bottom: auto; }
+.dropbox--bottom { bottom: 0; top: auto; }
+.dropbox--right { left: calc(100% + 12px); right: auto; }
+.dropbox--left { right: calc(100% + 12px); left: auto; }
 
 .dropbox--right.dropbox--top { transform-origin: top left; }
 .dropbox--right.dropbox--bottom { transform-origin: bottom left; }
@@ -365,35 +347,36 @@ function formatDate(value: string) {
 .dropbox--left.dropbox--bottom { transform-origin: bottom right; }
 
 .dropbox ul {
-    list-style: none;
-    margin: 0;
-    padding: 0.5rem 0;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
 }
 
 .dropbox li {
-    padding: 0.7rem;
-    font-size: 0.875rem;
-    color: #374151;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    border-radius: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--blues-color, #002945);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  border-radius: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .dropbox li:hover {
-    background-color: #f3f4f6;
-    color: var(--primary-color, #2563eb);
+  background-color: rgba(0, 87, 146, 0.08);
+  color: var(--primary-color, #005792);
 }
 
 .dropbox li.danger {
-    color: #dc2626;
+  color: #dc2626;
 }
+
 .dropbox li.danger:hover {
-    background-color: #fef2f2;
-    color: #b91c1c;
+  background-color: #fef2f2;
+  color: #b91c1c;
 }
 
 /* --- Animations --- */
@@ -401,41 +384,40 @@ function formatDate(value: string) {
 .slide-right-leave-active,
 .slide-left-enter-active,
 .slide-left-leave-active {
-    transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .slide-right-enter-from,
 .slide-right-leave-to {
-    opacity: 0;
-    transform: translateX(-15px) scale(0.95);
+  opacity: 0;
+  transform: translateX(-10px);
 }
 
 .slide-left-enter-from,
 .slide-left-leave-to {
-    opacity: 0;
-    transform: translateX(15px) scale(0.95);
+  opacity: 0;
+  transform: translateX(10px);
 }
 
 /* --- Overlay --- */
 :global(.overlay) {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(17, 24, 39, 0.25);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    z-index: 40;
-    cursor: default;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 41, 69, 0.25);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 40;
 }
 
 :global(.fade-enter-active),
 :global(.fade-leave-active) {
-    transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease;
 }
 :global(.fade-enter-from),
 :global(.fade-leave-to) {
-    opacity: 0;
+  opacity: 0;
 }
 </style>
