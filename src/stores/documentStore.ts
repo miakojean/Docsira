@@ -31,11 +31,48 @@ export interface DossierDocument {
 
 export type DocumentRelation = "INITIAL" | "ADDED" | "UPDATED";
 
+/** Récupère toutes les pages d'un endpoint DRF paginé de documents. */
+async function fetchAllDocumentPages(url: string): Promise<DossierDocument[] | null> {
+  const items: DossierDocument[] = [];
+  const separator = url.includes("?") ? "&" : "?";
+  let page = 1;
+  for (;;) {
+    const response = await api(`${url}${separator}page=${page}`, "GET");
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (Array.isArray(data)) return data;
+    items.push(...(data.results ?? []));
+    if (!data.next) return items;
+    page += 1;
+  }
+}
+
 export const useDocumentStore = defineStore("documents", () => {
   const documents = ref<DossierDocument[]>([]);
+  const allDocuments = ref<DossierDocument[]>([]);
   const isLoading = ref(false);
   const isUploading = ref(false);
   const errorMessage = ref("");
+
+  async function fetchAllDocuments() {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const items = await fetchAllDocumentPages("/affairs/documents/");
+      if (!items) {
+        errorMessage.value = "Impossible de charger les documents";
+        return false;
+      }
+      allDocuments.value = items;
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
 
   async function fetchDocuments(affairId: string) {
     isLoading.value = true;
@@ -140,6 +177,7 @@ export const useDocumentStore = defineStore("documents", () => {
         return false;
       }
       documents.value = documents.value.map((d) => (d.id === id ? data : d));
+      allDocuments.value = allDocuments.value.map((d) => (d.id === id ? data : d));
       return true;
     } catch (error) {
       console.error(error);
@@ -161,6 +199,7 @@ export const useDocumentStore = defineStore("documents", () => {
       documents.value = documents.value
         .filter((d) => d.id !== id)
         .map((d) => (d.parent === id ? { ...d, parent: removed?.parent ?? null } : d));
+      allDocuments.value = allDocuments.value.filter((d) => d.id !== id);
       return true;
     } catch (error) {
       console.error(error);
@@ -197,10 +236,12 @@ export const useDocumentStore = defineStore("documents", () => {
 
   return {
     documents,
+    allDocuments,
     isLoading,
     isUploading,
     errorMessage,
     fetchDocuments,
+    fetchAllDocuments,
     uploadDocuments,
     uploadNewVersion,
     moveDocument,

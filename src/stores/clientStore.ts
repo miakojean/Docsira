@@ -50,6 +50,22 @@ export interface ClientPayload {
   notes?: string;
 }
 
+/** Récupère toutes les pages d'un endpoint DRF paginé (ou une simple liste). */
+async function fetchAllPages(url: string): Promise<ClientListItem[] | null> {
+  const items: ClientListItem[] = [];
+  const separator = url.includes("?") ? "&" : "?";
+  let page = 1;
+  for (;;) {
+    const response = await api(`${url}${separator}page=${page}`, "GET");
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (Array.isArray(data)) return data;
+    items.push(...(data.results ?? []));
+    if (!data.next) return items;
+    page += 1;
+  }
+}
+
 export const useClientStore = defineStore("client", () => {
   const clients = ref<ClientListItem[]>([]);
   const trashClients = ref<ClientListItem[]>([]);
@@ -61,14 +77,12 @@ export const useClientStore = defineStore("client", () => {
     isLoading.value = true;
     errorMessage.value = "";
     try {
-      const response = await api("/Client/", "GET");
-      if (!response.ok) {
+      const items = await fetchAllPages("/Client/");
+      if (!items) {
         errorMessage.value = "Impossible de charger la liste des clients";
         return false;
       }
-      const data = await response.json();
-      // Le backend renvoie directement un tableau ; on garde une tolérance sur l'ancien format
-      clients.value = Array.isArray(data) ? data : (data?.results ?? []);
+      clients.value = items;
       return true;
     } catch (error) {
       console.error(error);
@@ -83,13 +97,12 @@ export const useClientStore = defineStore("client", () => {
     isLoading.value = true;
     errorMessage.value = "";
     try {
-      const response = await api("/Client/?trash=true", "GET");
-      if (!response.ok) {
+      const items = await fetchAllPages("/Client/?trash=true");
+      if (!items) {
         errorMessage.value = "Impossible de charger la corbeille";
         return false;
       }
-      const data = await response.json();
-      trashClients.value = Array.isArray(data) ? data : (data?.clients ?? []);
+      trashClients.value = items;
       return true;
     } catch (error) {
       console.error(error);

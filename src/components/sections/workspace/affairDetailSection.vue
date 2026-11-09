@@ -305,7 +305,6 @@ import uploadDocModale from '../../modale/uploadDocModale.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
 import { getDossierTypeLabel } from '../../../helpers/dossierTypes';
 import type { AffairDocumentsController } from '../../../composables/useAffairDocuments';
-import PaginatorVue from '../../tools/Paginator.vue';
 
 const props = defineProps<{
   affair: AffairDocumentsController;

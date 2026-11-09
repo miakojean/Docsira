@@ -19,7 +19,8 @@ const routes: RouteRecordRaw[] = [
   { path: '/dashboard/settings', component: () => import('../pages/dashboard/settings.vue'), name: 'settings' },
   { path: '/dashboard/settings/collaborators', component: () => import('../pages/dashboard/settings/collaborators.vue'), name: 'collaborators'},
   { path: '/dashboard/Customer', component: () => import('../pages/dashboard/customers/customers.vue'), name: 'customers' },
-  { path: '/dashboard/Customer/trash', component: () => import('../pages/dashboard/customers/trash.vue'), name: 'trash' }
+  { path: '/dashboard/Customer/trash', component: () => import('../pages/dashboard/customers/trash.vue'), name: 'trash' },
+  { path: '/dashboard/archives', alias: ['/dashboard/Archives'], component: () => import('../pages/dashboard/archives.vue'), name: 'archives' }
 ]
 
 export const router = createRouter({

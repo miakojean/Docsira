@@ -9,17 +9,27 @@
     </headerNav>
 
     <div v-if="clientStore.clients.length > 0" class="content-container">
-      <div v-if="filteredClients.length > 0" class="clients-grid">
-        <customerCard
-          v-for="client in filteredClients"
-          :key="client.id"
-          :client="client"
-          @view="viewClient"
-          @edit="editClient"
-          @share="shareClient"
-          @archive="archiveClient"
-          @delete="deleteClient"
-          @folders="openFolders"
+      <div v-if="filteredClients.length > 0" class="flex flex-col gap-4">
+        <div class="clients-grid">
+          <customerCard
+            v-for="client in paginatedClients"
+            :key="client.id"
+            :client="client"
+            @view="viewClient"
+            @edit="editClient"
+            @share="shareClient"
+            @archive="archiveClient"
+            @delete="deleteClient"
+            @folders="openFolders"
+          />
+        </div>
+
+        <!-- Pagination -->
+        <Pagination
+          v-model="currentPage"
+          :totalItems="filteredClients.length"
+          :pageSize="pageSize"
+          :hideOnSinglePage="false"
         />
       </div>
 
@@ -78,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import headerNav from '../../navbar/headerNav.vue';
 import emptyCards from '../../cards/emptyCards.vue';
 import customerCard from '../../cards/customerCard.vue';
@@ -89,6 +99,7 @@ import editClientModale from '../../modale/editClientModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
+import Pagination from '../../tools/Pagination.vue';
 import { useClientStore } from '../../../stores/clientStore';
 
 const clientStore = useClientStore();
@@ -103,6 +114,8 @@ const isSuccess = ref(false);
 const successTitle = ref('');
 const successSubtitle = ref('');
 const searchQuery = ref('');
+const currentPage = ref(1);
+const pageSize = ref(12);
 const selectedClient = ref<any>(null);
 const clientToDelete = ref<any>(null);
 
@@ -113,6 +126,16 @@ const filteredClients = computed(() => {
     [c.nom_complet, c.reference_client, c.email, c.telephone_1, c.ville]
       .some(v => (v || '').toLowerCase().includes(q))
   );
+});
+
+// Réinitialiser la page quand la recherche change
+watch(searchQuery, () => {
+  currentPage.value = 1;
+});
+
+const paginatedClients = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  return filteredClients.value.slice(start, start + pageSize.value);
 });
 
 function onCreated() {
