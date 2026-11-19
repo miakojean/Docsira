@@ -2,7 +2,6 @@
     <div class="workspace-container flex flex-col justify-center items-center gap-4 p-6">
         <!-- Bouton pour ajouter un dossier -->
 
-
         <div class="w-full flex flex-col items-center justify-center gap-2">
 
             <div class="w-full flex justify-center items-center gap-4">
