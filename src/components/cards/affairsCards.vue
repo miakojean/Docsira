@@ -438,7 +438,7 @@ function onAction(action: CardAction) {
 .folder-card {
   position: relative;
   width: 100%;
-  max-width: 245px;
+  max-width: 145px;
   padding: 0.5rem;
   border-radius: 8px;
   cursor: pointer;
@@ -457,7 +457,7 @@ function onAction(action: CardAction) {
 
 @media (hover: hover) {
   .folder-card:hover {
-    background-color: #fdfcfc;
+    background-color: #ffffff97;
     transform: translateY(-2px);
   }
   .folder-card:hover .paper-0 {
@@ -476,8 +476,8 @@ function onAction(action: CardAction) {
    ========================================= */
 .folder-visual {
   position: relative;
-  width: 200px;
-  height: 145px;
+  width: 135px;
+  height: 125px;
   user-select: none;
 }
 
@@ -677,9 +677,9 @@ function onAction(action: CardAction) {
 
 .folder-client {
   margin: 0;
-  max-width: 100%;
-  font-size: 1.02rem;
-  font-weight: 600;
+  max-width: 135px;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: #111827;
   white-space: nowrap;
   overflow: hidden;

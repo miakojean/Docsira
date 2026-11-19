@@ -13,9 +13,9 @@
         <ul v-else class="file-list" :class="`file-list--${view}`">
             <fileCards
                 v-for="(filePath, index) in files"
-            :key="filePath || index"
+                :key="filePath || index"
                 :file-path="filePath"
-            :view="view"
+                :view="view"
                 @open="emit('open', $event)"
                 @preview="emit('open', $event)"
                 @details="emit('details', $event)"

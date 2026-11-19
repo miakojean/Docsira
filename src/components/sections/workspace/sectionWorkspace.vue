@@ -360,10 +360,16 @@ onMounted(() => {
 
 .dossiers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
   gap: 1.25rem 0.75rem;
   width: 100%;
   padding-bottom: 2rem;
+}
+
+.dossiers-grid :deep(.folder-visual) {
+  transform: scale(0.85);
+  transform-origin: top center;
+  margin-bottom: -1.36rem;
 }
 
 .size-4 {
