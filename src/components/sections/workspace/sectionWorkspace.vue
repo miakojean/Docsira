@@ -8,22 +8,34 @@
     />
 
     <div v-if="store.allDossiers.length > 0" class="content-container">
-      <div class="workspace-view-container flex flex-col gap-3">
-        <!-- Filtres par statut -->
-        <div class="filters">
-          <button
-            v-for="f in filters"
-            :key="f.value"
-            class="filter-chip"
-            :class="{ active: statutFilter === f.value }"
-            @click="statutFilter = f.value"
-          >
-            {{ f.label }}
-          </button>
+      <div class="workspace-view-container flex-1 flex flex-col gap-3">
+        <!-- Filtres par statut et tri -->
+        <div class="controls-bar">
+          <div class="sort-control">
+            <span class="sort-label">Statut</span>
+            <div class="sort-select">
+              <BaseSelectInput
+                v-model="statutFilter"
+                :options="DOSSIER_STATUT_OPTIONS"
+                inputId="workspace-dossiers-statut"
+              />
+            </div>
+          </div>
+
+          <div class="sort-control">
+            <span class="sort-label">Trier par</span>
+            <div class="sort-select">
+              <BaseSelectInput
+                v-model="sortBy"
+                :options="DOSSIER_SORT_OPTIONS"
+                inputId="workspace-dossiers-sort"
+              />
+            </div>
+          </div>
         </div>
 
         <!-- Grille de tous les dossiers de tous les clients directement -->
-        <div v-if="filteredDossiers.length > 0" class="flex flex-col gap-4">
+        <div v-if="filteredDossiers.length > 0" class="flex-1 flex flex-col justify-between gap-4">
           <div class="dossiers-grid">
             <affairsCards
               v-for="d in paginatedDossiers"
@@ -136,7 +148,9 @@ import detailsModale, { type ItemDetails } from '../../modale/detailsModale.vue'
 import SuccesModale from '../../modale/succesModale.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
 import Pagination from '../../tools/Pagination.vue';
+import BaseSelectInput from '../../BaseInput/BaseSelectInput.vue';
 import { useClientDossierStore, type Dossier } from '../../../stores/dossierStore';
+import { DOSSIER_STATUT_OPTIONS, DOSSIER_SORT_OPTIONS, sortDossiers } from '../../../helpers/dossierSort';
 
 const store = useClientDossierStore();
 const router = useRouter();
@@ -148,6 +162,7 @@ const successTitle = ref('');
 const successSubtitle = ref('');
 const searchQuery = ref('');
 const statutFilter = ref('ALL');
+const sortBy = ref('date_desc');
 
 const currentPage = ref(1);
 const pageSize = ref(10);
@@ -161,15 +176,6 @@ const isDeleteOpen = ref(false);
 const dossierToDelete = ref<Dossier | null>(null);
 const isDeleting = ref(false);
 const isDeleteSuccess = ref(false);
-
-const filters = [
-  { value: 'ALL', label: 'Tous' },
-  { value: 'NOUVEAU', label: 'Nouveaux' },
-  { value: 'EN_COURS', label: 'En cours' },
-  { value: 'EN_ATTENTE', label: 'En attente' },
-  { value: 'TERMINE', label: 'Terminés' },
-  { value: 'CLOTURE', label: 'Clôturés' },
-];
 
 // Tous les dossiers filtrés directement
 const filteredDossiers = computed(() => {
@@ -192,14 +198,16 @@ const filteredDossiers = computed(() => {
   });
 });
 
-// Réinitialiser la page quand les filtres changent
-watch([searchQuery, statutFilter], () => {
+const sortedDossiers = computed(() => sortDossiers(filteredDossiers.value, sortBy.value));
+
+// Réinitialiser la page quand les filtres ou le tri changent
+watch([searchQuery, statutFilter, sortBy], () => {
   currentPage.value = 1;
 });
 
 const paginatedDossiers = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value;
-  return filteredDossiers.value.slice(start, start + pageSize.value);
+  return sortedDossiers.value.slice(start, start + pageSize.value);
 });
 
 function openAddRoot() {
@@ -220,6 +228,7 @@ const folderDetailsItem = computed<ItemDetails>(() => {
     size: `${d.documents_count ?? 0} document(s)`,
     fileCount: d.documents_count ?? 0,
     owner: d.client?.nom_complet || 'Client',
+    createdBy: d.created_by_name || undefined,
     createdAt: d.creation_date
       ? new Date(d.creation_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
       : undefined,
@@ -324,33 +333,29 @@ onMounted(() => {
   width: 100%;
 }
 
-.filters {
+.controls-bar {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
-.filter-chip {
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sort-label {
   font-size: 0.8rem;
-  font-weight: 500;
-  color: #4b5563;
-  cursor: pointer;
-  transition: all 0.2s;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
 }
 
-.filter-chip:hover {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-}
-
-.filter-chip.active {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-  color: #fff;
+.sort-select {
+  min-width: 215px;
 }
 
 .dossiers-grid {

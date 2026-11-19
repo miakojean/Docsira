@@ -8,7 +8,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 
 from .serializers import AffairSerializer, DocumentSerializer
-from .models import Affair, Document
+from .models import Affair, Document, get_user_display_name
+from sira.models import SiraFolderHistory
 
 class BaseFirmView(APIView):
     """Classe utilitaire pour récupérer le véritable compte du cabinet"""
@@ -23,9 +24,23 @@ class AffairView(BaseFirmView):
     def post(self, request):
         serializer = AffairSerializer(data=request.data)
         if serializer.is_valid():
-            # Assigne l'affaire au vrai compte du cabinet au lieu du request.user[cite: 3, 4]
+            # Assigne l'affaire au vrai compte du cabinet et trace le créateur (cabinet ou collaborateur)
             firm = self.get_firm(request.user)
-            serializer.save(firm=firm) 
+            save_kwargs = {'firm': firm, 'created_by': request.user}
+            if hasattr(request.user, 'collaborator_profile') and not serializer.validated_data.get('collaborator'):
+                save_kwargs['collaborator'] = request.user.collaborator_profile
+            affair = serializer.save(**save_kwargs)
+
+            author_name = get_user_display_name(request.user)
+            SiraFolderHistory.objects.create(
+                affair_id=affair.id,
+                previous_progression=0,
+                new_progression=affair.progression,
+                action_type="CREATION_DOSSIER",
+                document_title=affair.title,
+                author=author_name,
+                details=f"Création du dossier '{affair.title}' par {author_name}."
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -37,7 +52,7 @@ class AffairView(BaseFirmView):
                 # Filtrage unifié basé sur la Firme[cite: 3]
                 affair = (
                     Affair.objects
-                    .select_related('client', 'firm', 'collaborator')
+                    .select_related('client', 'firm', 'collaborator', 'created_by')
                     .prefetch_related('documents')
                     .get(id=affair_id, firm=firm)
                 )
@@ -49,7 +64,7 @@ class AffairView(BaseFirmView):
             affairs = (
                 Affair.objects
                 .filter(firm=firm, is_archived=False)
-                .select_related('client', 'firm', 'collaborator')
+                .select_related('client', 'firm', 'collaborator', 'created_by')
                 .prefetch_related('documents')
             )
             client_id = request.query_params.get('client')
@@ -91,7 +106,7 @@ class ArchivedAffairsView(BaseFirmView):
         affairs = (
             Affair.objects
             .filter(firm=self.get_firm(request.user), is_archived=True)
-            .select_related('client', 'firm', 'collaborator')
+            .select_related('client', 'firm', 'collaborator', 'created_by')
             .prefetch_related('documents')
         )
         paginator = PageNumberPagination()
@@ -183,7 +198,7 @@ class AffairDocumentsView(BaseFirmView):
             }
             if category:
                 doc_data["category"] = category
-            serializer = DocumentSerializer(data=doc_data)
+            serializer = DocumentSerializer(data=doc_data, context={'request': request})
             if not serializer.is_valid():
                 return Response(
                     {"files": serializer.errors},
@@ -210,7 +225,7 @@ class DocumentView(BaseFirmView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = DocumentSerializer(data=request.data)
+        serializer = DocumentSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             firm = self.get_firm(request.user)
             affair = serializer.validated_data['affair']
@@ -256,7 +271,7 @@ class DocumentView(BaseFirmView):
         except Document.DoesNotExist:
             return Response({"error": "Document introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = DocumentSerializer(document, data=request.data, partial=True)
+        serializer = DocumentSerializer(document, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -272,5 +287,5 @@ class DocumentView(BaseFirmView):
         except Document.DoesNotExist:
             return Response({"error": "Document introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
-        document.delete()
+        document.delete(actor=request.user)
         return Response({"message": "Document supprimé."}, status=status.HTTP_204_NO_CONTENT)

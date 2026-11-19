@@ -58,6 +58,13 @@
                   <span class="value">{{ item.owner || 'Docsira Admin' }}</span>
                 </div>
               </div>
+              <div class="detail-row" v-if="item.createdBy">
+                <span class="label">Créé par</span>
+                <div class="owner-pill">
+                  <span class="avatar-circle">{{ getInitials(item.createdBy) }}</span>
+                  <span class="value">{{ item.createdBy }}</span>
+                </div>
+              </div>
               <div class="detail-row">
                 <span class="label">Créé le</span>
                 <span class="value">{{ item.createdAt || '19 Août 2026' }}</span>
@@ -97,6 +104,7 @@ export interface ItemDetails {
   size?: string;
   fileCount?: number;
   owner?: string;
+  createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
   path?: string;

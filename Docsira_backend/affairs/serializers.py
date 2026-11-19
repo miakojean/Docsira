@@ -1,6 +1,6 @@
 import os
 from rest_framework import serializers
-from .models import Affair, Document
+from .models import Affair, Document, get_user_display_name
 from Client.models import Client
 from account.models import Collaborator
 
@@ -21,10 +21,21 @@ class AffairSerializer(serializers.ModelSerializer):
     # 2. LECTURE : Champs imbriqués pour l'affichage Frontend[cite: 3]
     # Idéalement, utilise ton SimpleUserSerializer pour 'firm' afin d'être encore plus léger !
     firm = CustomUserSerializer(read_only=True) 
+    created_by = CustomUserSerializer(read_only=True)
+    created_by_name = serializers.SerializerMethodField()
     collaborator = CollaboratorSerializer(read_only=True)
     client = ClientSerializer(read_only=True)
     documents_count = serializers.SerializerMethodField()
     documents_preview = serializers.SerializerMethodField()
+
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            return get_user_display_name(obj.created_by)
+        if obj.collaborator:
+            return get_user_display_name(obj.collaborator.user)
+        if obj.firm:
+            return get_user_display_name(obj.firm)
+        return "Système"
 
     def get_documents_count(self, obj):
         return obj.documents.count()
@@ -51,7 +62,7 @@ class AffairSerializer(serializers.ModelSerializer):
         model = Affair
         fields = '__all__'
         # On empêche formellement l'écrasement de ces champs système[cite: 2, 3]
-        read_only_fields = ['reference_affair', 'path_affair', 'firm']
+        read_only_fields = ['reference_affair', 'path_affair', 'firm', 'created_by']
 
 class DocumentSerializer(serializers.ModelSerializer):
     file_name = serializers.SerializerMethodField()
@@ -67,6 +78,25 @@ class DocumentSerializer(serializers.ModelSerializer):
                   'category', 'valide', 'pos_x', 'pos_y']
         read_only_fields = ['file_name', 'extension', 'size', 'download_url',
                             'parent', 'relation', 'version']
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        instance = Document(**validated_data)
+        if request and request.user and request.user.is_authenticated:
+            instance._actor = request.user
+        instance.save()
+        return instance
+
+    def update(self, instance, validated_data):
+        request = self.context.get('request')
+        meaningful_fields = set(validated_data.keys()) - {'pos_x', 'pos_y'}
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if request and request.user and request.user.is_authenticated:
+            instance._actor = request.user
+        instance._log_history = bool(meaningful_fields)
+        instance.save()
+        return instance
 
     def get_file_name(self, obj):
         return os.path.basename(obj.file.name) if obj.file else ''

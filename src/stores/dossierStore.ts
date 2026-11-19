@@ -17,6 +17,15 @@ export interface Dossier {
   /** Extensions des derniers documents (max 3), pour l'aperçu du dossier. */
   documents_preview?: string[];
   is_archived?: boolean;
+  created_by_name?: string | null;
+  created_by?: {
+    id: string;
+    username: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    account_type?: string;
+  } | null;
 }
 
 /** Récupère toutes les pages d'un endpoint DRF paginé (ou une simple liste). */

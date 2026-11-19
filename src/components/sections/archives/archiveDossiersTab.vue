@@ -5,21 +5,32 @@
     </div>
 
     <div v-else-if="dossierStore.archivedDossiers.length > 0" class="content-container">
-      <!-- Filtres par statut -->
-      <div class="filters">
-        <button
-          v-for="f in dossierFilters"
-          :key="f.value"
-          type="button"
-          class="filter-chip"
-          :class="{ active: dossierStatutFilter === f.value }"
-          @click="dossierStatutFilter = f.value"
-        >
-          {{ f.label }}
-        </button>
+      <!-- Filtres par statut et tri -->
+      <div class="controls-bar">
+        <div class="sort-control">
+          <span class="sort-label">Statut</span>
+          <div class="sort-select">
+            <BaseSelectInput
+              v-model="dossierStatutFilter"
+              :options="DOSSIER_STATUT_OPTIONS"
+              inputId="archive-dossiers-statut"
+            />
+          </div>
+        </div>
+
+        <div class="sort-control">
+          <span class="sort-label">Trier par</span>
+          <div class="sort-select">
+            <BaseSelectInput
+              v-model="sortBy"
+              :options="DOSSIER_SORT_OPTIONS"
+              inputId="archive-dossiers-sort"
+            />
+          </div>
+        </div>
       </div>
 
-      <div v-if="filteredDossiers.length > 0" class="flex flex-col gap-4">
+      <div v-if="filteredDossiers.length > 0" class="flex-1 flex flex-col justify-between gap-4">
         <div class="dossiers-grid">
           <affairsCards
             v-for="d in paginatedDossiers"
@@ -110,11 +121,13 @@ import affairsCards from '../../cards/affairsCards.vue';
 import emptyCards from '../../cards/emptyCards.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
 import Pagination from '../../tools/Pagination.vue';
+import BaseSelectInput from '../../BaseInput/BaseSelectInput.vue';
 import detailsModale, { type ItemDetails } from '../../modale/detailsModale.vue';
 import editDossierModale from '../../modale/editDossierModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
 import { useClientDossierStore, type Dossier } from '../../../stores/dossierStore';
+import { DOSSIER_STATUT_OPTIONS, DOSSIER_SORT_OPTIONS, sortDossiers } from '../../../helpers/dossierSort';
 
 const props = withDefaults(
   defineProps<{
@@ -131,17 +144,9 @@ const dossierStore = useClientDossierStore();
 const pageSize = 10;
 const currentPage = ref(1);
 const dossierStatutFilter = ref('ALL');
+const sortBy = ref('date_desc');
 
-const dossierFilters = [
-  { value: 'ALL', label: 'Tous' },
-  { value: 'NOUVEAU', label: 'Nouveaux' },
-  { value: 'EN_COURS', label: 'En cours' },
-  { value: 'EN_ATTENTE', label: 'En attente' },
-  { value: 'TERMINE', label: 'Terminés' },
-  { value: 'CLOTURE', label: 'Clôturés' },
-];
-
-watch([() => props.searchQuery, dossierStatutFilter], () => {
+watch([() => props.searchQuery, dossierStatutFilter, sortBy], () => {
   currentPage.value = 1;
 });
 
@@ -162,9 +167,11 @@ const filteredDossiers = computed(() => {
   });
 });
 
+const sortedDossiers = computed(() => sortDossiers(filteredDossiers.value, sortBy.value));
+
 const paginatedDossiers = computed(() => {
   const start = (currentPage.value - 1) * pageSize;
-  return filteredDossiers.value.slice(start, start + pageSize);
+  return sortedDossiers.value.slice(start, start + pageSize);
 });
 
 // Modales state
@@ -191,6 +198,7 @@ const dossierDetailsItem = computed<ItemDetails>(() => {
     size: `${d.documents_count ?? 0} document(s)`,
     fileCount: d.documents_count ?? 0,
     owner: d.client?.nom_complet || 'Client',
+    createdBy: d.created_by_name || undefined,
     createdAt: d.creation_date
       ? new Date(d.creation_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
       : undefined,
@@ -287,33 +295,29 @@ onMounted(() => {
   justify-content: center;
 }
 
-.filters {
+.controls-bar {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
-.filter-chip {
-  padding: 0.4rem 0.9rem;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sort-label {
   font-size: 0.8rem;
-  font-weight: 500;
-  color: #4b5563;
-  cursor: pointer;
-  transition: all 0.2s;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
 }
 
-.filter-chip:hover {
-  border-color: var(--primary-color, #005792);
-  color: var(--primary-color, #005792);
-}
-
-.filter-chip.active {
-  background: var(--primary-color, #005792);
-  border-color: var(--primary-color, #005792);
-  color: #ffffff;
+.sort-select {
+  min-width: 215px;
 }
 
 .dossiers-grid {

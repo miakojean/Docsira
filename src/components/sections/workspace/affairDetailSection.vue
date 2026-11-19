@@ -15,7 +15,7 @@
           </div>
           <div v-if="dossier" class="page-subtitle-row">
             <span class="ref-text">{{ dossier.reference_affair }}</span>
-            <span v-if="dossier.type_affair" class="type-badge">{{ getDossierTypeLabel(dossier.type_affair) }}</span>
+            <span v-if="dossier.created_by_name" class="creator-badge">Créé par {{ dossier.created_by_name }}</span>
           </div>
         </div>
       </div>
@@ -303,7 +303,6 @@ import renameDocModale from '../../modale/renameDocModale.vue';
 import moveDocModale from '../../modale/moveDocModale.vue';
 import uploadDocModale from '../../modale/uploadDocModale.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
-import { getDossierTypeLabel } from '../../../helpers/dossierTypes';
 import type { AffairDocumentsController } from '../../../composables/useAffairDocuments';
 
 const props = defineProps<{
@@ -482,14 +481,14 @@ const {
   margin-top: 0.2rem;
 }
 
-.type-badge {
+.creator-badge {
   display: inline-flex;
   align-items: center;
   font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--primary-color-dark, #005380);
-  background: rgba(0, 87, 146, 0.08);
-  border: 1px solid rgba(0, 87, 146, 0.18);
+  font-weight: 500;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
   padding: 0.1rem 0.55rem;
   border-radius: 999px;
 }

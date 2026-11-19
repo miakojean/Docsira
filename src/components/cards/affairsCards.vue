@@ -125,6 +125,13 @@
       <p class="files-count">
         {{ displaySubtitle }}
       </p>
+      <p
+        v-if="!isClientCard && dossier?.created_by_name"
+        class="folder-creator"
+        :title="`Créé par ${dossier.created_by_name}`"
+      >
+        Créé par {{ dossier.created_by_name }}
+      </p>
     </div>
 
     <!-- Overlay pour fermer le menu -->
@@ -684,6 +691,17 @@ function onAction(action: CardAction) {
   color: #6b7280;
   font-size: 0.85rem;
   font-weight: 500;
+}
+
+.folder-creator {
+  margin: 0;
+  max-width: 100%;
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* =========================================

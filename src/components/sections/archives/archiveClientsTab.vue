@@ -5,7 +5,20 @@
     </div>
 
     <div v-else-if="clientStore.archivedClients.length > 0" class="content-container">
-      <div v-if="filteredClients.length > 0" class="flex flex-col gap-4">
+      <div class="controls-bar">
+        <div class="sort-control">
+          <span class="sort-label">Trier par</span>
+          <div class="sort-select">
+            <BaseSelectInput
+              v-model="sortBy"
+              :options="sortOptions"
+              inputId="archive-clients-sort"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div v-if="filteredClients.length > 0" class="flex-1 flex flex-col justify-between gap-4">
         <div class="clients-grid">
           <customerCard
             v-for="client in paginatedClients"
@@ -98,6 +111,7 @@ import customerCard from '../../cards/customerCard.vue';
 import emptyCards from '../../cards/emptyCards.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
 import Pagination from '../../tools/Pagination.vue';
+import BaseSelectInput from '../../BaseInput/BaseSelectInput.vue';
 import viewClientModale from '../../modale/viewClientModale.vue';
 import clientDossiersModale from '../../modale/clientDossiersModale.vue';
 import editClientModale from '../../modale/editClientModale.vue';
@@ -118,8 +132,18 @@ const clientStore = useClientStore();
 
 const pageSize = 12;
 const currentPage = ref(1);
+const sortBy = ref('date_desc');
 
-watch(() => props.searchQuery, () => {
+const sortOptions = [
+  { value: 'date_desc', label: "Plus récents d'abord" },
+  { value: 'date_asc', label: "Plus anciens d'abord" },
+  { value: 'alpha_asc', label: 'Ordre alphabétique (A → Z)' },
+  { value: 'alpha_desc', label: 'Ordre alphabétique (Z → A)' },
+  { value: 'ref_asc', label: 'Référence (croissante)' },
+  { value: 'ville_asc', label: 'Ville (A → Z)' },
+];
+
+watch([() => props.searchQuery, sortBy], () => {
   currentPage.value = 1;
 });
 
@@ -133,9 +157,30 @@ const filteredClients = computed(() => {
   );
 });
 
+const sortedClients = computed(() => {
+  const list = [...filteredClients.value];
+  switch (sortBy.value) {
+    case 'date_asc':
+      return list.sort((a, b) => new Date(a.date_creation || 0).getTime() - new Date(b.date_creation || 0).getTime());
+    case 'alpha_asc':
+      return list.sort((a, b) => (a.nom_complet || '').localeCompare(b.nom_complet || '', 'fr', { sensitivity: 'base' }));
+    case 'alpha_desc':
+      return list.sort((a, b) => (b.nom_complet || '').localeCompare(a.nom_complet || '', 'fr', { sensitivity: 'base' }));
+    case 'ref_asc':
+      return list.sort((a, b) =>
+        (a.reference_client || '').localeCompare(b.reference_client || '', 'fr', { sensitivity: 'base', numeric: true })
+      );
+    case 'ville_asc':
+      return list.sort((a, b) => (a.ville || '').localeCompare(b.ville || '', 'fr', { sensitivity: 'base' }));
+    case 'date_desc':
+    default:
+      return list.sort((a, b) => new Date(b.date_creation || 0).getTime() - new Date(a.date_creation || 0).getTime());
+  }
+});
+
 const paginatedClients = computed(() => {
   const start = (currentPage.value - 1) * pageSize;
-  return filteredClients.value.slice(start, start + pageSize);
+  return sortedClients.value.slice(start, start + pageSize);
 });
 
 // Modales state
@@ -228,6 +273,32 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.sort-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.sort-select {
+  min-width: 225px;
 }
 
 .clients-grid {

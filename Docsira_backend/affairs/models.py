@@ -10,6 +10,21 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from account.models import CustomUser, Collaborator
 from Client.models import Client
 from sira.models import SiraCategory, SiraFolderHistory
+
+
+def get_user_display_name(user):
+    """Retourne un libellé lisible pour un utilisateur (Cabinet ou Collaborateur)."""
+    if not user:
+        return "Système"
+    full_name = f"{getattr(user, 'first_name', '')} {getattr(user, 'last_name', '')}".strip()
+    base_name = full_name or getattr(user, 'username', '') or getattr(user, 'email', '') or "Utilisateur"
+    if hasattr(user, 'collaborator_profile'):
+        return f"{base_name} (Collaborateur)"
+    if getattr(user, 'account_type', None) == 'firm':
+        return f"{base_name} (Cabinet)"
+    return base_name
+
+
 # Create your models here.
 
 class Affair(models.Model):
@@ -87,6 +102,14 @@ class Affair(models.Model):
 
     # Relation 
     firm = models.ForeignKey(CustomUser, on_delete=models.PROTECT, related_name='affairs', verbose_name=_("Cabinet"))
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        related_name='created_affairs',
+        verbose_name=_("Créé par"),
+        null=True,
+        blank=True,
+    )
     collaborator = models.ForeignKey(Collaborator, on_delete=models.PROTECT, related_name='affairs', verbose_name=_("Collaborateur"), null=True)
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name='affairs', verbose_name=_("Client"))
 
@@ -348,37 +371,52 @@ class Document(models.Model):
     def __str__(self):
         return f"{self.title} ({self.affair.reference_affair})"
 
+    def _resolve_author_name(self, actor=None):
+        if actor is not None:
+            return get_user_display_name(actor)
+        if self.affair.collaborator:
+            return get_user_display_name(self.affair.collaborator.user)
+        if self.affair.created_by:
+            return get_user_display_name(self.affair.created_by)
+        return "Système"
+
     def save(self, *args, **kwargs):
-        is_new = self.pk is None
+        actor = kwargs.pop('actor', None) or getattr(self, '_actor', None)
+        log_history = kwargs.pop('log_history', getattr(self, '_log_history', True))
+        is_new = self._state.adding
         old_progression = self.affair.progression
-        
+
         super().save(*args, **kwargs)
-        
+
         # Recalcul de la progression via SIRA
         new_progression = self.affair.calculer_progression_sira()
-        
+
         if old_progression != new_progression or is_new:
             self.affair.progression = new_progression
             self.affair.save(update_fields=['progression'])
-            
-            # Enregistrement automatique dans le module d'historique SIRA
+
+        if log_history:
+            author_name = self._resolve_author_name(actor)
+            action_type = "AJOUT_DOCUMENT" if is_new else "MAJ_DOCUMENT"
+            action_verb = "Ajout" if is_new else "Modification"
             SiraFolderHistory.objects.create(
                 affair_id=self.affair.id,
                 previous_progression=old_progression,
                 new_progression=new_progression,
-                action_type="AJOUT_DOCUMENT" if is_new else "MAJ_DOCUMENT",
+                action_type=action_type,
                 document_title=self.title,
                 category=self.category,
-                author=str(self.affair.collaborator) if self.affair.collaborator else "Système",
-                details=f"Ajout/Mise à jour du document '{self.title}' dans la catégorie {self.category}."
+                author=author_name,
+                details=f"{action_verb} du document '{self.title}' ({self.category}) par {author_name}."
             )
 
     def delete(self, *args, **kwargs):
+        actor = kwargs.pop('actor', None) or getattr(self, '_actor', None)
         affair = self.affair
         old_progression = affair.progression
         doc_title = self.title
         doc_category = self.category
-        author_name = str(affair.collaborator) if affair.collaborator else "Système"
+        author_name = self._resolve_author_name(actor)
 
         with transaction.atomic():
             result = super().delete(*args, **kwargs)
@@ -392,6 +430,6 @@ class Document(models.Model):
                 document_title=doc_title,
                 category=doc_category,
                 author=author_name,
-                details=f"Suppression du document '{doc_title}' ({doc_category})."
+                details=f"Suppression du document '{doc_title}' ({doc_category}) par {author_name}."
             )
         return result

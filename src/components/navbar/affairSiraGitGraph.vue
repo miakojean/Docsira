@@ -82,13 +82,16 @@
 
             <div
               class="git-del-item"
-              :title="`Supprimé le ${formatDate(delDoc.timestamp)}`"
+              :title="`Supprimé${delDoc.author ? ` par ${delDoc.author}` : ''} le ${formatDate(delDoc.timestamp)}`"
             >
               <div class="git-del-bullet"></div>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="git-del-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
               </svg>
               <span class="git-del-name">{{ delDoc.title }}</span>
+              <span v-if="delDoc.author" class="git-del-author" :title="delDoc.author">
+                par {{ delDoc.author }}
+              </span>
               <span v-if="delDoc.previous_progression > delDoc.new_progression" class="git-del-drop">
                 -{{ delDoc.previous_progression - delDoc.new_progression }}%
               </span>
@@ -142,6 +145,9 @@
                 <span class="log-date">{{ formatDate(h.timestamp) }}</span>
               </div>
               <div v-if="h.document_title" class="log-doc">{{ h.document_title }}</div>
+              <div v-if="h.author" class="log-author">
+                Par <span>{{ h.author }}</span>
+              </div>
               <div class="log-diff">
                 <code>{{ h.previous_progression }}% → {{ h.new_progression }}%</code>
               </div>
@@ -209,6 +215,7 @@ function getDeletedDocsForCategory(cat: string) {
   const list: Array<{
     id: string;
     title: string;
+    author?: string | null;
     timestamp: string;
     previous_progression: number;
     new_progression: number;
@@ -221,6 +228,7 @@ function getDeletedDocsForCategory(cat: string) {
       list.push({
         id: h.id,
         title,
+        author: h.author,
         timestamp: h.timestamp,
         previous_progression: h.previous_progression,
         new_progression: h.new_progression,
@@ -303,10 +311,12 @@ const gitNodes = computed(() => {
 
 function formatActionType(action: string) {
   switch (action) {
+    case 'CREATION_DOSSIER':
+      return 'init: création dossier';
     case 'AJOUT_DOCUMENT':
       return 'commit: ajout doc';
     case 'MAJ_DOCUMENT':
-      return 'commit: mise à jour';
+      return 'commit: modification';
     case 'SUPPRESSION_DOCUMENT':
       return 'revert: suppression';
     default:
@@ -316,6 +326,7 @@ function formatActionType(action: string) {
 
 function getActionClass(action: string) {
   switch (action) {
+    case 'CREATION_DOSSIER':
     case 'AJOUT_DOCUMENT':
       return 'dot-add';
     case 'SUPPRESSION_DOCUMENT':
@@ -345,8 +356,12 @@ function extClass(ext: string) {
   return '';
 }
 
+const documentsSignature = computed(() =>
+  props.documents.map((d) => `${d.id}:${d.title}:${d.category}:${d.valide}`).join('|')
+);
+
 watch(
-  () => [props.currentId, props.documents.length],
+  () => [props.currentId, documentsSignature.value],
   ([id]) => {
     if (id) {
       siraStore.fetchHistory(String(id));
@@ -814,6 +829,30 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 0.05rem;
+}
+
+.log-author {
+  font-size: 0.67rem;
+  color: #64748b;
+  margin-top: 0.05rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-author span {
+  font-weight: 600;
+  color: #334155;
+}
+
+.git-del-author {
+  font-size: 0.65rem;
+  color: #9f1239;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
 }
 
 .log-diff code {
