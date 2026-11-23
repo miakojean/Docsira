@@ -102,14 +102,14 @@ function handleChange(event: Event) {
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 1rem;
   width: 100%;
 }
 
 .input-label {
   font-size: 0.8rem;
-  font-weight: 600;
-  color: #6b7280;
+  font-weight: 500;
+  color: #374151;
 }
 
 .required-mark {
@@ -131,7 +131,7 @@ function handleChange(event: Event) {
   -webkit-appearance: none;
   -moz-appearance: none;
   padding: 0.7rem 2.5rem 0.7rem 0.9rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #ebebeb;
   border-radius: 10px;
   font-size: 0.9rem;
   outline: none;

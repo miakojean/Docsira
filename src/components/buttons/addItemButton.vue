@@ -1,11 +1,12 @@
 <template>
-    <button class="outline-btn" @click="$emit('add')">
+    <button type="button" class="outline-btn" @click="$emit('add', $event); $emit('click', $event)">
         {{btnLabel}}
     </button>
 </template>
 
 <script>
 export default {
+    emits: ['add', 'click'],
     props:{
         btnLabel:{
             type:String,
@@ -25,7 +26,7 @@ export default {
     justify-content: center;
     gap: 0.5rem;
     background-color: transparent;
-    border: 1px solid #d1d5db;
+    border: 1px solid #ebebeb;
     border-radius: 8px;
     padding: 0.6rem 1.25rem;
     font-size: 0.95rem;
