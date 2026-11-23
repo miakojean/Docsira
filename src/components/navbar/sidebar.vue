@@ -205,7 +205,7 @@ export default {
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  gap: 0.5rem;
+  gap: 0.2rem;
   padding: 0 1rem;
   scrollbar-width: none;
 }
@@ -227,7 +227,7 @@ export default {
   width: 100px;
   min-height: 50px;
   font-size: 0.5rem;
-  font-weight: 600;
+  font-weight: 500;
   transition: all 0.2s ease;
   text-decoration: none;
 }

@@ -26,6 +26,7 @@
                 </li>
               </ul>
               <p v-else class="hint">Aucun client trouvé.</p>
+              <mainButton label="nouveau client"/>
             </template>
             <p v-if="dossierStore.fieldErrors.client_id" class="error-text">{{ dossierStore.fieldErrors.client_id }}</p>
           </div>
@@ -86,6 +87,7 @@ import { ref, computed, watch, onUnmounted } from 'vue';
 import { useClientDossierStore } from '../../stores/dossierStore';
 import { useClientStore, type ClientListItem } from '../../stores/clientStore';
 import { DOSSIER_TYPE_GROUPS } from '../../helpers/dossierTypes';
+import mainButton from '../buttons/mainButton.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -150,7 +152,11 @@ onUnmounted(() => { document.body.style.overflow = ''; });
   padding: 1.5rem; background: rgba(15, 23, 42, 0.42);
 }
 .modal-card {
-  background: #fff; border-radius: 16px; padding: 1.5rem; width: 100%; max-width: 480px; max-height: 90vh;
+  background: #fff; 
+  border-radius: 16px; 
+  padding: 1.5rem; 
+  width: 100%; 
+  max-width: 500px; max-height: 90vh;
   display: flex; flex-direction: column; gap: 1.25rem; overflow-y: auto;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
 }
