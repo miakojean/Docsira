@@ -16,9 +16,6 @@
               </span>
               <div>
                 <h3 class="modal-title">{{ item.name || 'Détails du dossier' }}</h3>
-                <span class="type-badge" :class="item.isFolder ? 'badge-folder' : 'badge-file'">
-                  {{ item.isFolder ? 'Dossier' : 'Fichier' }}
-                </span>
               </div>
             </div>
             <button class="close-btn" @click="closeModal" aria-label="Fermer la modale">
@@ -54,14 +51,12 @@
               <div class="detail-row">
                 <span class="label">Propriétaire</span>
                 <div class="owner-pill">
-                  <span class="avatar-circle">{{ getInitials(item.owner || 'Docsira') }}</span>
                   <span class="value">{{ item.owner || 'Docsira Admin' }}</span>
                 </div>
               </div>
               <div class="detail-row" v-if="item.createdBy">
                 <span class="label">Créé par</span>
                 <div class="owner-pill">
-                  <span class="avatar-circle">{{ getInitials(item.createdBy) }}</span>
                   <span class="value">{{ item.createdBy }}</span>
                 </div>
               </div>
@@ -142,11 +137,6 @@ const handlePrimaryAction = () => {
   emit('action', props.item);
 };
 
-const getInitials = (name: string): string => {
-  if (!name) return 'D';
-  return name.split(' ').map(part => part[0]).join('').substring(0, 2).toUpperCase();
-};
-
 const formatValue = (val?: string): string => {
   if (!val) return 'Aujourd\'hui à 14:30';
   if (val.toUpperCase() === 'EN_COURS') {
@@ -221,7 +211,7 @@ onUnmounted(() => {
 }
 .header-icon-box.is-folder {
     background-color: #eff6ff;
-    color: #2563eb;
+    color: #dbb10b;
 }
 .header-icon-box.is-file {
     background-color: #f0fdf4;
@@ -238,14 +228,7 @@ onUnmounted(() => {
     color: #1f2937;
     line-height: 1.3;
 }
-.type-badge {
-    display: inline-block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0.15rem 0.5rem;
-    border-radius: 6px;
-    margin-top: 0.2rem;
-}
+
 .badge-folder {
     background-color: #dbeafe;
     color: #1e40af;
@@ -277,7 +260,7 @@ onUnmounted(() => {
     align-items: center;
     gap: 1rem;
 }
-.banner-icon { color: #3b82f6; }
+.banner-icon { color: #dbb10b; }
 .banner-text { overflow: hidden; }
 .banner-filename {
     margin: 0;
@@ -303,7 +286,6 @@ onUnmounted(() => {
 .value { color: #1f2937; }
 .font-medium { font-weight: 600; }
 .owner-pill { display: flex; align-items: center; gap: 0.5rem; }
-.avatar-circle { width: 24px; height: 24px; border-radius: 50%; background: #2563eb; color: white; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .status-pill { padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
 .status-pill.shared { background-color: #fef3c7; color: #92400e; }
 .status-pill.private { background-color: #f3f4f6; color: #4b5563; }

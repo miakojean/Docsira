@@ -1,15 +1,15 @@
 <template>
-    <nav class="w-full flex justify-between items-center">
+    <nav class="w-full flex flex-wrap justify-between items-center gap-3">
         <div class="header__nav">
             <h3>{{title}}</h3>
         </div>
-        <div class="tools-frame flex items-center justify-center gap-4">
+        <div class="tools-frame flex flex-wrap items-center justify-end gap-3">
+            <slot name="actions"></slot>
             <BaseResearchInput 
                 :modelValue="modelValue" 
                 :placeholder="resolvedPlaceholder"
                 @update:modelValue="$emit('update:modelValue', $event)" 
             />
-            <slot name="actions"></slot>
             <toolsButton v-if="showToolsButton" @handleEvent="$emit('handleEvent')"/>
         </div>
     </nav>

@@ -5,14 +5,10 @@
       :showToolsButton="true"
       @handleEvent="openAddRoot"
       v-model="searchQuery"
-    />
-
-    <div v-if="store.allDossiers.length > 0" class="content-container">
-      <div class="workspace-view-container flex-1 flex flex-col gap-3">
-        <!-- Filtres par statut et tri -->
+    >
+      <template v-if="store.allDossiers.length > 0" #actions>
         <div class="controls-bar">
           <div class="sort-control">
-            <span class="sort-label">Statut</span>
             <div class="sort-select">
               <BaseSelectInput
                 v-model="statutFilter"
@@ -23,7 +19,6 @@
           </div>
 
           <div class="sort-control">
-            <span class="sort-label">Trier par</span>
             <div class="sort-select">
               <BaseSelectInput
                 v-model="sortBy"
@@ -33,7 +28,11 @@
             </div>
           </div>
         </div>
+      </template>
+    </headerNav>
 
+    <div v-if="store.allDossiers.length > 0" class="content-container">
+      <div class="workspace-view-container flex-1 flex flex-col gap-3">
         <!-- Grille de tous les dossiers de tous les clients directement -->
         <div v-if="filteredDossiers.length > 0" class="flex-1 flex flex-col justify-between gap-4">
           <div class="dossiers-grid">
@@ -347,15 +346,13 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
-.sort-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #64748b;
-  white-space: nowrap;
+.sort-select {
+  min-width: fit-content;
 }
 
-.sort-select {
-  min-width: 215px;
+.sort-select :deep(.select-input) {
+  padding: 0.5rem 2.2rem 0.5rem 0.8rem;
+  font-size: 0.85rem;
 }
 
 .dossiers-grid {
