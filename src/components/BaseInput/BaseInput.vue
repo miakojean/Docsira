@@ -7,7 +7,7 @@
 
         <div class="input-wrapper">
             <span v-if="$slots.prepend" class="input-icon input-icon-left">
-                <slot name="prepend"></slot>
+              <slot name="prepend"></slot>
             </span>
 
         <input
@@ -157,7 +157,7 @@ defineExpose({
 }
 
 .input-label {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: 500;
   color: var(--label-color);
   display: block;
@@ -198,6 +198,8 @@ defineExpose({
 
 input::placeholder {
     color: #C7C5C5;
+    font-weight: 400;
+    font-size: 0.9rem;
 }
 
 /* Gestion des icônes */
