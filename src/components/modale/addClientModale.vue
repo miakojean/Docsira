@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="modal-fade" :duration="300">
-      <div v-if="isOpen" class="modal-overlay" @click.self="$emit('close')">
+      <div v-if="isOpen" class="modal-overlay" :style="zIndex ? { zIndex } : {}" @click.self="$emit('close')">
         <div class="modal-card" role="dialog" aria-modal="true">
           <div class="modal-header">
             <h3 class="modal-title">Nouveau client</h3>
@@ -66,7 +66,15 @@ import BaseInput from '../BaseInput/BaseInput.vue';
 import mainButton from '../buttons/mainButton.vue';
 import { useClientStore, type ClientPayload } from '../../stores/clientStore';
 
-const props = defineProps<{ isOpen: boolean }>();
+const props = withDefaults(
+  defineProps<{
+    isOpen: boolean;
+    zIndex?: number;
+  }>(),
+  {
+    zIndex: 11000,
+  }
+);
 const emit = defineEmits(['close', 'created']);
 
 const clientStore = useClientStore();
@@ -120,7 +128,7 @@ onUnmounted(() => { document.body.style.overflow = ''; });
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 11000;
   display: flex;
   align-items: center;
   justify-content: center;
