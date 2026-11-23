@@ -6,8 +6,37 @@
           <div class="preview-header">
             <div class="preview-title-box truncate">
               <h3 class="preview-title truncate">{{ preview.title }}</h3>
+              <span v-if="preview.kind === 'pdf' && pdfPageCount > 0" class="preview-badge">
+                {{ pdfPageCount }} page{{ pdfPageCount > 1 ? 's' : '' }}
+              </span>
+              <span v-else-if="preview.kind === 'docx'" class="preview-badge is-word">Word</span>
+              <span v-else-if="preview.kind === 'image'" class="preview-badge is-image">Image</span>
             </div>
+
             <div class="preview-actions">
+              <!-- Contrôles de zoom pour PDF -->
+              <div v-if="preview.kind === 'pdf' && pdfPageCount > 0" class="zoom-controls">
+                <button
+                  type="button"
+                  class="zoom-btn"
+                  title="Zoom arrière"
+                  :disabled="pdfScale <= 0.6"
+                  @click="changeZoom(-0.2)"
+                >
+                  −
+                </button>
+                <span class="zoom-label">{{ Math.round(pdfScale * 100) }}%</span>
+                <button
+                  type="button"
+                  class="zoom-btn"
+                  title="Zoom avant"
+                  :disabled="pdfScale >= 2.4"
+                  @click="changeZoom(0.2)"
+                >
+                  +
+                </button>
+              </div>
+
               <button
                 type="button"
                 class="preview-action-btn"
@@ -30,9 +59,45 @@
             </div>
           </div>
 
-          <div class="preview-body">
-            <img v-if="preview.kind === 'image'" :src="preview.url" :alt="preview.title" class="preview-img" />
-            <iframe v-else-if="preview.kind === 'pdf'" :src="preview.url" class="preview-frame"></iframe>
+          <div class="preview-body" :class="{ 'is-document-bg': preview.kind === 'pdf' || preview.kind === 'docx' }">
+            <!-- Chargement -->
+            <div v-if="preview.kind === 'loading' || isRenderingPdf" class="preview-state">
+              <LogoLoader size="md" label="Chargement de l'aperçu..." />
+            </div>
+
+            <!-- Image -->
+            <img
+              v-else-if="preview.kind === 'image' && preview.url"
+              :src="preview.url"
+              :alt="preview.title"
+              class="preview-img"
+            />
+
+            <!-- PDF rendu via pdfjs-dist -->
+            <div v-show="preview.kind === 'pdf' && !isRenderingPdf && !pdfError" ref="pdfContainerRef" class="pdf-pages-container"></div>
+
+            <!-- Erreur PDF -->
+            <div v-if="preview.kind === 'pdf' && pdfError" class="preview-state">
+              <p class="state-message">{{ pdfError }}</p>
+              <button type="button" class="preview-action-btn" @click="$emit('download', preview.doc)">
+                Télécharger le PDF
+              </button>
+            </div>
+
+            <!-- Word (.docx) rendu via mammoth -->
+            <div v-else-if="preview.kind === 'docx'" class="docx-scroll-container">
+              <article class="docx-page" v-html="preview.html || '<p>Document vide.</p>'"></article>
+            </div>
+
+            <!-- Format non prévisualisable (ex: ancien .doc) -->
+            <div v-else-if="preview.kind === 'unsupported'" class="preview-state">
+              <p class="state-message">
+                {{ preview.message || "L'aperçu intégré n'est pas disponible pour ce format." }}
+              </p>
+              <button type="button" class="preview-action-btn" @click="$emit('download', preview.doc)">
+                Télécharger le document
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -41,16 +106,25 @@
 </template>
 
 <script setup lang="ts">
+import { nextTick, ref, watch } from 'vue';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type { DossierDocument } from '../../stores/documentStore';
+import LogoLoader from '../tools/LogoLoader.vue';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 export interface PreviewData {
-  url: string;
   title: string;
-  kind: 'image' | 'pdf';
+  kind: 'loading' | 'image' | 'pdf' | 'docx' | 'unsupported';
   doc: DossierDocument;
+  url?: string;
+  data?: ArrayBuffer;
+  html?: string;
+  message?: string;
 }
 
-defineProps<{
+const props = defineProps<{
   preview: PreviewData | null;
 }>();
 
@@ -58,6 +132,112 @@ defineEmits<{
   (e: 'close'): void;
   (e: 'download', doc: DossierDocument): void;
 }>();
+
+const pdfContainerRef = ref<HTMLDivElement | null>(null);
+const isRenderingPdf = ref(false);
+const pdfError = ref('');
+const pdfPageCount = ref(0);
+const pdfScale = ref(1.2);
+let renderGeneration = 0;
+
+function changeZoom(delta: number) {
+  const next = Math.min(2.4, Math.max(0.6, Number((pdfScale.value + delta).toFixed(1))));
+  if (next !== pdfScale.value) {
+    pdfScale.value = next;
+  }
+}
+
+async function renderPdf(buffer: ArrayBuffer) {
+  const gen = ++renderGeneration;
+  isRenderingPdf.value = true;
+  pdfError.value = '';
+  pdfPageCount.value = 0;
+
+  await nextTick();
+  const container = pdfContainerRef.value;
+  if (!container) {
+    isRenderingPdf.value = false;
+    return;
+  }
+  container.innerHTML = '';
+
+  try {
+    const bytes = new Uint8Array(buffer.slice(0));
+    const loadingTask = pdfjsLib.getDocument({ data: bytes });
+    const pdfDoc = await loadingTask.promise;
+
+    if (gen !== renderGeneration) {
+      await loadingTask.destroy();
+      return;
+    }
+
+    pdfPageCount.value = pdfDoc.numPages;
+    const dpr = window.devicePixelRatio || 1;
+
+    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+      if (gen !== renderGeneration) {
+        await loadingTask.destroy();
+        return;
+      }
+
+      const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: pdfScale.value });
+
+      const pageWrapper = document.createElement('div');
+      pageWrapper.className = 'pdf-page-wrapper';
+
+      const canvas = document.createElement('canvas');
+      canvas.className = 'pdf-page-canvas';
+      canvas.width = Math.floor(viewport.width * dpr);
+      canvas.height = Math.floor(viewport.height * dpr);
+      canvas.style.width = `${Math.floor(viewport.width)}px`;
+      canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+      }
+
+      pageWrapper.appendChild(canvas);
+      container.appendChild(pageWrapper);
+    }
+
+    await loadingTask.destroy();
+  } catch (err) {
+    console.error('Erreur rendu PDF :', err);
+    if (gen === renderGeneration) {
+      pdfError.value = "Impossible d'afficher ce fichier PDF. Vous pouvez le télécharger pour l'ouvrir localement.";
+    }
+  } finally {
+    if (gen === renderGeneration) {
+      isRenderingPdf.value = false;
+    }
+  }
+}
+
+watch(
+  () => [props.preview?.kind, props.preview?.data, pdfScale.value] as const,
+  ([kind, data]) => {
+    if (kind === 'pdf' && data) {
+      void renderPdf(data);
+    } else {
+      renderGeneration++;
+      isRenderingPdf.value = false;
+      pdfError.value = '';
+      pdfPageCount.value = 0;
+      if (pdfContainerRef.value) pdfContainerRef.value.innerHTML = '';
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.preview?.doc?.id,
+  () => {
+    pdfScale.value = 1.2;
+  }
+);
 </script>
 
 <style scoped>
@@ -75,8 +255,8 @@ defineEmits<{
 
 .preview-modal {
   width: 100%;
-  max-width: 900px;
-  height: 85vh;
+  max-width: 980px;
+  height: 88vh;
   background: #ffffff;
   border-radius: 20px;
   display: flex;
@@ -86,29 +266,97 @@ defineEmits<{
 }
 
 .preview-header {
-  padding: 1rem 1.5rem;
+  padding: 0.9rem 1.5rem;
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .preview-title-box {
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .preview-title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: #111827;
+}
+
+.preview-badge {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.preview-badge.is-word {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.preview-badge.is-image {
+  background: #f3e8ff;
+  color: #7e22ce;
 }
 
 .preview-actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+.zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.2rem 0.35rem;
+}
+
+.zoom-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zoom-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.zoom-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.zoom-label {
+  min-width: 44px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #334155;
 }
 
 .preview-action-btn {
@@ -159,19 +407,116 @@ defineEmits<{
   align-items: center;
   justify-content: center;
   overflow: auto;
+  padding: 1.25rem;
+}
+
+.preview-body.is-document-bg {
+  background: #e2e8f0;
+  align-items: flex-start;
+}
+
+.preview-state {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 2rem;
+  background: #ffffff;
+  border-radius: 14px;
+  max-width: 460px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+}
+
+.state-message {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #334155;
+  line-height: 1.5;
 }
 
 .preview-img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+  border-radius: 8px;
 }
 
-.preview-frame {
+.pdf-pages-container {
   width: 100%;
-  height: 100%;
-  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pdf-pages-container :deep(.pdf-page-wrapper) {
   background: #ffffff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+  border-radius: 4px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.docx-scroll-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.docx-page {
+  width: 100%;
+  max-width: 794px;
+  min-height: 600px;
+  background: #ffffff;
+  color: #1e293b;
+  padding: 2.5rem 3rem;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+  font-size: 0.95rem;
+  line-height: 1.65;
+  overflow-wrap: break-word;
+}
+
+.docx-page :deep(h1),
+.docx-page :deep(h2),
+.docx-page :deep(h3),
+.docx-page :deep(h4) {
+  color: #0f172a;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.docx-page :deep(p) {
+  margin: 0 0 0.75rem;
+}
+
+.docx-page :deep(ul),
+.docx-page :deep(ol) {
+  margin: 0 0 0.85rem;
+  padding-left: 1.5rem;
+}
+
+.docx-page :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.88rem;
+}
+
+.docx-page :deep(th),
+.docx-page :deep(td) {
+  border: 1px solid #cbd5e1;
+  padding: 0.45rem 0.65rem;
+  text-align: left;
+}
+
+.docx-page :deep(img) {
+  max-width: 100%;
+  height: auto;
 }
 
 .truncate {

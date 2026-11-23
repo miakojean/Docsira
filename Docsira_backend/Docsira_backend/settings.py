@@ -141,22 +141,12 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
-
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
-USE_I18N = True
-
-USE_TZ = True
-
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 AUTH_USER_MODEL = 'account.CustomUser'
 
@@ -189,8 +179,6 @@ LANGUAGE_CODE = 'fr-fr'  # CORRECTION: Une seule définition
 TIME_ZONE = 'Africa/Abidjan'  # CORRECTION: Fuseau horaire d'Abidjan
 
 USE_I18N = True
-
-USE_L10N = True  # AJOUT: Pour la localisation des formats
 
 USE_TZ = True
 

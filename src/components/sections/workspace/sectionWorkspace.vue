@@ -46,6 +46,8 @@
               @details="openDetails(d)"
               @edit="openEdit(d)"
               @rename="openEdit(d)"
+              @share="openShareDossier(d)"
+              @link="openShareDossier(d)"
               @archive="handleArchiveDossier(d)"
               @delete="openDelete(d)"
             />
@@ -122,6 +124,19 @@
       @delete="confirmDelete"
     />
 
+    <linkModale
+      :isOpen="isShareDossierOpen"
+      :targetTitle="dossierToShare ? `${dossierToShare.reference_affair} • ${dossierToShare.title}` : ''"
+      description="Créez un lien de partage pour permettre à un collaborateur ou à un client de télécharger l'ensemble des documents de ce dossier (archive ZIP)."
+      :links="dossierShareLinks"
+      :isLoading="isShareDossierLoading"
+      :isCreating="isShareDossierCreating"
+      :errorMessage="shareDossierError"
+      @close="closeShareDossier"
+      @create="createDossierShareLink"
+      @revoke="revokeDossierShareLink"
+    />
+
     <SuccesModale
       modaleTitle="Succès"
       :isOpen="isSuccess"
@@ -144,11 +159,12 @@ import addDossierModale from '../../modale/addDossierModale.vue';
 import editDossierModale from '../../modale/editDossierModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 import detailsModale, { type ItemDetails } from '../../modale/detailsModale.vue';
+import linkModale from '../../modale/linkModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
 import Pagination from '../../tools/Pagination.vue';
 import BaseSelectInput from '../../BaseInput/BaseSelectInput.vue';
-import { useClientDossierStore, type Dossier } from '../../../stores/dossierStore';
+import { useClientDossierStore, type AffairShareLink, type Dossier } from '../../../stores/dossierStore';
 import { DOSSIER_STATUT_OPTIONS, DOSSIER_SORT_OPTIONS, sortDossiers } from '../../../helpers/dossierSort';
 
 const store = useClientDossierStore();
@@ -273,6 +289,70 @@ async function handleArchiveDossier(d: Dossier) {
     successTitle.value = "Dossier archivé";
     successSubtitle.value = "Le dossier a été transféré dans les archives du cabinet.";
     isSuccess.value = true;
+  }
+}
+
+// Partage par lien de dossier
+const isShareDossierOpen = ref(false);
+const dossierToShare = ref<Dossier | null>(null);
+const dossierShareLinks = ref<AffairShareLink[]>([]);
+const isShareDossierLoading = ref(false);
+const isShareDossierCreating = ref(false);
+const shareDossierError = ref('');
+
+async function openShareDossier(d: Dossier) {
+  dossierToShare.value = d;
+  dossierShareLinks.value = [];
+  shareDossierError.value = '';
+  isShareDossierOpen.value = true;
+  isShareDossierLoading.value = true;
+  try {
+    const existing = await store.fetchAffairShareLinks(d.id);
+    if (existing.length > 0) {
+      dossierShareLinks.value = existing;
+    } else {
+      const created = await store.createAffairShareLink(d.id, 7);
+      if (created) {
+        dossierShareLinks.value = [created];
+      } else if (store.errorMessage) {
+        shareDossierError.value = store.errorMessage;
+      }
+    }
+  } finally {
+    isShareDossierLoading.value = false;
+  }
+}
+
+function closeShareDossier() {
+  isShareDossierOpen.value = false;
+  dossierToShare.value = null;
+  shareDossierError.value = '';
+}
+
+async function createDossierShareLink(expiresInDays: number | null) {
+  if (!dossierToShare.value) return;
+  isShareDossierCreating.value = true;
+  shareDossierError.value = '';
+  try {
+    const created = await store.createAffairShareLink(dossierToShare.value.id, expiresInDays);
+    if (created) {
+      dossierShareLinks.value = [created, ...dossierShareLinks.value];
+    } else {
+      shareDossierError.value = store.errorMessage || 'Impossible de créer le lien.';
+    }
+  } finally {
+    isShareDossierCreating.value = false;
+  }
+}
+
+async function revokeDossierShareLink(linkId: string) {
+  if (!dossierToShare.value) return;
+  shareDossierError.value = '';
+  const ok = await store.revokeAffairShareLink(dossierToShare.value.id, linkId);
+  if (ok) {
+    dossierShareLinks.value = dossierShareLinks.value.filter((l) => l.id !== linkId);
+  } else {
+    shareDossierError.value = store.errorMessage || 'Impossible de révoquer ce lien.';
   }
 }
 

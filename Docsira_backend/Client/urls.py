@@ -13,5 +13,5 @@ urlpatterns = [
     path('<uuid:client_id>/', ManageClient.as_view(), name='client_detail'),
     path('<uuid:client_id>/archive/', ClientArchiveView.as_view(), name='client-archive'),
     path('<uuid:client_id>/restore/', RestoreClient.as_view(), name='client_restore'),
-    path('<uuid:client_id>/permanent-delete/', PermanentDeleteClient.as_view())
+    path('<uuid:client_id>/permanent-delete/', PermanentDeleteClient.as_view(), name='client_permanent_delete')
 ]

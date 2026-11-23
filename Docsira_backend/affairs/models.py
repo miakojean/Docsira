@@ -1,4 +1,5 @@
 import os
+import secrets
 import uuid
 from django.conf import settings
 from django.db import models, transaction
@@ -302,6 +303,35 @@ class DocumentQuerySet(models.QuerySet):
         return result
 
 
+ALLOWED_DOCUMENT_EXTENSIONS = {'.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.webp', '.gif'}
+
+
+def resolve_document_file_path(document):
+    """Résout le chemin disque d'un document en supportant MEDIA_ROOT et les emplacements legacy."""
+    if not document.file or not document.file.name:
+        return None
+
+    try:
+        if document.file.storage.exists(document.file.name):
+            return document.file.path
+    except (OSError, ValueError, NotImplementedError):
+        pass
+
+    rel_name = document.file.name.replace("\\", "/").lstrip("/")
+    if not rel_name.startswith(("dossiers_clients/", "documents/")):
+        return None
+
+    base_dir = os.path.abspath(settings.BASE_DIR)
+    candidate = os.path.abspath(os.path.join(base_dir, rel_name))
+    try:
+        if os.path.commonpath([base_dir, candidate]) != base_dir:
+            return None
+    except ValueError:
+        return None
+
+    return candidate if os.path.isfile(candidate) else None
+
+
 def document_upload_path(instance, filename):
     """Place new documents in the client directory associated with the affair."""
     media_root = os.path.abspath(settings.MEDIA_ROOT)
@@ -397,8 +427,13 @@ class Document(models.Model):
 
         if log_history:
             author_name = self._resolve_author_name(actor)
-            action_type = "AJOUT_DOCUMENT" if is_new else "MAJ_DOCUMENT"
-            action_verb = "Ajout" if is_new else "Modification"
+            if is_new and self.relation == self.Relation.UPDATED:
+                action_type = "MAJ_DOCUMENT"
+                details = f"Nouvelle version (v{self.version}) du document '{self.title}' ({self.category}) par {author_name}."
+            else:
+                action_type = "AJOUT_DOCUMENT" if is_new else "MAJ_DOCUMENT"
+                action_verb = "Ajout" if is_new else "Modification"
+                details = f"{action_verb} du document '{self.title}' ({self.category}) par {author_name}."
             SiraFolderHistory.objects.create(
                 affair_id=self.affair.id,
                 previous_progression=old_progression,
@@ -407,7 +442,7 @@ class Document(models.Model):
                 document_title=self.title,
                 category=self.category,
                 author=author_name,
-                details=f"{action_verb} du document '{self.title}' ({self.category}) par {author_name}."
+                details=details
             )
 
     def delete(self, *args, **kwargs):
@@ -433,3 +468,99 @@ class Document(models.Model):
                 details=f"Suppression du document '{doc_title}' ({doc_category}) par {author_name}."
             )
         return result
+
+
+def generate_share_token():
+    return secrets.token_urlsafe(32)
+
+
+class DocumentShareLink(models.Model):
+    """Lien de partage / téléchargement sécurisé (optionnellement expirable) pour un document."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    document = models.ForeignKey(
+        Document,
+        on_delete=models.CASCADE,
+        related_name='share_links',
+        verbose_name=_("Document"),
+    )
+    token = models.CharField(
+        _("Jeton de partage"),
+        max_length=64,
+        unique=True,
+        db_index=True,
+        default=generate_share_token,
+    )
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_share_links',
+        verbose_name=_("Créé par"),
+    )
+    created_at = models.DateTimeField(_("Date de création"), auto_now_add=True)
+    expires_at = models.DateTimeField(_("Date d'expiration"), null=True, blank=True)
+    is_active = models.BooleanField(_("Actif"), default=True)
+    download_count = models.PositiveIntegerField(_("Nombre d'accès"), default=0)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = _("Lien de partage")
+        verbose_name_plural = _("Liens de partage")
+
+    @property
+    def is_expired(self):
+        return bool(self.expires_at and timezone.now() > self.expires_at)
+
+    @property
+    def is_valid(self):
+        return self.is_active and not self.is_expired
+
+    def __str__(self):
+        return f"Partage {self.document.title} ({self.token[:8]}...)"
+
+
+class AffairShareLink(models.Model):
+    """Lien de partage / téléchargement ZIP sécurisé (optionnellement expirable) pour un dossier entier."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    affair = models.ForeignKey(
+        Affair,
+        on_delete=models.CASCADE,
+        related_name='share_links',
+        verbose_name=_("Dossier"),
+    )
+    token = models.CharField(
+        _("Jeton de partage"),
+        max_length=64,
+        unique=True,
+        db_index=True,
+        default=generate_share_token,
+    )
+    created_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_affair_share_links',
+        verbose_name=_("Créé par"),
+    )
+    created_at = models.DateTimeField(_("Date de création"), auto_now_add=True)
+    expires_at = models.DateTimeField(_("Date d'expiration"), null=True, blank=True)
+    is_active = models.BooleanField(_("Actif"), default=True)
+    download_count = models.PositiveIntegerField(_("Nombre d'accès"), default=0)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = _("Lien de partage de dossier")
+        verbose_name_plural = _("Liens de partage de dossiers")
+
+    @property
+    def is_expired(self):
+        return bool(self.expires_at and timezone.now() > self.expires_at)
+
+    @property
+    def is_valid(self):
+        return self.is_active and not self.is_expired
+
+    def __str__(self):
+        return f"Partage dossier {self.affair.reference_affair} ({self.token[:8]}...)"

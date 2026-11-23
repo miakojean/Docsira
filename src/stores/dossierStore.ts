@@ -44,6 +44,18 @@ async function fetchAllPages(url: string): Promise<Dossier[] | null> {
   }
 }
 
+export interface AffairShareLink {
+  id: string;
+  affair: string;
+  token: string;
+  share_url: string;
+  created_at: string;
+  expires_at: string | null;
+  is_active: boolean;
+  is_expired: boolean;
+  download_count: number;
+}
+
 export interface DossierPayload {
   title: string;
   client_id: string;
@@ -306,6 +318,56 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
     }
   }
 
+  async function fetchAffairShareLinks(affairId: string): Promise<AffairShareLink[]> {
+    try {
+      const response = await api(`/affairs/${affairId}/share-links/`, "GET");
+      if (!response.ok) return [];
+      const data = await response.json().catch(() => []);
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+  }
+
+  async function createAffairShareLink(
+    affairId: string,
+    expiresInDays: number | null = 7,
+  ): Promise<AffairShareLink | null> {
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/${affairId}/share-links/`, "POST", {
+        expires_in_days: expiresInDays,
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data) {
+        errorMessage.value = data?.error || "Impossible de créer le lien de partage du dossier";
+        return null;
+      }
+      return data as AffairShareLink;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return null;
+    }
+  }
+
+  async function revokeAffairShareLink(affairId: string, linkId: string): Promise<boolean> {
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/${affairId}/share-links/${linkId}/`, "DELETE");
+      if (!response.ok) {
+        errorMessage.value = "Impossible de révoquer le lien de partage";
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    }
+  }
+
   return {
     dossiersByClient,
     allDossiers,
@@ -322,5 +384,8 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
     addDossier,
     updateDossier,
     deleteDossier,
+    fetchAffairShareLinks,
+    createAffairShareLink,
+    revokeAffairShareLink,
   };
 });

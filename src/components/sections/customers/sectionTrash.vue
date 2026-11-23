@@ -276,11 +276,12 @@ async function confirmPermanentDeleteClient() {
     const ok = await clientStore.deleteClientPermanently(clientToPermanentDelete.value.id);
     await new Promise(resolve => setTimeout(resolve, 1000));
     isPermanentDeleting.value = false;
-    isPermanentDeleteOpen.value = false; // Close the confirmation modal
+
 
     if (ok) {
       isPermanentDeleteSuccess.value = true;
     } else {
+      isPermanentDeleteOpen.value = false;
       errorTitle.value = "Action refusée";
       errorSubtitle.value = clientStore.errorMessage || "Vous n'êtes pas autorisé à réaliser cette action.";
       isErrorOpen.value = true;

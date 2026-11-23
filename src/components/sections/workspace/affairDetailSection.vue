@@ -21,6 +21,18 @@
       </div>
 
       <div class="header-actions">
+        <!-- Bouton Partager le dossier par lien -->
+        <button
+          type="button"
+          class="new-folder-btn"
+          title="Créer un lien de partage pour ce dossier"
+          @click="openShareDossierModal"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="size-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+          </svg>
+          <span>Partager</span>
+        </button>
 
         <!-- Bouton Nouveau sous-dossier -->
         <button
@@ -166,7 +178,7 @@
               <span>Nouveau sous-dossier</span>
             </button>
           </div>
-          <span class="empty-hint">Ou glissez-déposez directement vos fichiers ici</span>
+          <span class="empty-hint">Ou glissez-déposez vos documents PDF, Word ou images ici</span>
         </div>
       </div>
 
@@ -187,10 +199,11 @@
           v-for="doc in currentDocuments"
           :key="doc.id"
           :document="doc"
-          @open="openDocDetails"
+          @open="openDocument"
           @preview="openDocument"
           @details="openDocDetails"
           @download="downloadDocument"
+          @share="openShareModal"
           @rename="openRename"
           @delete="openDelete"
           @move="openMoveDocModal(doc)"
@@ -204,6 +217,7 @@
       :ref="(el) => { diskFileInputRef = (el as HTMLInputElement | null); }"
       type="file"
       multiple
+      :accept="ALLOWED_DOCUMENT_ACCEPT"
       class="hidden-file-input"
       @change="onDiskFileInputChange"
     />
@@ -218,6 +232,8 @@
     <renameDocModale
       :isOpen="!!renamingDoc"
       :initialName="renamingDoc?.title"
+      :isLoading="isRenaming"
+      :errorMessage="docStore.errorMessage"
       @close="renamingDoc = null"
       @rename="confirmRename"
     />
@@ -248,9 +264,25 @@
       :isOpen="isMoveDocModalOpen"
       :document="docToMove"
       :subfolders="subfolders"
+      :otherDossiers="otherDossiers"
       :initialFolderId="targetFolderIdForMove"
+      :isMoving="isMovingDoc"
       @close="isMoveDocModalOpen = false"
       @confirm="confirmMoveDoc"
+    />
+
+    <linkModale
+      :isOpen="isShareModalOpen"
+      :document="docToShare"
+      :targetTitle="shareTargetTitle"
+      :description="shareDescription"
+      :links="shareLinks"
+      :isLoading="isShareLoading"
+      :isCreating="isShareCreating"
+      :errorMessage="shareError"
+      @close="closeShareModal"
+      @create="createNewShareLink"
+      @revoke="revokeExistingShareLink"
     />
 
     <detail-modale
@@ -301,8 +333,10 @@ import detailModale from '../../modale/detailModale.vue';
 import filePreviewModale from '../../modale/filePreviewModale.vue';
 import renameDocModale from '../../modale/renameDocModale.vue';
 import moveDocModale from '../../modale/moveDocModale.vue';
+import linkModale from '../../modale/linkModale.vue';
 import uploadDocModale from '../../modale/uploadDocModale.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
+import { ALLOWED_DOCUMENT_ACCEPT } from '../../../helpers/documentFormats';
 import type { AffairDocumentsController } from '../../../composables/useAffairDocuments';
 
 const props = defineProps<{
@@ -340,6 +374,8 @@ const {
   isMoveDocModalOpen,
   docToMove,
   targetFolderIdForMove,
+  otherDossiers,
+  isMovingDoc,
   openMoveDocModal,
   confirmMoveDoc,
   onDocDropOnFolder,
@@ -351,8 +387,22 @@ const {
   closePreview,
   downloadDocument,
   renamingDoc,
+  isRenaming,
   openRename,
   confirmRename,
+  isShareModalOpen,
+  docToShare,
+  shareTargetTitle,
+  shareDescription,
+  shareLinks,
+  isShareLoading,
+  isShareCreating,
+  shareError,
+  openShareModal,
+  openShareDossierModal,
+  closeShareModal,
+  createNewShareLink,
+  revokeExistingShareLink,
   isDetailsOpen,
   docForDetails,
   openDocDetails,

@@ -1,9 +1,11 @@
 #[tauri::command]
 pub async fn is_online() -> bool {
-    let client = reqwest::Client::builder()
+    let Ok(client) = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(3))
         .build()
-        .unwrap();
+    else {
+        return false;
+    };
     client
         .get("https://www.gstatic.com/generate_204")
         .send()

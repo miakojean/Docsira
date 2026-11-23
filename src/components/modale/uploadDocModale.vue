@@ -50,7 +50,7 @@
                 </div>
                 <p class="dropzone-title">Glissez-déposez vos fichiers ici</p>
                 <p class="dropzone-subtitle">ou cliquez pour parcourir votre ordinateur</p>
-                <span class="dropzone-formats">PDF, Word, Excel, Images, Textes</span>
+                <span class="dropzone-formats">PDF (.pdf), Word (.doc, .docx) et Images (.png, .jpg, .webp, .gif)</span>
               </div>
 
               <!-- Liste des fichiers sélectionnés -->
@@ -121,7 +121,7 @@
             </div>
 
             <!-- Erreur éventuelle -->
-            <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
+            <p v-if="localError || errorMessage" class="error-text">{{ localError || errorMessage }}</p>
           </div>
 
           <!-- Pied de page -->
@@ -147,6 +147,7 @@
             ref="fileInputRef"
             type="file"
             multiple
+            :accept="ALLOWED_DOCUMENT_ACCEPT"
             class="hidden-input"
             @change="onFileInputChange"
           />
@@ -162,6 +163,12 @@ import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { readFile } from '@tauri-apps/plugin-fs';
 import type { Dossier } from '../../stores/dossierStore';
 import type { SiraCategory } from '../../stores/documentStore';
+import {
+  ALLOWED_DOCUMENT_ACCEPT,
+  DOCUMENT_MIME_BY_EXT,
+  TAURI_DOCUMENT_FILTERS,
+  filterAllowedDocuments,
+} from '../../helpers/documentFormats';
 import LogoLoader from '../tools/LogoLoader.vue';
 
 const props = withDefaults(
@@ -189,6 +196,7 @@ const emit = defineEmits<{
 const selectedFiles = ref<File[]>([]);
 const selectedCategory = ref<SiraCategory>('IDENTIFICATION');
 const isDragOver = ref(false);
+const localError = ref('');
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
 const SIRA_OPTIONS = [
@@ -199,27 +207,23 @@ const SIRA_OPTIONS = [
   { value: 'CLOTURE' as SiraCategory, label: 'Clôture' },
 ];
 
-const mimeByExt: Record<string, string> = {
-  pdf: 'application/pdf',
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  gif: 'image/gif',
-  webp: 'image/webp',
-  svg: 'image/svg+xml',
-  txt: 'text/plain',
-  doc: 'application/msword',
-  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  xls: 'application/vnd.ms-excel',
-  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-};
+function appendFiles(files: File[], replace = false) {
+  const { valid, rejected, errorMessage } = filterAllowedDocuments(files);
+  if (replace) {
+    selectedFiles.value = valid;
+  } else if (valid.length > 0) {
+    selectedFiles.value.push(...valid);
+  }
+  localError.value = rejected.length > 0 ? errorMessage : '';
+}
 
 watch(
   () => props.isOpen,
   (val) => {
     if (val) {
+      localError.value = '';
       if (props.initialFiles && props.initialFiles.length > 0) {
-        selectedFiles.value = [...props.initialFiles];
+        appendFiles(props.initialFiles, true);
       } else {
         selectedFiles.value = [];
       }
@@ -234,13 +238,14 @@ watch(
   () => props.initialFiles,
   (files) => {
     if (files && files.length > 0) {
-      selectedFiles.value = [...files];
+      appendFiles(files, true);
     }
   }
 );
 
 function handleClose() {
   selectedFiles.value = [];
+  localError.value = '';
   emit('close');
 }
 
@@ -275,21 +280,26 @@ async function browseFiles() {
     const selected = await openDialog({
       multiple: true,
       directory: false,
-      title: 'Sélectionner des documents',
+      title: 'Sélectionner des documents (PDF, Word ou Images)',
+      filters: TAURI_DOCUMENT_FILTERS,
     });
     if (!selected) return;
     const paths = Array.isArray(selected) ? selected : [selected];
+    const pickedFiles: File[] = [];
     for (const path of paths) {
       try {
         const bytes = await readFile(path);
         const name = path.split(/[\\/]/).pop() || 'document';
         const ext = name.split('.').pop()?.toLowerCase() || '';
-        selectedFiles.value.push(
-          new File([bytes], name, { type: mimeByExt[ext] || 'application/octet-stream' })
+        pickedFiles.push(
+          new File([bytes], name, { type: DOCUMENT_MIME_BY_EXT[ext] || 'application/octet-stream' })
         );
       } catch (err) {
         console.error('Erreur de lecture du fichier', err);
       }
+    }
+    if (pickedFiles.length > 0) {
+      appendFiles(pickedFiles);
     }
   } catch (err) {
     console.warn('Fallback HTML file input', err);
@@ -305,7 +315,7 @@ function onFileInputChange(event: Event) {
   const files = Array.from(target.files ?? []);
   target.value = '';
   if (files.length > 0) {
-    selectedFiles.value.push(...files);
+    appendFiles(files);
   }
 }
 
@@ -314,7 +324,7 @@ function onDropFiles(e: DragEvent) {
   if (!e.dataTransfer?.files) return;
   const files = Array.from(e.dataTransfer.files);
   if (files.length > 0) {
-    selectedFiles.value.push(...files);
+    appendFiles(files);
   }
 }
 

@@ -31,6 +31,32 @@ export interface DossierDocument {
 
 export type DocumentRelation = "INITIAL" | "ADDED" | "UPDATED";
 
+export interface DocumentShareLink {
+  id: string;
+  document: string;
+  token: string;
+  share_url: string;
+  created_at: string;
+  expires_at: string | null;
+  is_active: boolean;
+  is_expired: boolean;
+  download_count: number;
+}
+
+/** Extrait un message d'erreur lisible depuis une réponse DRF. */
+function extractBackendError(data: any, fallback: string): string {
+  if (!data) return fallback;
+  if (typeof data.error === "string" && data.error) return data.error;
+  if (Array.isArray(data.file) && data.file[0]) return String(data.file[0]);
+  if (data.files && typeof data.files === "object") {
+    if (Array.isArray(data.files.file) && data.files.file[0]) return String(data.files.file[0]);
+    const first = Object.values(data.files)[0];
+    if (Array.isArray(first) && first[0]) return String(first[0]);
+  }
+  if (typeof data.detail === "string" && data.detail) return data.detail;
+  return fallback;
+}
+
 /** Récupère toutes les pages d'un endpoint DRF paginé de documents. */
 async function fetchAllDocumentPages(url: string): Promise<DossierDocument[] | null> {
   const items: DossierDocument[] = [];
@@ -78,14 +104,13 @@ export const useDocumentStore = defineStore("documents", () => {
     isLoading.value = true;
     errorMessage.value = "";
     try {
-      const response = await api(`/affairs/${affairId}/documents/`, "GET");
-      if (!response.ok) {
+      const items = await fetchAllDocumentPages(`/affairs/${affairId}/documents/`);
+      if (!items) {
         errorMessage.value = "Impossible de charger les documents";
         documents.value = [];
         return false;
       }
-      const data = await response.json();
-      documents.value = Array.isArray(data) ? data : (data.results ?? []);
+      documents.value = items;
       return true;
     } catch (error) {
       console.error(error);
@@ -109,10 +134,12 @@ export const useDocumentStore = defineStore("documents", () => {
       const response = await api(`/affairs/${affairId}/documents/`, "POST", form);
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        errorMessage.value = data?.error ?? "Import des documents impossible";
+        errorMessage.value = extractBackendError(data, "Import des documents impossible");
         return false;
       }
-      documents.value = [...(Array.isArray(data) ? data : [data]), ...documents.value];
+      const created = Array.isArray(data) ? data : [data];
+      documents.value = [...created, ...documents.value];
+      allDocuments.value = [...created, ...allDocuments.value];
       return true;
     } catch (error) {
       console.error(error);
@@ -136,12 +163,15 @@ export const useDocumentStore = defineStore("documents", () => {
       const response = await api(`/affairs/documents/${id}/versions/`, "POST", form);
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        errorMessage.value = data?.error ?? "Mise à jour du document impossible";
+        errorMessage.value = extractBackendError(data, "Mise à jour du document impossible");
         return null;
       }
       const newDoc = data as DossierDocument;
       if (!documents.value.some((d) => d.id === newDoc.id)) {
         documents.value = [newDoc, ...documents.value];
+      }
+      if (!allDocuments.value.some((d) => d.id === newDoc.id)) {
+        allDocuments.value = [newDoc, ...allDocuments.value];
       }
       return newDoc;
     } catch (error) {
@@ -212,24 +242,113 @@ export const useDocumentStore = defineStore("documents", () => {
   async function fetchFileBlob(id: string): Promise<Blob | null> {
     try {
       const response = await api(`/affairs/documents/${id}/download/`, "GET");
-      if (!response.ok) return null;
-      return await response.blob();
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        errorMessage.value = extractBackendError(
+          errData,
+          `Impossible de récupérer le fichier (code ${response.status})`,
+        );
+        return null;
+      }
+      const buffer = await response.arrayBuffer();
+      const contentType = response.headers.get("content-type") || "application/octet-stream";
+      return new Blob([buffer], { type: contentType });
     } catch (error) {
-      console.error(error);
+      console.error("Erreur lors du téléchargement du fichier :", error);
+      errorMessage.value = "Erreur réseau lors du chargement du document";
       return null;
     }
   }
 
   /** Met à jour la catégorie SIRA d'un document */
   async function updateDocumentCategory(id: string, category: SiraCategory) {
+    errorMessage.value = "";
     try {
       const response = await api(`/affairs/documents/${id}/`, "PATCH", { category });
       const data = await response.json().catch(() => null);
-      if (!response.ok) return false;
+      if (!response.ok || !data) {
+        errorMessage.value = extractBackendError(data, "Mise à jour de la catégorie impossible");
+        return false;
+      }
       documents.value = documents.value.map((d) => (d.id === id ? { ...d, category: data.category } : d));
+      allDocuments.value = allDocuments.value.map((d) => (d.id === id ? { ...d, category: data.category } : d));
       return true;
     } catch (err) {
       console.error(err);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    }
+  }
+
+  /** Déplace un document vers une autre affaire (dossier) du cabinet. */
+  async function moveDocumentToAffair(id: string, targetAffairId: string) {
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/documents/${id}/`, "PATCH", { affair: targetAffairId });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        errorMessage.value = extractBackendError(data, "Déplacement du document impossible");
+        return false;
+      }
+      documents.value = documents.value.filter((d) => d.id !== id);
+      allDocuments.value = allDocuments.value.map((d) => (d.id === id ? data : d));
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    }
+  }
+
+  /** Récupère les liens de partage actifs d'un document. */
+  async function fetchShareLinks(docId: string): Promise<DocumentShareLink[]> {
+    try {
+      const response = await api(`/affairs/documents/${docId}/share-links/`, "GET");
+      if (!response.ok) return [];
+      const data = await response.json().catch(() => []);
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+  }
+
+  /** Crée un lien de partage public (expirable ou permanent) pour un document. */
+  async function createShareLink(
+    docId: string,
+    expiresInDays: number | null = 7,
+  ): Promise<DocumentShareLink | null> {
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/documents/${docId}/share-links/`, "POST", {
+        expires_in_days: expiresInDays,
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data) {
+        errorMessage.value = extractBackendError(data, "Impossible de créer le lien de partage");
+        return null;
+      }
+      return data as DocumentShareLink;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return null;
+    }
+  }
+
+  /** Révoque un lien de partage existant. */
+  async function revokeShareLink(docId: string, linkId: string): Promise<boolean> {
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/documents/${docId}/share-links/${linkId}/`, "DELETE");
+      if (!response.ok) {
+        errorMessage.value = "Impossible de révoquer le lien de partage";
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
       return false;
     }
   }
@@ -245,9 +364,13 @@ export const useDocumentStore = defineStore("documents", () => {
     uploadDocuments,
     uploadNewVersion,
     moveDocument,
+    moveDocumentToAffair,
     renameDocument,
     deleteDocument,
     updateDocumentCategory,
     fetchFileBlob,
+    fetchShareLinks,
+    createShareLink,
+    revokeShareLink,
   };
 });

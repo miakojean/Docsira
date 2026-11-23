@@ -255,8 +255,8 @@ export default {
                     return;
                 }
 
-                successMessage.value = 'Mot de passe modifié avec succès.';
                 resetPasswordForm();
+                successMessage.value = 'Mot de passe modifié avec succès.';
                 changePassword.value = false; // close the form
                 emit('update');
             } catch (error: any) {

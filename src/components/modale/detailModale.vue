@@ -75,20 +75,39 @@
                         <div><dt>Type</dt><dd>{{ file.extension || 'Inconnu' }}</dd></div>
                         <div><dt>Version</dt><dd>v{{ file.version || 1 }}</dd></div>
                         <div v-if="folderName"><dt>Dossier</dt><dd>{{ folderName }}</dd></div>
+                        <div class="category-row">
+                          <dt>Catégorie SIRA</dt>
+                          <dd>
+                            <select
+                              class="sira-category-select"
+                              :value="file.category || ''"
+                              @change="onCategoryChange"
+                            >
+                              <option value="" disabled>Choisir...</option>
+                              <option
+                                v-for="step in SIRA_STEPS"
+                                :key="step.category"
+                                :value="step.category"
+                              >
+                                {{ step.label }} ({{ step.threshold }}%)
+                              </option>
+                            </select>
+                          </dd>
+                        </div>
                       </dl>
                     </div>
 
                     <div class="divider"></div>
 
-                    <!-- Partagé avec -->
+                    <!-- Partage par lien -->
                     <div class="file-section">
-                        <h4>Accès</h4>
-                        <p class="description-text">Les accès sont gérés au niveau du cabinet, pas individuellement pour ce document.</p>
+                        <h4>Partage</h4>
+                        <p class="description-text">Générez un lien de partage sécurisé pour envoyer ce document à un collaborateur ou à un client.</p>
                     </div>
 
                     <div class="divider"></div>
 
-                    <!-- Actions (Share, Edit, Delete) -->
+                    <!-- Actions (Share, Download, Rename, Delete) -->
                     <div class="file-actions">
                         <button class="action-btn" @click="$emit('share')">
                             <div class="action-icon bg-blue-light">
@@ -96,7 +115,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                                 </svg>
                             </div>
-                            <span>Collaborateurs</span>
+                            <span>Partager</span>
                         </button>
 
                           <button class="action-btn" @click="$emit('download')">
@@ -135,6 +154,7 @@
 
 <script lang="ts">
 import { computed } from 'vue'
+import { SIRA_STEPS } from '../../stores/siraStore'
 
 type FileKind =
   | 'pdf' | 'word' | 'excel' | 'image'
@@ -156,11 +176,18 @@ export default {
             default: ''
         }
     },
-    emits: ['close', 'share', 'download', 'edit', 'delete'],
+    emits: ['close', 'share', 'download', 'edit', 'delete', 'changeCategory'],
     setup(props, { emit }) {
 
         const closeModal = () => {
             emit('close')
+        }
+
+        const onCategoryChange = (event: Event) => {
+            const target = event.target as HTMLSelectElement
+            if (target.value) {
+                emit('changeCategory', { doc: props.file, category: target.value })
+            }
         }
 
         const KIND_BY_EXT: Record<string, FileKind> = {
@@ -200,6 +227,8 @@ export default {
 
         return {
             closeModal,
+            onCategoryChange,
+            SIRA_STEPS,
             fileKind,
             displayName,
             formattedSize,
@@ -335,6 +364,26 @@ export default {
   color: #444;
   text-align: right;
   overflow-wrap: anywhere;
+}
+
+.category-row {
+  align-items: center;
+}
+
+.sira-category-select {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+  color: #1e293b;
+  background: #f8fafc;
+  cursor: pointer;
+  outline: none;
+}
+
+.sira-category-select:focus {
+  border-color: #2563eb;
+  background: #ffffff;
 }
 
 .file-actions {

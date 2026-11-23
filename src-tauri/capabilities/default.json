@@ -27,8 +27,7 @@
         { "path": "$DOWNLOAD/**" },
         { "path": "$DESKTOP/**" },
         { "path": "$PICTURE/**" },
-        { "path": "$APPDATA/*" },
-        { "path": "D:/DOCSIRA/**" },
+        { "path": "$APPDATA/**" },
         { "path": "C:/**" },
         { "path": "D:/**" }
       ]
@@ -41,8 +40,7 @@
         { "path": "$DOWNLOAD/**" },
         { "path": "$DESKTOP/**" },
         { "path": "$PICTURE/**" },
-        { "path": "$APPDATA/*" },
-        { "path": "D:/DOCSIRA/**" },
+        { "path": "$APPDATA/**" },
         { "path": "C:/**" },
         { "path": "D:/**" }
       ]
@@ -50,12 +48,23 @@
     {
       "identifier": "fs:allow-exists",
       "allow": [
-        { "path": "$APPDATA/*" },
+        { "path": "$APPDATA/**" },
         { "path": "$HOME/**" },
         { "path": "$DOCUMENT/**" },
         { "path": "$DOWNLOAD/**" },
         { "path": "$DESKTOP/**" },
-        { "path": "D:/DOCSIRA/**" },
+        { "path": "C:/**" },
+        { "path": "D:/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-remove",
+      "allow": [
+        { "path": "$HOME/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DESKTOP/**" },
+        { "path": "$APPDATA/**" },
         { "path": "C:/**" },
         { "path": "D:/**" }
       ]
@@ -64,7 +73,15 @@
     "fs:allow-write-file",
     {
       "identifier": "opener:allow-open-path",
-      "allow": [{ "path": "/path/to/file" }, { "path": "$APPDATA/file" }]
+      "allow": [
+        { "path": "$HOME/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DESKTOP/**" },
+        { "path": "$APPDATA/**" },
+        { "path": "C:/**" },
+        { "path": "D:/**" }
+      ]
     },
     {
       "identifier": "opener:allow-open-url",

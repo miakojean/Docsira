@@ -1,6 +1,7 @@
 <template>
   <div
     class="my-file-cards"
+    :class="{ 'is-menu-open': isMenuOpen }"
     draggable="true"
     @dragstart="onDragStart"
     @click="$emit('open', document)"
@@ -19,7 +20,7 @@
 
       <!-- Dropdown des actions du document -->
       <div v-if="isMenuOpen" class="file-dropdown-menu">
-        <button type="button" class="dropdown-row" @click="emitAction('open')">
+        <button type="button" class="dropdown-row" @click="emitAction('preview')">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="size-4">
             <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
@@ -39,6 +40,13 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
           </svg>
           <span>Télécharger</span>
+        </button>
+
+        <button type="button" class="dropdown-row" @click="emitAction('share')">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="size-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+          </svg>
+          <span>Partager (lien)</span>
         </button>
 
         <button type="button" class="dropdown-row" @click="emitAction('move')">
@@ -267,6 +275,10 @@ export default {
   box-shadow: 0 10px 20px -3px rgba(37, 99, 235, 0.12);
 }
 
+.my-file-cards.is-menu-open {
+  z-index: 40;
+}
+
 .my-file-header {
   width: 100%;
   display: flex;
@@ -275,12 +287,12 @@ export default {
 }
 
 .kebab-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: #9ca3af;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: #f8fafc;
+  color: #475569;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -288,42 +300,56 @@ export default {
   transition: all 0.2s ease;
 }
 
+.kebab-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
 .kebab-btn:hover {
-  background: #f3f4f6;
-  color: #111827;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
 }
 
 .file-dropdown-menu {
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 0.25rem;
+  margin-top: 0.35rem;
   background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  padding: 0.35rem;
-  min-width: 160px;
-  z-index: 50;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px -5px rgba(15, 23, 42, 0.16), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  padding: 0.45rem;
+  min-width: 195px;
+  z-index: 60;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
 .dropdown-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.65rem;
   width: 100%;
-  padding: 0.5rem 0.65rem;
-  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
   border: none;
   background: transparent;
-  color: #374151;
-  font-size: 0.85rem;
+  color: #1f2937;
+  font-size: 0.9rem;
+  font-weight: 500;
   cursor: pointer;
   text-align: left;
+  white-space: nowrap;
   transition: all 0.15s ease;
+}
+
+.dropdown-row svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 .dropdown-row:hover {

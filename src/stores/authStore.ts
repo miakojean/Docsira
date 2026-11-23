@@ -1,8 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import { load } from "@tauri-apps/plugin-store";
-import { api } from "../services/api";
+import { api, clearAuthSession, getAuthStore } from "../services/api";
 
 export interface Customer {
   id?: string | number;
@@ -20,6 +19,7 @@ export const useAuthStore = defineStore("auth", () => {
   const isLoading = ref(false);
   const message = ref({ succesMessage: "", errorMessage: "" });
   const isAuthenticated = ref(false);
+  const isHydrated = ref(false);
   const user = ref<Customer>({
     id: "",
     email: "",
@@ -30,6 +30,36 @@ export const useAuthStore = defineStore("auth", () => {
   });
 
   const getIsAuthenticated = computed(() => isAuthenticated.value);
+
+  function resetLocalAuthState() {
+    isAuthenticated.value = false;
+    user.value = {
+      id: "",
+      email: "",
+      first_name: "",
+      last_name: "",
+      username: "",
+      password: "",
+    };
+  }
+
+  async function hydrateSession() {
+    try {
+      const store = await getAuthStore();
+      const token = await store.get<string>("auth_token");
+      const savedUser = await store.get<Customer>("user");
+      if (token) {
+        isAuthenticated.value = true;
+        if (savedUser) user.value = savedUser;
+      } else {
+        resetLocalAuthState();
+      }
+    } catch {
+      resetLocalAuthState();
+    } finally {
+      isHydrated.value = true;
+    }
+  }
 
   // Actions
   async function Registration(payload: Customer) {
@@ -62,17 +92,29 @@ export const useAuthStore = defineStore("auth", () => {
         return false;
       }
 
-      const data = await response.json();
-      if (data.access) {
-        const store = await load("authStore.json", { autoSave: true });
-        await store.set("auth_token", data.access);
-        await store.set("refresh_token", data.refresh);
-        await store.set("user", data.user);
+      const data = await response.json().catch(() => null);
+      if (!data?.access) {
+        message.value.errorMessage = "Réponse de connexion invalide (jeton manquant)";
+        return false;
       }
+
+      const store = await getAuthStore();
+      await store.set("auth_token", data.access);
+      if (data.refresh) {
+        await store.set("refresh_token", data.refresh);
+      }
+      if (data.user) {
+        await store.set("user", data.user);
+        user.value = data.user;
+      }
+      await store.save();
+
       isAuthenticated.value = true;
+      isHydrated.value = true;
       message.value.succesMessage = "Connexion réussie";
-      if (data.user) user.value = data.user;
-      router.push("/dashboard");
+      const redirect = router.currentRoute.value.query.redirect;
+      const target = typeof redirect === "string" && redirect.startsWith("/") ? redirect : "/dashboard";
+      await router.push(target);
       return true;
     } catch (error) {
       message.value.errorMessage = "Erreur serveur, veuillez réessayer plus tard";
@@ -93,7 +135,7 @@ export const useAuthStore = defineStore("auth", () => {
         const updatedUser = await response.json();
         user.value = updatedUser;
 
-        const store = await load("authStore.json", { autoSave: true });
+        const store = await getAuthStore();
         await store.set("user", updatedUser);
         await store.save();
         message.value.succesMessage = "Profile mis à jour";
@@ -144,7 +186,7 @@ export const useAuthStore = defineStore("auth", () => {
     message.value.errorMessage = "";
 
     try {
-      const store = await load("authStore.json", { autoSave: true });
+      const store = await getAuthStore();
       const refreshToken = await store.get<string>("refresh_token");
 
       if (refreshToken) {
@@ -158,21 +200,8 @@ export const useAuthStore = defineStore("auth", () => {
     } catch (error) {
       console.error("Erreur lors de la déconnexion serveur :", error);
     } finally {
-      const store = await load("authStore.json", { autoSave: true });
-      await store.delete("auth_token");
-      await store.delete("refresh_token");
-      await store.delete("user");
-      await store.save();
-
-      isAuthenticated.value = false;
-      user.value = {
-        id: "",
-        email: "",
-        first_name: "",
-        last_name: "",
-        username: "",
-        password: "",
-      };
+      await clearAuthSession();
+      resetLocalAuthState();
       await router.push("/login");
       isLoading.value = false;
     }
@@ -183,10 +212,15 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       const response = await api("/account/me/", "GET");
       if (response.ok) {
-        user.value = await response.json();
+        const profile = await response.json();
+        user.value = profile;
         isAuthenticated.value = true;
+        const store = await getAuthStore();
+        await store.set("user", profile);
+        await store.save();
       } else if (response.status === 401) {
-        isAuthenticated.value = false;
+        await clearAuthSession();
+        resetLocalAuthState();
         router.push("/login");
       }
     } catch (error) {
@@ -270,9 +304,12 @@ export const useAuthStore = defineStore("auth", () => {
     isLoading,
     user,
     isAuthenticated,
+    isHydrated,
     message,
     collaborators,
     getIsAuthenticated,
+    hydrateSession,
+    resetLocalAuthState,
     Registration,
     Login,
     Logout,

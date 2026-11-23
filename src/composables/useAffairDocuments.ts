@@ -2,10 +2,13 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { save as saveDialog } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
-import { useClientDossierStore, type Dossier } from '../stores/dossierStore';
-import { useDocumentStore, type DossierDocument, type SiraCategory } from '../stores/documentStore';
+import mammoth from 'mammoth';
+import { useClientDossierStore, type AffairShareLink, type Dossier } from '../stores/dossierStore';
+import { useDocumentStore, type DocumentShareLink, type DossierDocument, type SiraCategory } from '../stores/documentStore';
 import { useAffairFolderStore, type AffairSubfolder } from '../stores/affairFolderStore';
+import { DOCUMENT_MIME_BY_EXT, filterAllowedDocuments } from '../helpers/documentFormats';
 import type { PreviewData } from '../components/modale/filePreviewModale.vue';
+import type { MoveDocPayload } from '../components/modale/moveDocModale.vue';
 
 export function useAffairDocuments() {
   const route = useRoute();
@@ -105,23 +108,46 @@ export function useAffairDocuments() {
     folderToDelete.value = null;
   }
 
-  // ---------- Déplacement d'un document dans un sous-dossier ----------
+  // ---------- Déplacement d'un document (sous-dossier ou autre dossier/affaire) ----------
   const isMoveDocModalOpen = ref(false);
   const docToMove = ref<DossierDocument | null>(null);
   const targetFolderIdForMove = ref<string | null>(null);
+  const isMovingDoc = ref(false);
 
-  function openMoveDocModal(doc: DossierDocument) {
+  const otherDossiers = computed<Dossier[]>(() => {
+    return dossierStore.allDossiers.filter((d) => String(d.id) !== affairId.value);
+  });
+
+  async function openMoveDocModal(doc: DossierDocument) {
     docToMove.value = doc;
     targetFolderIdForMove.value = folderStore.docFolderMap[doc.id] ?? null;
     isMoveDocModalOpen.value = true;
+    if (dossierStore.allDossiers.length === 0) {
+      await dossierStore.fetchAllDossiers();
+    }
   }
 
-  function confirmMoveDoc(folderId: string | null) {
-    if (docToMove.value) {
-      folderStore.assignDocToFolder(docToMove.value.id, folderId);
-      isMoveDocModalOpen.value = false;
-      docToMove.value = null;
+  async function confirmMoveDoc(payload: MoveDocPayload) {
+    if (!docToMove.value) return;
+    if (payload.targetAffairId && payload.targetAffairId !== affairId.value) {
+      isMovingDoc.value = true;
+      try {
+        const ok = await docStore.moveDocumentToAffair(docToMove.value.id, payload.targetAffairId);
+        if (ok) {
+          folderStore.assignDocToFolder(docToMove.value.id, null);
+          isMoveDocModalOpen.value = false;
+          docToMove.value = null;
+          await Promise.all([refreshDossier(), dossierStore.fetchAllDossiers()]);
+        }
+      } finally {
+        isMovingDoc.value = false;
+      }
+      return;
     }
+
+    folderStore.assignDocToFolder(docToMove.value.id, payload.targetFolderId);
+    isMoveDocModalOpen.value = false;
+    docToMove.value = null;
   }
 
   function onDocDropOnFolder(docId: string, folderId: string) {
@@ -192,8 +218,12 @@ export function useAffairDocuments() {
     const target = event.target as HTMLInputElement;
     const files = Array.from(target.files ?? []);
     target.value = '';
-    if (files.length > 0) {
-      openUploadDocModal(files);
+    if (files.length === 0) return;
+
+    const { valid, errorMessage } = filterAllowedDocuments(files);
+    if (errorMessage) docStore.errorMessage = errorMessage;
+    if (valid.length > 0) {
+      openUploadDocModal(valid);
     }
   }
 
@@ -202,8 +232,12 @@ export function useAffairDocuments() {
     const dt = e.dataTransfer;
     if (!dt) return;
     const files = Array.from(dt.files);
-    if (files.length > 0) {
-      openUploadDocModal(files);
+    if (files.length === 0) return;
+
+    const { valid, errorMessage } = filterAllowedDocuments(files);
+    if (errorMessage) docStore.errorMessage = errorMessage;
+    if (valid.length > 0) {
+      openUploadDocModal(valid);
     }
   }
 
@@ -213,7 +247,8 @@ export function useAffairDocuments() {
   async function typedBlob(doc: DossierDocument) {
     const blob = await docStore.fetchFileBlob(doc.id);
     if (!blob) return null;
-    const type = mimeByExt[doc.extension];
+    const ext = (doc.extension || '').toLowerCase();
+    const type = DOCUMENT_MIME_BY_EXT[ext] ?? mimeByExt[ext];
     return type ? new Blob([blob], { type }) : blob;
   }
 
@@ -221,28 +256,91 @@ export function useAffairDocuments() {
     const ext = (doc.extension || '').toLowerCase();
     const isImg = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext);
     const isPdf = ext === 'pdf';
+    const isDocx = ext === 'docx';
+    const isLegacyDoc = ext === 'doc';
 
-    if (!isImg && !isPdf) {
-      return downloadDocument(doc);
-    }
+    closePreview();
 
-    const blob = await typedBlob(doc);
-    if (!blob) {
-      docStore.errorMessage = 'Impossible de charger le document pour la visualisation.';
+    if (isLegacyDoc) {
+      preview.value = {
+        title: doc.title,
+        kind: 'unsupported',
+        message: "L'aperçu intégré n'est pas disponible pour l'ancien format Word (.doc). Téléchargez le fichier pour l'ouvrir dans Word.",
+        doc,
+      };
       return;
     }
 
-    closePreview();
+    if (!isImg && !isPdf && !isDocx) {
+      preview.value = {
+        title: doc.title,
+        kind: 'unsupported',
+        message: `L'aperçu intégré n'est pas disponible pour le format .${ext || 'inconnu'}.`,
+        doc,
+      };
+      return;
+    }
+
     preview.value = {
-      url: URL.createObjectURL(blob),
       title: doc.title,
-      kind: isImg ? 'image' : 'pdf',
+      kind: 'loading',
       doc,
     };
+
+    const blob = await typedBlob(doc);
+    if (!blob) {
+      closePreview();
+      if (!docStore.errorMessage) {
+        docStore.errorMessage = 'Impossible de charger le document pour la visualisation.';
+      }
+      return;
+    }
+
+    if (isImg) {
+      preview.value = {
+        title: doc.title,
+        kind: 'image',
+        url: URL.createObjectURL(blob),
+        doc,
+      };
+      return;
+    }
+
+    if (isPdf) {
+      const buffer = await blob.arrayBuffer();
+      preview.value = {
+        title: doc.title,
+        kind: 'pdf',
+        data: buffer,
+        doc,
+      };
+      return;
+    }
+
+    if (isDocx) {
+      try {
+        const arrayBuffer = await blob.arrayBuffer();
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        preview.value = {
+          title: doc.title,
+          kind: 'docx',
+          html: result.value,
+          doc,
+        };
+      } catch (err) {
+        console.error('Erreur lecture DOCX :', err);
+        preview.value = {
+          title: doc.title,
+          kind: 'unsupported',
+          message: "Impossible de prévisualiser ce fichier Word (.docx). Vous pouvez le télécharger pour l'ouvrir dans Word.",
+          doc,
+        };
+      }
+    }
   }
 
   function closePreview() {
-    if (preview.value) URL.revokeObjectURL(preview.value.url);
+    if (preview.value?.url) URL.revokeObjectURL(preview.value.url);
     preview.value = null;
   }
 
@@ -264,15 +362,153 @@ export function useAffairDocuments() {
 
   // ---------- Renommage Document ----------
   const renamingDoc = ref<DossierDocument | null>(null);
+  const isRenaming = ref(false);
 
   function openRename(doc: DossierDocument) {
+    docStore.errorMessage = '';
     renamingDoc.value = doc;
   }
 
   async function confirmRename(newName: string) {
     if (!renamingDoc.value || !newName.trim()) return;
-    if (await docStore.renameDocument(renamingDoc.value.id, newName.trim())) {
-      renamingDoc.value = null;
+    isRenaming.value = true;
+    try {
+      const targetId = renamingDoc.value.id;
+      const trimmed = newName.trim();
+      if (await docStore.renameDocument(targetId, trimmed)) {
+        if (docForDetails.value?.id === targetId) {
+          docForDetails.value = { ...docForDetails.value, title: trimmed };
+        }
+        renamingDoc.value = null;
+      }
+    } finally {
+      isRenaming.value = false;
+    }
+  }
+
+  // ---------- Partage par lien (Document ou Dossier entier) ----------
+  const isShareModalOpen = ref(false);
+  const shareMode = ref<'document' | 'dossier'>('document');
+  const docToShare = ref<DossierDocument | null>(null);
+  const shareLinks = ref<Array<DocumentShareLink | AffairShareLink>>([]);
+  const isShareLoading = ref(false);
+  const isShareCreating = ref(false);
+  const shareError = ref('');
+
+  const shareTargetTitle = computed(() => {
+    if (shareMode.value === 'dossier') {
+      if (!dossier.value) return 'Dossier';
+      return `${dossier.value.reference_affair} • ${dossier.value.title}`;
+    }
+    return docToShare.value?.title || docToShare.value?.file_name || '';
+  });
+
+  const shareDescription = computed(() => {
+    if (shareMode.value === 'dossier') {
+      return "Créez un lien de partage pour permettre à un collaborateur ou à un client de télécharger l'ensemble des documents de ce dossier (archive ZIP).";
+    }
+    return "Créez un lien de partage et envoyez-le à un collaborateur ou à un client pour qu'il puisse consulter et télécharger ce document.";
+  });
+
+  async function openShareModal(doc: DossierDocument) {
+    shareMode.value = 'document';
+    docToShare.value = doc;
+    shareLinks.value = [];
+    shareError.value = '';
+    isShareModalOpen.value = true;
+    isShareLoading.value = true;
+    try {
+      const existing = await docStore.fetchShareLinks(doc.id);
+      if (existing.length > 0) {
+        shareLinks.value = existing;
+      } else {
+        const created = await docStore.createShareLink(doc.id, 7);
+        if (created) {
+          shareLinks.value = [created];
+        } else if (docStore.errorMessage) {
+          shareError.value = docStore.errorMessage;
+        }
+      }
+    } finally {
+      isShareLoading.value = false;
+    }
+  }
+
+  async function openShareDossierModal() {
+    if (!affairId.value) return;
+    shareMode.value = 'dossier';
+    docToShare.value = null;
+    shareLinks.value = [];
+    shareError.value = '';
+    isShareModalOpen.value = true;
+    isShareLoading.value = true;
+    try {
+      const existing = await dossierStore.fetchAffairShareLinks(affairId.value);
+      if (existing.length > 0) {
+        shareLinks.value = existing;
+      } else {
+        const created = await dossierStore.createAffairShareLink(affairId.value, 7);
+        if (created) {
+          shareLinks.value = [created];
+        } else if (dossierStore.errorMessage) {
+          shareError.value = dossierStore.errorMessage;
+        }
+      }
+    } finally {
+      isShareLoading.value = false;
+    }
+  }
+
+  function closeShareModal() {
+    isShareModalOpen.value = false;
+    docToShare.value = null;
+    shareError.value = '';
+  }
+
+  async function createNewShareLink(expiresInDays: number | null) {
+    isShareCreating.value = true;
+    shareError.value = '';
+    try {
+      if (shareMode.value === 'dossier') {
+        const created = await dossierStore.createAffairShareLink(affairId.value, expiresInDays);
+        if (created) {
+          shareLinks.value = [created, ...shareLinks.value];
+        } else {
+          shareError.value = dossierStore.errorMessage || 'Impossible de créer le lien.';
+        }
+        return;
+      }
+
+      if (!docToShare.value) return;
+      const created = await docStore.createShareLink(docToShare.value.id, expiresInDays);
+      if (created) {
+        shareLinks.value = [created, ...shareLinks.value];
+      } else {
+        shareError.value = docStore.errorMessage || 'Impossible de créer le lien.';
+      }
+    } finally {
+      isShareCreating.value = false;
+    }
+  }
+
+  async function revokeExistingShareLink(linkId: string) {
+    shareError.value = '';
+    if (shareMode.value === 'dossier') {
+      const ok = await dossierStore.revokeAffairShareLink(affairId.value, linkId);
+      if (ok) {
+        shareLinks.value = shareLinks.value.filter((l) => l.id !== linkId);
+      } else {
+        shareError.value = dossierStore.errorMessage || 'Impossible de révoquer ce lien.';
+      }
+      return;
+    }
+
+    if (!docToShare.value) return;
+    const ok = await docStore.revokeShareLink(docToShare.value.id, linkId);
+    if (ok) {
+      shareLinks.value = shareLinks.value.filter((l) => l.id !== linkId);
+    } else {
+      shareError.value = docStore.errorMessage || 'Impossible de révoquer ce lien.';
     }
   }
 
@@ -286,8 +522,11 @@ export function useAffairDocuments() {
   }
 
   function openCollaboratorSettings() {
+    const selected = docForDetails.value;
     isDetailsOpen.value = false;
-    router.push('/dashboard/settings/collaborators');
+    if (selected) {
+      void openShareModal(selected);
+    }
   }
 
   function downloadDetailsDocument() {
@@ -319,9 +558,12 @@ export function useAffairDocuments() {
     isSiraModalOpen.value = false;
   }
 
-  async function changeDocumentCategory(doc: DossierDocument, category: any) {
+  async function changeDocumentCategory(doc: DossierDocument, category: SiraCategory) {
     const ok = await docStore.updateDocumentCategory(doc.id, category);
     if (ok) {
+      if (docForDetails.value?.id === doc.id) {
+        docForDetails.value = { ...docForDetails.value, category };
+      }
       await refreshDossier();
     }
   }
@@ -353,21 +595,23 @@ export function useAffairDocuments() {
   }
 
   onMounted(async () => {
-    await Promise.all([
+    const tasks: Promise<unknown>[] = [
       refreshDossier(),
       docStore.fetchDocuments(affairId.value),
-      folderStore.loadStore(),
-    ]);
+    ];
+    if (!folderStore.isLoaded) tasks.push(folderStore.loadStore());
+    await Promise.all(tasks);
   });
 
   watch(affairId, async () => {
     closePreview();
     currentFolderId.value = null;
-    await Promise.all([
+    const tasks: Promise<unknown>[] = [
       refreshDossier(),
       docStore.fetchDocuments(affairId.value),
-      folderStore.loadStore(),
-    ]);
+    ];
+    if (!folderStore.isLoaded) tasks.push(folderStore.loadStore());
+    await Promise.all(tasks);
   });
 
   onUnmounted(() => {
@@ -404,6 +648,8 @@ export function useAffairDocuments() {
     isMoveDocModalOpen,
     docToMove,
     targetFolderIdForMove,
+    otherDossiers,
+    isMovingDoc,
     openMoveDocModal,
     confirmMoveDoc,
     onDocDropOnFolder,
@@ -426,8 +672,23 @@ export function useAffairDocuments() {
     downloadDocument,
     // Rename doc
     renamingDoc,
+    isRenaming,
     openRename,
     confirmRename,
+    // Share link
+    isShareModalOpen,
+    docToShare,
+    shareTargetTitle,
+    shareDescription,
+    shareLinks,
+    isShareLoading,
+    isShareCreating,
+    shareError,
+    openShareModal,
+    openShareDossierModal,
+    closeShareModal,
+    createNewShareLink,
+    revokeExistingShareLink,
     // Details doc
     isDetailsOpen,
     docForDetails,

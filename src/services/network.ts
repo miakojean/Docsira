@@ -8,8 +8,11 @@ export function checkConnection(): Promise<boolean> {
   return Promise.resolve(navigator.onLine);
 }
 
-export function watchConnection(onChange: (online: boolean) => void) {
-  let last: boolean | null = null;
+export function watchConnection(
+  onChange: (online: boolean) => void,
+  initialOnline: boolean | null = null,
+) {
+  let last: boolean | null = initialOnline;
   return setInterval(async () => {
     const now = await checkConnection();
     if (now !== last) {

@@ -1,6 +1,14 @@
 import os
 from rest_framework import serializers
-from .models import Affair, Document, get_user_display_name
+from .models import (
+    ALLOWED_DOCUMENT_EXTENSIONS,
+    Affair,
+    AffairShareLink,
+    Document,
+    DocumentShareLink,
+    get_user_display_name,
+    resolve_document_file_path,
+)
 from Client.models import Client
 from account.models import Collaborator
 
@@ -98,6 +106,15 @@ class DocumentSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+    def validate_file(self, value):
+        if value:
+            ext = os.path.splitext(value.name)[1].lower()
+            if ext not in ALLOWED_DOCUMENT_EXTENSIONS:
+                raise serializers.ValidationError(
+                    "Format de fichier non autorisé. Seuls les documents PDF (.pdf), Word (.doc, .docx) et images (.png, .jpg, .jpeg, .webp, .gif) sont acceptés."
+                )
+        return value
+
     def get_file_name(self, obj):
         return os.path.basename(obj.file.name) if obj.file else ''
 
@@ -108,10 +125,67 @@ class DocumentSerializer(serializers.ModelSerializer):
         try:
             return obj.file.size
         except (OSError, ValueError):
+            file_path = resolve_document_file_path(obj)
+            if file_path:
+                try:
+                    return os.path.getsize(file_path)
+                except OSError:
+                    return 0
             return 0  # fichier manquant sur le disque
 
     def get_download_url(self, obj):
         return f"/affairs/documents/{obj.id}/download/"
 
-    def __str__(self):
-        return f"{self.title} ({self.affair.reference_affair})"
+
+class DocumentShareLinkSerializer(serializers.ModelSerializer):
+    share_url = serializers.SerializerMethodField()
+    is_expired = serializers.ReadOnlyField()
+
+    class Meta:
+        model = DocumentShareLink
+        fields = [
+            'id',
+            'document',
+            'token',
+            'share_url',
+            'created_at',
+            'expires_at',
+            'is_active',
+            'is_expired',
+            'download_count',
+        ]
+        read_only_fields = ['id', 'document', 'token', 'share_url', 'created_at', 'is_expired', 'download_count']
+
+    def get_share_url(self, obj):
+        path = f"/affairs/share/{obj.token}/"
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(path)
+        return path
+
+
+class AffairShareLinkSerializer(serializers.ModelSerializer):
+    share_url = serializers.SerializerMethodField()
+    is_expired = serializers.ReadOnlyField()
+
+    class Meta:
+        model = AffairShareLink
+        fields = [
+            'id',
+            'affair',
+            'token',
+            'share_url',
+            'created_at',
+            'expires_at',
+            'is_active',
+            'is_expired',
+            'download_count',
+        ]
+        read_only_fields = ['id', 'affair', 'token', 'share_url', 'created_at', 'is_expired', 'download_count']
+
+    def get_share_url(self, obj):
+        path = f"/affairs/share/dossier/{obj.token}/"
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(path)
+        return path

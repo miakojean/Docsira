@@ -72,7 +72,7 @@ class Client(models.Model):
     # Gestion administrative
     date_creation = models.DateTimeField(_("Date de création"), auto_now_add=True)
     date_modification = models.DateTimeField(_("Date de modification"), auto_now=True)
-    date_premier_contact = models.DateField(_("Date premier contact"), default=timezone.now)
+    date_premier_contact = models.DateField(_("Date premier contact"), default=timezone.localdate)
     notes = models.TextField(_("Notes"), blank=True, help_text=_("Notes internes sur le client"))
 
     # Relations

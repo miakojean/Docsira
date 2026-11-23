@@ -7,6 +7,7 @@ from .serializers import ClientSerializer
 from .models import Client
 from account.models import CustomUser
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 
 def get_firm_users(user):
     if user.account_type == CustomUser.AccountType.COLLABORATOR:
@@ -48,10 +49,20 @@ class ManageClient(APIView):
                 'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
 
-    def get(self, request):
-        is_trash = request.query_params.get('trash', 'false').lower() == 'true'
-        
+    def get(self, request, client_id=None):
         users_to_include = get_firm_users(request.user)
+
+        if client_id is not None:
+            try:
+                client = Client.objects.get(id=client_id, charge_de_clientele__in=users_to_include)
+                return Response(ClientSerializer(client).data, status=status.HTTP_200_OK)
+            except Client.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': 'Client non trouvé',
+                }, status=status.HTTP_404_NOT_FOUND)
+
+        is_trash = request.query_params.get('trash', 'false').lower() == 'true'
         clients = Client.objects.filter(charge_de_clientele__in=users_to_include, is_deleted=is_trash)
         if not is_trash:
             clients = clients.exclude(statut='ARCHIVE')
@@ -247,26 +258,20 @@ class PermanentDeleteClient(APIView):
         try:
             user = request.user
             
-            # 1. Déterminer le "propriétaire" du cabinet et vérifier les permissions
+            # 1. Vérifier les permissions pour les collaborateurs
             if hasattr(user, 'collaborator_profile'):
                 collab_profile = user.collaborator_profile
-                
+
                 # Si le collaborateur n'est pas un administrateur, on bloque l'action
-                if collab_profile.role != 'admin': 
+                if collab_profile.role != 'admin':
                     return Response({
                         'success': False,
                         'message': 'Action refusée : Seul un administrateur peut supprimer définitivement un client.'
                     }, status=status.HTTP_403_FORBIDDEN)
-                
-                # Le client appartient au compte principal de ce collaborateur
-                owner = collab_profile.main_account
-            else:
-                # L'utilisateur connecté est le compte principal (Firme/Individu)
-                owner = user
 
-            # 2. Récupérer le client en s'assurant qu'il appartient bien au cabinet 
-            # (On utilise 'owner' pour sécuriser la vérification)
-            client = Client.objects.get(id=client_id, charge_de_clientele=owner)
+            # 2. Récupérer le client en s'assurant qu'il appartient bien au cabinet
+            users_to_include = get_firm_users(user)
+            client = Client.objects.get(id=client_id, charge_de_clientele__in=users_to_include)
 
             # 3. Suppression physique définitive de la base de données
             client.delete()
@@ -281,6 +286,12 @@ class PermanentDeleteClient(APIView):
                 'success': False,
                 'message': 'Client introuvable ou vous n\'avez pas l\'autorisation de le supprimer.'
             }, status=status.HTTP_404_NOT_FOUND)
+
+        except ProtectedError:
+            return Response({
+                'success': False,
+                'message': 'Impossible de supprimer définitivement ce client car il possède encore des dossiers associés.'
+            }, status=status.HTTP_409_CONFLICT)
             
         except Exception as e:
             return Response({

@@ -1,33 +1,35 @@
 <template>
   <Teleport to="body">
     <Transition name="modal-fade">
-      <div v-if="isOpen" class="modal-backdrop" @click.self="$emit('close')">
-        <div class="modal-box">
-          <div class="modal-box-header">
-            <h3 class="modal-box-title">Renommer le document</h3>
-            <button type="button" class="modal-box-close" @click="$emit('close')">×</button>
+      <div v-if="isOpen" class="rename-modal-overlay" @click.self="$emit('close')">
+        <div class="rename-modal-card" role="dialog" aria-modal="true">
+          <div class="rename-modal-header">
+            <h3 class="rename-modal-title">Renommer le document</h3>
+            <button type="button" class="rename-modal-close" @click="$emit('close')">×</button>
           </div>
-          <div class="modal-box-body">
+          <div class="rename-modal-body">
             <label class="input-label" for="renameDocInput">Titre du document</label>
             <input
+              ref="inputRef"
               id="renameDocInput"
               type="text"
               v-model="renameValue"
               class="text-input"
               placeholder="Nom du document"
+              :disabled="isLoading"
               @keyup.enter="handleConfirm"
-              autofocus
             />
+            <p v-if="errorMessage" class="error-text">{{ errorMessage }}</p>
           </div>
-          <div class="modal-box-footer">
-            <button type="button" class="btn btn-secondary" @click="$emit('close')">Annuler</button>
+          <div class="rename-modal-footer">
+            <button type="button" class="btn" :disabled="isLoading" @click="$emit('close')">Annuler</button>
             <button
               type="button"
               class="btn btn-primary"
-              :disabled="!isValid"
+              :disabled="!isValid || isLoading"
               @click="handleConfirm"
             >
-              Enregistrer
+              {{ isLoading ? 'Enregistrement...' : 'Enregistrer' }}
             </button>
           </div>
         </div>
@@ -37,12 +39,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, nextTick } from 'vue';
 
-const props = defineProps<{
-  isOpen: boolean;
-  initialName?: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    isOpen: boolean;
+    initialName?: string;
+    isLoading?: boolean;
+    errorMessage?: string;
+  }>(),
+  {
+    initialName: '',
+    isLoading: false,
+    errorMessage: '',
+  }
+);
 
 const emit = defineEmits<{
   (e: 'close'): void;
@@ -50,12 +61,16 @@ const emit = defineEmits<{
 }>();
 
 const renameValue = ref('');
+const inputRef = ref<HTMLInputElement | null>(null);
 
 watch(
   () => [props.isOpen, props.initialName],
-  () => {
+  async () => {
     if (props.isOpen) {
       renameValue.value = props.initialName ?? '';
+      await nextTick();
+      inputRef.value?.focus();
+      inputRef.value?.select();
     }
   },
   { immediate: true }
@@ -67,14 +82,14 @@ const isValid = computed(() => {
 });
 
 function handleConfirm() {
-  if (isValid.value) {
+  if (isValid.value && !props.isLoading) {
     emit('rename', renameValue.value.trim());
   }
 }
 </script>
 
 <style scoped>
-.modal-backdrop {
+.rename-modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 10000;
@@ -85,7 +100,7 @@ function handleConfirm() {
   padding: 1.5rem;
 }
 
-.modal-box {
+.rename-modal-card {
   width: 100%;
   max-width: 440px;
   background: #ffffff;
@@ -97,20 +112,20 @@ function handleConfirm() {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-.modal-box-header {
+.rename-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.modal-box-title {
+.rename-modal-title {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 600;
   color: #111827;
 }
 
-.modal-box-close {
+.rename-modal-close {
   background: none;
   border: none;
   font-size: 1.4rem;
@@ -119,7 +134,7 @@ function handleConfirm() {
   line-height: 1;
 }
 
-.modal-box-close:hover {
+.rename-modal-close:hover {
   color: #4b5563;
 }
 
@@ -150,7 +165,13 @@ function handleConfirm() {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-.modal-box-footer {
+.error-text {
+  margin: 0.45rem 0 0;
+  font-size: 0.8rem;
+  color: #dc2626;
+}
+
+.rename-modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
@@ -164,15 +185,6 @@ function handleConfirm() {
   cursor: pointer;
   border: none;
   transition: all 0.2s ease;
-}
-
-.btn-secondary {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.btn-secondary:hover {
-  background: #e5e7eb;
 }
 
 .btn-primary {

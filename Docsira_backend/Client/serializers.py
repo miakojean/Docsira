@@ -21,7 +21,7 @@ class ClientSerializer(serializers.ModelSerializer):
     date_premier_contact = serializers.DateField(
         required=False,
         allow_null=True,
-        default=timezone.now().date()  # Date par défaut (pas datetime)
+        default=timezone.localdate
     )
     
     class Meta:
@@ -83,14 +83,18 @@ class ClientSerializer(serializers.ModelSerializer):
         type_client = data.get('type_client', self.instance.type_client if self.instance else None)
         instance_pk = self.instance.pk if self.instance else None
 
-        # 1. Champs obligatoires selon le type (inchangé)
+        # 1. Champs obligatoires selon le type (avec fallback sur l'instance en PATCH partiel)
+        nom_val = data.get('nom', self.instance.nom if self.instance else None)
+        prenoms_val = data.get('prenoms', self.instance.prenoms if self.instance else None)
+        raison_sociale_val = data.get('raison_sociale', self.instance.raison_sociale if self.instance else None)
+
         if type_client == 'PERSONNE_PHYSIQUE':
-            if not data.get('nom'):
+            if not nom_val:
                 raise serializers.ValidationError({'nom': 'Le nom est obligatoire pour une personne physique.'})
-            if not data.get('prenoms'):
+            if not prenoms_val:
                 raise serializers.ValidationError({'prenoms': 'Le ou les prénoms sont obligatoires pour une personne physique.'})
         elif type_client == 'PERSONNE_MORALE':
-            if not data.get('raison_sociale'):
+            if not raison_sociale_val:
                 raise serializers.ValidationError({'raison_sociale': 'La raison sociale est obligatoire pour une personne morale.'})
 
         # Propriétaire du client : celui du payload, sinon celui de l'instance, sinon l'utilisateur connecté

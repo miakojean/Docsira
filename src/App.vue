@@ -67,7 +67,7 @@ onMounted(async () => {
         } else {
             notifPopup.value.myMessage = "Vous n'êtes pas connecté à internet";
         }
-    });
+    }, estEnLigne);
 });
 
 onUnmounted(() => {
