@@ -236,12 +236,25 @@ export const useAuthStore = defineStore("auth", () => {
   async function fetchCollaborators() {
     isLoading.value = true;
     try {
-      const response = await api("/account/collaborators/", "GET", undefined, { requireAuth: true });
-      if (response.ok) {
-        collaborators.value = await response.json();
-        console.log("your collaborator", collaborators.value);
-      } else {
-        console.error("Failed to fetch collaborators");
+      const allItems: any[] = [];
+      let page = 1;
+      for (;;) {
+        const response = await api(`/account/collaborators/?page=${page}`, "GET", undefined, { requireAuth: true });
+        if (!response.ok) {
+          console.error("Failed to fetch collaborators");
+          return;
+        }
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          collaborators.value = data;
+          return;
+        }
+        allItems.push(...(data.results ?? []));
+        if (!data.next) {
+          collaborators.value = allItems;
+          return;
+        }
+        page += 1;
       }
     } catch (error) {
       console.error(error);

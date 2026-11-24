@@ -5,7 +5,7 @@
         <div v-if="authStore.collaborators.length > 0" class="content-container">
 
             <div class="cards-grid" v-if="filteredCollaborators.length > 0">
-                <template v-for="(collaborator, index) in filteredCollaborators" :key="collaborator.id || index">
+                <template v-for="(collaborator, index) in paginatedCollaborators" :key="collaborator.id || index">
                     <CollaboratorCard
                         v-if="collaborator.status === 'accepted'"
                         :name="getCollaboratorName(collaborator.user)"
@@ -24,8 +24,16 @@
                     />
                 </template>
             </div>
+
+            <Pagination
+                v-if="filteredCollaborators.length > 0"
+                v-model="currentPage"
+                :totalItems="filteredCollaborators.length"
+                :pageSize="pageSize"
+                :hideOnSinglePage="false"
+            />
             
-            <div v-else class="flex-1 w-full flex justify-center items-center">
+            <div v-if="filteredCollaborators.length === 0" class="flex-1 w-full flex justify-center items-center">
                 <emptyCards 
                     title="Aucun résultat"
                     :mainText="`Aucun collaborateur trouvé pour '${searchQuery}'`"
@@ -83,7 +91,8 @@ import PendingCollaboratorCard from '../../cards/PendingCollaboratorCard.vue';
 import CollaboratorCard from '../../cards/CollaboratorCard.vue';
 import inviteModale from '../../modale/inviteModale.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
-import { ref, onMounted, computed } from 'vue';
+import Pagination from '../../tools/Pagination.vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useAuthStore } from '../../../stores/authStore';
 import SuccesModale from '../../modale/succesModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
@@ -104,6 +113,8 @@ const isOwner = computed(() => {
 });
 
 const searchQuery = ref("");
+const currentPage = ref(1);
+const pageSize = 12;
 
 const filteredCollaborators = computed(() => {
     if (!searchQuery.value) return authStore.collaborators;
@@ -115,6 +126,15 @@ const filteredCollaborators = computed(() => {
         const fullName = `${c.user.first_name || ''} ${c.user.last_name || ''}`.toLowerCase().trim();
         return username.includes(lowerQuery) || email.includes(lowerQuery) || fullName.includes(lowerQuery);
     });
+});
+
+watch(searchQuery, () => {
+    currentPage.value = 1;
+});
+
+const paginatedCollaborators = computed(() => {
+    const start = (currentPage.value - 1) * pageSize;
+    return filteredCollaborators.value.slice(start, start + pageSize);
 });
 
 function getCollaboratorName(user: any) {

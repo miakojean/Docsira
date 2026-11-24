@@ -3,6 +3,7 @@ from rest_framework import serializers
 from .models import (
     ALLOWED_DOCUMENT_EXTENSIONS,
     Affair,
+    AffairComment,
     AffairShareLink,
     Document,
     DocumentShareLink,
@@ -46,11 +47,11 @@ class AffairSerializer(serializers.ModelSerializer):
         return "Système"
 
     def get_documents_count(self, obj):
-        return obj.documents.count()
+        return obj.documents.filter(is_deleted=False).count()
 
     def get_documents_preview(self, obj):
         """Extensions (max 3) des derniers documents, pour l'aperçu du dossier."""
-        docs = obj.documents.order_by('-uploaded_at')[:3]
+        docs = obj.documents.filter(is_deleted=False).order_by('-uploaded_at')[:3]
         return [
             os.path.splitext(d.file.name)[1].lstrip('.').lower() if d.file else ''
             for d in docs
@@ -77,15 +78,19 @@ class DocumentSerializer(serializers.ModelSerializer):
     extension = serializers.SerializerMethodField()
     size = serializers.SerializerMethodField()
     download_url = serializers.SerializerMethodField()
+    affair_title = serializers.CharField(source='affair.title', read_only=True)
+    affair_reference = serializers.CharField(source='affair.reference_affair', read_only=True)
     file = serializers.FileField(required=False)
 
     class Meta:
         model = Document
-        fields = ['id', 'affair', 'title', 'file', 'file_name', 'extension', 'size',
-                  'download_url', 'uploaded_at', 'parent', 'relation', 'version',
-                  'category', 'valide', 'pos_x', 'pos_y']
+        fields = ['id', 'affair', 'affair_title', 'affair_reference', 'title', 'file',
+                  'file_name', 'extension', 'size', 'download_url', 'uploaded_at',
+                  'parent', 'relation', 'version', 'category', 'valide', 'pos_x', 'pos_y',
+                  'is_deleted', 'deleted_at']
         read_only_fields = ['file_name', 'extension', 'size', 'download_url',
-                            'parent', 'relation', 'version']
+                            'affair_title', 'affair_reference',
+                            'parent', 'relation', 'version', 'is_deleted', 'deleted_at']
 
     def create(self, validated_data):
         request = self.context.get('request')
@@ -189,3 +194,106 @@ class AffairShareLinkSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(path)
         return path
+
+
+class AffairCommentSerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+    author_initials = serializers.SerializerMethodField()
+    document_title = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AffairComment
+        fields = [
+            'id',
+            'affair',
+            'document',
+            'document_title',
+            'parent',
+            'author',
+            'author_name',
+            'author_initials',
+            'content',
+            'is_edited',
+            'created_at',
+            'updated_at',
+            'can_edit',
+            'can_delete',
+        ]
+        read_only_fields = [
+            'id',
+            'affair',
+            'author',
+            'author_name',
+            'author_initials',
+            'document_title',
+            'is_edited',
+            'created_at',
+            'updated_at',
+            'can_edit',
+            'can_delete',
+        ]
+
+    def get_author_name(self, obj):
+        user = obj.author
+        if not user:
+            return "Utilisateur"
+        full_name = f"{getattr(user, 'first_name', '')} {getattr(user, 'last_name', '')}".strip()
+        return full_name or user.username or user.email or "Utilisateur"
+
+    def get_author_initials(self, obj):
+        name = self.get_author_name(obj)
+        parts = [p for p in name.split() if p]
+        if len(parts) >= 2:
+            return f"{parts[0][0]}{parts[1][0]}".upper()
+        return name[:2].upper() if name else "U"
+
+    def get_document_title(self, obj):
+        if obj.document and not obj.document.is_deleted:
+            return obj.document.title or os.path.basename(obj.document.file.name)
+        return None
+
+    def get_can_edit(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return False
+        return obj.author_id == request.user.id
+
+    def get_can_delete(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return False
+        user = request.user
+        if obj.author_id == user.id or obj.affair.firm_id == user.id:
+            return True
+        if hasattr(user, 'collaborator_profile'):
+            collab = user.collaborator_profile
+            if collab.main_account_id == obj.affair.firm_id and collab.role == 'admin':
+                return True
+        return False
+
+    def validate_content(self, value):
+        cleaned = (value or '').strip()
+        if not cleaned:
+            raise serializers.ValidationError("Le commentaire ne peut pas être vide.")
+        if len(cleaned) > 4000:
+            raise serializers.ValidationError("Le commentaire ne peut pas dépasser 4000 caractères.")
+        return cleaned
+
+    def validate(self, attrs):
+        affair = self.context.get('affair') or (self.instance.affair if self.instance else None)
+        document = attrs.get('document')
+        parent = attrs.get('parent')
+
+        if affair and document and (document.affair_id != affair.id or document.is_deleted):
+            raise serializers.ValidationError({"document": "Ce document n'appartient pas à ce dossier."})
+
+        if affair and parent:
+            if parent.affair_id != affair.id:
+                raise serializers.ValidationError({"parent": "Le commentaire parent n'appartient pas à ce dossier."})
+            # Limiter l'imbrication à 1 niveau de réponses pour garder la discussion lisible
+            if parent.parent_id is not None:
+                attrs['parent'] = parent.parent
+
+        return attrs

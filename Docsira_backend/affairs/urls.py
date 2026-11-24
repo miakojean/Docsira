@@ -1,5 +1,7 @@
 from .views import (
     AffairArchiveView,
+    AffairCommentDetailView,
+    AffairCommentsView,
     AffairDocumentsView,
     AffairShareLinkView,
     AffairView,
@@ -8,8 +10,12 @@ from .views import (
     DocumentShareLinkView,
     DocumentVersionView,
     DocumentView,
+    PermanentDeleteAffairView,
+    PermanentDeleteDocumentView,
     PublicAffairShareView,
     PublicDocumentShareView,
+    RestoreAffairView,
+    RestoreDocumentView,
 )
 from django.urls import path
 
@@ -17,14 +23,20 @@ urlpatterns = [
     path('archives/', ArchivedAffairsView.as_view(), name='affair-archives'),
     path('', AffairView.as_view(), name='affair-list'),
     path('<uuid:affair_id>/archive/', AffairArchiveView.as_view(), name='affair-archive'),
+    path('<uuid:affair_id>/restore/', RestoreAffairView.as_view(), name='affair-restore'),
+    path('<uuid:affair_id>/permanent-delete/', PermanentDeleteAffairView.as_view(), name='affair-permanent-delete'),
     path('<uuid:affair_id>/share-links/', AffairShareLinkView.as_view(), name='affair-share-links'),
     path('<uuid:affair_id>/share-links/<uuid:link_id>/', AffairShareLinkView.as_view(), name='affair-share-link-detail'),
+    path('<uuid:affair_id>/comments/', AffairCommentsView.as_view(), name='affair-comments'),
+    path('comments/<uuid:comment_id>/', AffairCommentDetailView.as_view(), name='affair-comment-detail'),
     path('<uuid:affair_id>/', AffairView.as_view(), name='affair-detail'),
     path('<uuid:affair_id>/documents/', AffairDocumentsView.as_view(), name='affair-documents'),
     # Documents d'un dossier
     path('documents/', DocumentView.as_view(), name="document-list"),
     path('documents/<uuid:document_id>/download/', DocumentDownloadView.as_view(), name='document-download'),
     path('documents/<uuid:document_id>/versions/', DocumentVersionView.as_view(), name='document-versions'),
+    path('documents/<uuid:document_id>/restore/', RestoreDocumentView.as_view(), name='document-restore'),
+    path('documents/<uuid:document_id>/permanent-delete/', PermanentDeleteDocumentView.as_view(), name='document-permanent-delete'),
     path('documents/<uuid:document_id>/share-links/', DocumentShareLinkView.as_view(), name='document-share-links'),
     path('documents/<uuid:document_id>/share-links/<uuid:link_id>/', DocumentShareLinkView.as_view(), name='document-share-link-detail'),
     path('documents/<uuid:document_id>/', DocumentView.as_view(), name="document-id"),

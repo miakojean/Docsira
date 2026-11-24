@@ -129,6 +129,8 @@ class Affair(models.Model):
 
     #Archivage et suppression
     is_archived = models.BooleanField(_("Archivé"), default=False)
+    is_deleted = models.BooleanField(_("Dans la corbeille"), default=False)
+    deleted_at = models.DateTimeField(_("Mis à la corbeille le"), null=True, blank=True)
 
     # Dates importantes
 
@@ -266,7 +268,7 @@ class Affair(models.Model):
         if self.statut in ['CLOTURE', 'TERMINE']:
             return 100
 
-        docs = self.documents.all()
+        docs = self.documents.filter(is_deleted=False)
         categories = set(docs.values_list('category', flat=True))
 
         if 'CLOTURE' in categories or self.statut == 'CLOTURE':
@@ -390,6 +392,10 @@ class Document(models.Model):
     # Position sur l'espace de travail (null = disposition automatique)
     pos_x = models.FloatField(_("Position X"), null=True, blank=True)
     pos_y = models.FloatField(_("Position Y"), null=True, blank=True)
+
+    # Corbeille (Soft Delete)
+    is_deleted = models.BooleanField(_("Dans la corbeille"), default=False)
+    deleted_at = models.DateTimeField(_("Mis à la corbeille le"), null=True, blank=True)
 
     class Meta:
         ordering = ['-uploaded_at']
@@ -564,3 +570,51 @@ class AffairShareLink(models.Model):
 
     def __str__(self):
         return f"Partage dossier {self.affair.reference_affair} ({self.token[:8]}...)"
+
+
+class AffairComment(models.Model):
+    """Commentaire collaboratif sur un dossier (et optionnellement rattaché à un document ou à un commentaire parent)."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    affair = models.ForeignKey(
+        Affair,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name=_("Affaire"),
+    )
+    document = models.ForeignKey(
+        Document,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='comments',
+        verbose_name=_("Document concerné"),
+    )
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='replies',
+        verbose_name=_("En réponse à"),
+    )
+    author = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='affair_comments',
+        verbose_name=_("Auteur"),
+    )
+    content = models.TextField(_("Contenu"))
+    is_edited = models.BooleanField(_("Modifié"), default=False)
+    created_at = models.DateTimeField(_("Date de création"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("Dernière modification"), auto_now=True)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = _("Commentaire")
+        verbose_name_plural = _("Commentaires")
+        indexes = [
+            models.Index(fields=['affair', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"Commentaire de {self.author} sur {self.affair.reference_affair}"

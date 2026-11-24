@@ -20,6 +20,18 @@
     <main class="main-content">
       <affairDetailSection :affair="affair" @showSira="activeTreeTab = 'sira'" />
     </main>
+
+    <!-- Panneau latéral droit : commentaires collaborateurs -->
+    <affairCommentsDrawer
+      :isOpen="isCommentsOpen"
+      :affairId="affairId"
+      :documents="documents"
+      :initialDocumentId="commentInitialDocId"
+      :focusKey="commentFocusKey"
+      @toggle="toggleComments"
+      @share="openShareDossierModal"
+      @openDocument="openDocumentById"
+    />
   </div>
 </template>
 
@@ -28,10 +40,24 @@ import { ref } from 'vue';
 import sidebar from '../../components/navbar/sidebar.vue';
 import affairTree from '../../components/navbar/affairTree.vue';
 import affairDetailSection from '../../components/sections/workspace/affairDetailSection.vue';
+import affairCommentsDrawer from '../../components/sections/workspace/affairCommentsDrawer.vue';
 import { useAffairDocuments } from '../../composables/useAffairDocuments';
 
 const affair = useAffairDocuments();
-const { affairId, documents, subfolders, currentFolderId, openDocument, dossier } = affair;
+const {
+  affairId,
+  documents,
+  subfolders,
+  currentFolderId,
+  openDocument,
+  dossier,
+  isCommentsOpen,
+  commentInitialDocId,
+  commentFocusKey,
+  toggleComments,
+  openShareDossierModal,
+  openDocumentById,
+} = affair;
 
 const activeTreeTab = ref<'folders' | 'sira'>('folders');
 </script>

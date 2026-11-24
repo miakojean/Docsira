@@ -49,6 +49,13 @@
           <span>Partager (lien)</span>
         </button>
 
+        <button type="button" class="dropdown-row" @click="emitAction('comment')">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="size-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+          </svg>
+          <span>Commenter</span>
+        </button>
+
         <button type="button" class="dropdown-row" @click="emitAction('move')">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="size-4">
             <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
@@ -72,7 +79,7 @@
       </div>
     </div>
 
-    <div class="my-file-body flex flex-col items-center justify-center gap-4">
+    <div class="my-file-body flex flex-col items-center justify-center gap-2">
       <div class="icon-wrapper flex items-center justify-center">
         <!-- 1. PDF -->
         <svg v-if="fileKind === 'pdf'" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" class="icon icon-pdf">
@@ -164,7 +171,7 @@ export default {
       default: () => ({}),
     },
   },
-  emits: ['open', 'preview', 'detail', 'details', 'rename', 'share', 'download', 'delete', 'move'],
+  emits: ['open', 'preview', 'detail', 'details', 'rename', 'share', 'comment', 'download', 'delete', 'move'],
   setup(props: any, { emit }: any) {
     const isMenuOpen = ref(false);
 
@@ -234,13 +241,13 @@ export default {
 .sira-tag-row {
   display: flex;
   justify-content: center;
-  margin-top: -0.2rem;
+  margin-top: -0.1rem;
 }
 
 .sira-tag {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 700;
-  padding: 0.12rem 0.5rem;
+  padding: 0.08rem 0.42rem;
   border-radius: 999px;
   border: 1px solid transparent;
   letter-spacing: 0.02em;
@@ -252,16 +259,16 @@ export default {
 
 .my-file-cards {
   width: 100%;
-  max-width: 260px;
-  height: 290px;
+  max-width: 195px;
+  height: 220px;
   border: 1px solid #e5e7eb;
-  border-radius: 14px;
+  border-radius: 12px;
   background: #ffffff;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
+  padding: 0.55rem;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   position: relative;
@@ -287,9 +294,9 @@ export default {
 }
 
 .kebab-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   border: 1px solid transparent;
   background: #f8fafc;
   color: #475569;
@@ -301,8 +308,8 @@ export default {
 }
 
 .kebab-btn svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .kebab-btn:hover {
@@ -366,19 +373,19 @@ export default {
 }
 
 .my-file-body {
-  padding: 0 0.5rem;
+  padding: 0 0.35rem;
   width: 100%;
 }
 
 .file-name {
   width: 100%;
   min-width: 0;
-  padding: 0 0.5rem;
+  padding: 0 0.25rem;
   text-align: center;
 }
 
 .file-name span {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: #1f2937;
   display: -webkit-box;
@@ -388,20 +395,20 @@ export default {
   overflow: hidden;
   overflow-wrap: anywhere;
   word-break: break-word;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .icon-wrapper {
-  height: 90px;
-  width: 80px;
+  height: 62px;
+  width: 56px;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 9px;
   background: #f8fafc;
 }
 
 .icon-wrapper svg {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
 }
 
 .icon-pdf { color: #e53935; }
@@ -421,11 +428,11 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.25rem 0.5rem;
+  padding: 0.15rem 0.35rem;
 }
 
 .size-wrapper span {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 500;
   color: #94a3b8;
 }
@@ -436,11 +443,11 @@ export default {
   justify-content: center;
   background: #eff6ff;
   color: #2563eb;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 700;
   border-radius: 6px;
   border: none;
-  height: 26px;
-  padding: 0 0.45rem;
+  height: 22px;
+  padding: 0 0.38rem;
 }
 </style>
