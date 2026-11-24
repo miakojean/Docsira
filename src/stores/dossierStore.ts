@@ -17,6 +17,8 @@ export interface Dossier {
   /** Extensions des derniers documents (max 3), pour l'aperçu du dossier. */
   documents_preview?: string[];
   is_archived?: boolean;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
   created_by_name?: string | null;
   created_by?: {
     id: string;
@@ -69,6 +71,8 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
   const allDossiers = ref<Dossier[]>([]);
   // Tous les dossiers archivés du cabinet (page archives)
   const archivedDossiers = ref<Dossier[]>([]);
+  // Tous les dossiers dans la corbeille
+  const trashDossiers = ref<Dossier[]>([]);
   const isLoading = ref(false);
   const errorMessage = ref("");
   const fieldErrors = ref<Record<string, string>>({});
@@ -352,6 +356,76 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
     }
   }
 
+  async function fetchTrashDossiers() {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const items = await fetchAllPages("/affairs/?trash=true");
+      if (!items) {
+        errorMessage.value = "Impossible de charger la corbeille des dossiers";
+        return false;
+      }
+      trashDossiers.value = items;
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function restoreTrashDossier(id: string) {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/${id}/restore/`, "POST");
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        errorMessage.value = data?.message || data?.error || "Restauration du dossier impossible";
+        return false;
+      }
+      const restored: Dossier | undefined = data?.dossier ?? trashDossiers.value.find((d) => d.id === id);
+      trashDossiers.value = trashDossiers.value.filter((d) => d.id !== id);
+      if (restored) {
+        if (restored.is_archived) {
+          archivedDossiers.value = [restored, ...archivedDossiers.value.filter((d) => d.id !== id)];
+        } else {
+          allDossiers.value = [restored, ...allDossiers.value.filter((d) => d.id !== id)];
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function deleteDossierPermanently(id: string) {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/${id}/permanent-delete/`, "DELETE");
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        errorMessage.value = data?.message || data?.error || "Suppression définitive du dossier impossible";
+        return false;
+      }
+      trashDossiers.value = trashDossiers.value.filter((d) => d.id !== id);
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   async function revokeAffairShareLink(affairId: string, linkId: string): Promise<boolean> {
     errorMessage.value = "";
     try {
@@ -372,13 +446,17 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
     dossiersByClient,
     allDossiers,
     archivedDossiers,
+    trashDossiers,
     isLoading,
     errorMessage,
     fieldErrors,
     fetchAllDossiers,
     fetchArchivedDossiers,
+    fetchTrashDossiers,
     archiveDossier,
     restoreDossier,
+    restoreTrashDossier,
+    deleteDossierPermanently,
     fetchClientDossiers,
     fetchDossier,
     addDossier,

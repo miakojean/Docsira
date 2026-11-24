@@ -13,6 +13,8 @@ export type SiraCategory =
 export interface DossierDocument {
   id: string;
   affair: string;
+  affair_title?: string;
+  affair_reference?: string;
   title: string;
   file_name: string;
   extension: string;
@@ -27,6 +29,8 @@ export interface DossierDocument {
   valide?: boolean;
   pos_x: number | null;
   pos_y: number | null;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
 }
 
 export type DocumentRelation = "INITIAL" | "ADDED" | "UPDATED";
@@ -76,6 +80,7 @@ async function fetchAllDocumentPages(url: string): Promise<DossierDocument[] | n
 export const useDocumentStore = defineStore("documents", () => {
   const documents = ref<DossierDocument[]>([]);
   const allDocuments = ref<DossierDocument[]>([]);
+  const trashDocuments = ref<DossierDocument[]>([]);
   const isLoading = ref(false);
   const isUploading = ref(false);
   const errorMessage = ref("");
@@ -336,6 +341,69 @@ export const useDocumentStore = defineStore("documents", () => {
     }
   }
 
+  /** Récupère tous les documents présents dans la corbeille du cabinet. */
+  async function fetchTrashDocuments() {
+    isLoading.value = true;
+    errorMessage.value = "";
+    try {
+      const items = await fetchAllDocumentPages("/affairs/documents/?trash=true");
+      if (!items) {
+        errorMessage.value = "Impossible de charger la corbeille des documents";
+        return false;
+      }
+      trashDocuments.value = items;
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /** Restaure un document depuis la corbeille. */
+  async function restoreTrashDocument(id: string) {
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/documents/${id}/restore/`, "POST");
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        errorMessage.value = extractBackendError(data, "Restauration du document impossible");
+        return false;
+      }
+      const restored: DossierDocument | undefined = data?.document ?? trashDocuments.value.find((d) => d.id === id);
+      trashDocuments.value = trashDocuments.value.filter((d) => d.id !== id);
+      if (restored) {
+        allDocuments.value = [restored, ...allDocuments.value.filter((d) => d.id !== id)];
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    }
+  }
+
+  /** Supprime définitivement un document depuis la corbeille. */
+  async function deleteDocumentPermanently(id: string) {
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/documents/${id}/permanent-delete/`, "DELETE");
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        errorMessage.value = data?.message || extractBackendError(data, "Suppression définitive du document impossible");
+        return false;
+      }
+      trashDocuments.value = trashDocuments.value.filter((d) => d.id !== id);
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
+    }
+  }
+
   /** Révoque un lien de partage existant. */
   async function revokeShareLink(docId: string, linkId: string): Promise<boolean> {
     errorMessage.value = "";
@@ -356,17 +424,21 @@ export const useDocumentStore = defineStore("documents", () => {
   return {
     documents,
     allDocuments,
+    trashDocuments,
     isLoading,
     isUploading,
     errorMessage,
     fetchDocuments,
     fetchAllDocuments,
+    fetchTrashDocuments,
     uploadDocuments,
     uploadNewVersion,
     moveDocument,
     moveDocumentToAffair,
     renameDocument,
     deleteDocument,
+    restoreTrashDocument,
+    deleteDocumentPermanently,
     updateDocumentCategory,
     fetchFileBlob,
     fetchShareLinks,

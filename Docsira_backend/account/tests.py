@@ -159,3 +159,22 @@ class CollaborateurViewTests(TestCase):
         self.assertTrue(Collaborator.objects.filter(main_account=self.user, user=invitation.user, role="editor").exists())
         invitation.refresh_from_db()
         self.assertIsNotNone(invitation.accepted_at)
+
+    def test_collaborators_list_is_paginated(self):
+        for idx in range(3):
+            self.client.post(
+                "/account/collaborators/",
+                {"email": f"collab{idx}@example.com", "role": "viewer"},
+                format="json",
+            )
+
+        page1 = self.client.get("/account/collaborators/?page=1&page_size=2")
+        self.assertEqual(page1.status_code, 200)
+        self.assertEqual(page1.data["count"], 3)
+        self.assertEqual(len(page1.data["results"]), 2)
+        self.assertIsNotNone(page1.data["next"])
+
+        page2 = self.client.get("/account/collaborators/?page=2&page_size=2")
+        self.assertEqual(page2.status_code, 200)
+        self.assertEqual(len(page2.data["results"]), 1)
+        self.assertIsNone(page2.data["next"])

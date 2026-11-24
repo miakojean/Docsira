@@ -14,8 +14,22 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 
-from .serializers import AffairSerializer, AffairShareLinkSerializer, DocumentSerializer, DocumentShareLinkSerializer
-from .models import Affair, AffairShareLink, Document, DocumentShareLink, get_user_display_name, resolve_document_file_path
+from .serializers import (
+    AffairCommentSerializer,
+    AffairSerializer,
+    AffairShareLinkSerializer,
+    DocumentSerializer,
+    DocumentShareLinkSerializer,
+)
+from .models import (
+    Affair,
+    AffairComment,
+    AffairShareLink,
+    Document,
+    DocumentShareLink,
+    get_user_display_name,
+    resolve_document_file_path,
+)
 from sira.models import SiraFolderHistory
 
 
@@ -87,19 +101,29 @@ class AffairView(BaseFirmView):
                     Affair.objects
                     .select_related('client', 'firm', 'collaborator', 'created_by')
                     .prefetch_related('documents')
-                    .get(id=affair_id, firm=firm)
+                    .get(id=affair_id, firm=firm, is_deleted=False)
                 )
                 serializer = AffairSerializer(affair)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except Affair.DoesNotExist:
                 return Response({"error": "Affair not found."}, status=status.HTTP_404_NOT_FOUND)
         else:
-            affairs = (
-                Affair.objects
-                .filter(firm=firm, is_archived=False)
-                .select_related('client', 'firm', 'collaborator', 'created_by')
-                .prefetch_related('documents')
-            )
+            is_trash = request.query_params.get('trash', 'false').lower() == 'true'
+            if is_trash:
+                affairs = (
+                    Affair.objects
+                    .filter(firm=firm, is_deleted=True)
+                    .select_related('client', 'firm', 'collaborator', 'created_by')
+                    .prefetch_related('documents')
+                    .order_by('-deleted_at', '-creation_date')
+                )
+            else:
+                affairs = (
+                    Affair.objects
+                    .filter(firm=firm, is_archived=False, is_deleted=False)
+                    .select_related('client', 'firm', 'collaborator', 'created_by')
+                    .prefetch_related('documents')
+                )
             client_id = request.query_params.get('client')
             if client_id:
                 affairs = affairs.filter(client_id=client_id)
@@ -113,7 +137,7 @@ class AffairView(BaseFirmView):
     def patch(self, request, affair_id):
         try:
             firm = self.get_firm(request.user)
-            affair = Affair.objects.get(id=affair_id, firm=firm)
+            affair = Affair.objects.get(id=affair_id, firm=firm, is_deleted=False)
             serializer = AffairSerializer(affair, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -125,9 +149,22 @@ class AffairView(BaseFirmView):
     def delete(self, request, affair_id):
         try:
             firm = self.get_firm(request.user)
-            affair = Affair.objects.get(id=affair_id, firm=firm)
-            affair.delete()
-            return Response({"message": "Affair deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+            affair = Affair.objects.get(id=affair_id, firm=firm, is_deleted=False)
+            affair.is_deleted = True
+            affair.deleted_at = timezone.now()
+            affair.save(update_fields=['is_deleted', 'deleted_at'])
+
+            author_name = get_user_display_name(request.user)
+            SiraFolderHistory.objects.create(
+                affair_id=affair.id,
+                previous_progression=affair.progression,
+                new_progression=affair.progression,
+                action_type="MISE_CORBEILLE_DOSSIER",
+                document_title=affair.title,
+                author=author_name,
+                details=f"Dossier '{affair.title}' déplacé dans la corbeille par {author_name}.",
+            )
+            return Response({"success": True, "message": "Dossier déplacé vers la corbeille."}, status=status.HTTP_200_OK)
         except Affair.DoesNotExist:
             return Response({"error": "Affair not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -138,7 +175,7 @@ class ArchivedAffairsView(BaseFirmView):
     def get(self, request):
         affairs = (
             Affair.objects
-            .filter(firm=self.get_firm(request.user), is_archived=True)
+            .filter(firm=self.get_firm(request.user), is_archived=True, is_deleted=False)
             .select_related('client', 'firm', 'collaborator', 'created_by')
             .prefetch_related('documents')
         )
@@ -204,8 +241,14 @@ class AffairDocumentsView(BaseFirmView):
         if error_response:
             return error_response
 
-        documents = affair.documents.all()
-        return Response(DocumentSerializer(documents, many=True).data, status=status.HTTP_200_OK)
+        documents = affair.documents.filter(is_deleted=False)
+        paginator = PageNumberPagination()
+        paginator.page_size = 12
+        paginator.page_size_query_param = 'page_size'
+        paginator.max_page_size = 100
+        paginated_documents = paginator.paginate_queryset(documents, request)
+        serializer = DocumentSerializer(paginated_documents, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def post(self, request, affair_id):
         affair, error_response = self.get_affair(request, affair_id)
@@ -243,7 +286,7 @@ class AffairDocumentsView(BaseFirmView):
             serializers.append(serializer)
 
         created_documents = []
-        previous = affair.documents.order_by("-uploaded_at").first()
+        previous = affair.documents.filter(is_deleted=False).order_by("-uploaded_at").first()
         with transaction.atomic():
             for serializer in serializers:
                 relation = Document.Relation.ADDED if previous else Document.Relation.INITIAL
@@ -280,13 +323,26 @@ class DocumentView(BaseFirmView):
 
         if doc_id:
             try:
-                document = Document.objects.get(id=doc_id, affair__firm=firm)
+                document = Document.objects.get(id=doc_id, affair__firm=firm, is_deleted=False)
                 serializer = DocumentSerializer(document)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except Document.DoesNotExist:
                 return Response({"error": "Document not found"}, status=status.HTTP_404_NOT_FOUND)
         else:
-            documents = Document.objects.filter(affair__firm=firm)
+            is_trash = request.query_params.get('trash', 'false').lower() == 'true'
+            if is_trash:
+                documents = (
+                    Document.objects
+                    .filter(affair__firm=firm, is_deleted=True)
+                    .select_related('affair')
+                    .order_by('-deleted_at', '-uploaded_at')
+                )
+            else:
+                documents = (
+                    Document.objects
+                    .filter(affair__firm=firm, is_deleted=False, affair__is_deleted=False)
+                    .select_related('affair')
+                )
             affair_id = request.query_params.get('affair')
             if affair_id:
                 documents = documents.filter(affair_id=affair_id)
@@ -358,12 +414,267 @@ class DocumentView(BaseFirmView):
             return Response({"error": "ID de document requis."}, status=status.HTTP_400_BAD_REQUEST)
         firm = self.get_firm(request.user)
         try:
-            document = Document.objects.get(id=doc_id, affair__firm=firm)
+            document = Document.objects.select_related('affair').get(id=doc_id, affair__firm=firm, is_deleted=False)
         except Document.DoesNotExist:
             return Response({"error": "Document introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
-        document.delete(actor=request.user)
-        return Response({"message": "Document supprimé."}, status=status.HTTP_204_NO_CONTENT)
+        affair = document.affair
+        old_progression = affair.progression
+        author_name = document._resolve_author_name(request.user)
+
+        with transaction.atomic():
+            Document.objects.filter(parent=document).update(parent=document.parent)
+            document.is_deleted = True
+            document.deleted_at = timezone.now()
+            document._log_history = False
+            document.save(update_fields=['is_deleted', 'deleted_at'])
+            new_progression = affair.recalculer_progression()
+
+            SiraFolderHistory.objects.create(
+                affair_id=affair.id,
+                previous_progression=old_progression,
+                new_progression=new_progression,
+                action_type="SUPPRESSION_DOCUMENT",
+                document_title=document.title,
+                category=document.category,
+                author=author_name,
+                details=f"Document '{document.title}' ({document.category}) déplacé dans la corbeille par {author_name}.",
+            )
+        return Response({"success": True, "message": "Document déplacé vers la corbeille."}, status=status.HTTP_200_OK)
+
+
+class RestoreAffairView(BaseFirmView):
+    """Restaure un dossier depuis la corbeille."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, affair_id):
+        firm = self.get_firm(request.user)
+        try:
+            affair = Affair.objects.get(id=affair_id, firm=firm, is_deleted=True)
+        except Affair.DoesNotExist:
+            return Response({"success": False, "message": "Dossier introuvable dans la corbeille."}, status=status.HTTP_404_NOT_FOUND)
+
+        affair.is_deleted = False
+        affair.deleted_at = None
+        affair.save(update_fields=['is_deleted', 'deleted_at'])
+
+        author_name = get_user_display_name(request.user)
+        SiraFolderHistory.objects.create(
+            affair_id=affair.id,
+            previous_progression=affair.progression,
+            new_progression=affair.progression,
+            action_type="RESTAURATION_DOSSIER",
+            document_title=affair.title,
+            author=author_name,
+            details=f"Dossier '{affair.title}' restauré depuis la corbeille par {author_name}.",
+        )
+        return Response({"success": True, "message": "Dossier restauré avec succès.", "dossier": AffairSerializer(affair).data}, status=status.HTTP_200_OK)
+
+
+class PermanentDeleteAffairView(BaseFirmView):
+    """Supprime définitivement un dossier (réservé au compte principal ou admin)."""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, affair_id):
+        user = request.user
+        if hasattr(user, 'collaborator_profile') and user.collaborator_profile.role != 'admin':
+            return Response(
+                {"success": False, "message": "Action refusée : Seul un administrateur peut supprimer définitivement un dossier."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        firm = self.get_firm(user)
+        try:
+            affair = Affair.objects.get(id=affair_id, firm=firm)
+        except Affair.DoesNotExist:
+            return Response({"success": False, "message": "Dossier introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        affair.delete()
+        return Response({"success": True, "message": "Le dossier a été supprimé définitivement."}, status=status.HTTP_200_OK)
+
+
+class RestoreDocumentView(BaseFirmView):
+    """Restaure un document depuis la corbeille."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, document_id):
+        firm = self.get_firm(request.user)
+        try:
+            document = Document.objects.select_related('affair').get(id=document_id, affair__firm=firm, is_deleted=True)
+        except Document.DoesNotExist:
+            return Response({"success": False, "message": "Document introuvable dans la corbeille."}, status=status.HTTP_404_NOT_FOUND)
+
+        affair = document.affair
+        old_progression = affair.progression
+        author_name = document._resolve_author_name(request.user)
+
+        with transaction.atomic():
+            document.is_deleted = False
+            document.deleted_at = None
+            document._log_history = False
+            document.save(update_fields=['is_deleted', 'deleted_at'])
+            new_progression = affair.recalculer_progression()
+
+            SiraFolderHistory.objects.create(
+                affair_id=affair.id,
+                previous_progression=old_progression,
+                new_progression=new_progression,
+                action_type="RESTAURATION_DOCUMENT",
+                document_title=document.title,
+                category=document.category,
+                author=author_name,
+                details=f"Document '{document.title}' ({document.category}) restauré depuis la corbeille par {author_name}.",
+            )
+        return Response({"success": True, "message": "Document restauré avec succès.", "document": DocumentSerializer(document).data}, status=status.HTTP_200_OK)
+
+
+class PermanentDeleteDocumentView(BaseFirmView):
+    """Supprime définitivement un document (réservé au compte principal ou admin)."""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, document_id):
+        user = request.user
+        if hasattr(user, 'collaborator_profile') and user.collaborator_profile.role != 'admin':
+            return Response(
+                {"success": False, "message": "Action refusée : Seul un administrateur peut supprimer définitivement un document."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        firm = self.get_firm(user)
+        try:
+            document = Document.objects.select_related('affair').get(id=document_id, affair__firm=firm)
+        except Document.DoesNotExist:
+            return Response({"success": False, "message": "Document introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        document.delete(actor=user)
+        return Response({"success": True, "message": "Le document a été supprimé définitivement."}, status=status.HTTP_200_OK)
+
+
+class AffairCommentsView(BaseFirmView):
+    """Liste et ajoute des commentaires collaborateurs sur un dossier du cabinet."""
+    permission_classes = [IsAuthenticated]
+
+    def _get_affair(self, request, affair_id):
+        firm = self.get_firm(request.user)
+        try:
+            return Affair.objects.get(id=affair_id, firm=firm, is_deleted=False)
+        except Affair.DoesNotExist:
+            return None
+
+    def get(self, request, affair_id):
+        affair = self._get_affair(request, affair_id)
+        if not affair:
+            return Response({"error": "Dossier introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        comments = (
+            affair.comments
+            .select_related('author', 'document', 'affair')
+            .order_by('created_at')
+        )
+        doc_id = request.query_params.get('document')
+        if doc_id:
+            comments = comments.filter(document_id=doc_id)
+
+        serializer = AffairCommentSerializer(comments, many=True, context={'request': request, 'affair': affair})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, affair_id):
+        affair = self._get_affair(request, affair_id)
+        if not affair:
+            return Response({"error": "Dossier introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AffairCommentSerializer(
+            data=request.data,
+            context={'request': request, 'affair': affair},
+        )
+        if not serializer.is_valid():
+            return Response(
+                {"error": _extract_first_error(serializer.errors), **serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            comment = serializer.save(affair=affair, author=request.user)
+            _touch_affair(affair)
+            author_name = get_user_display_name(request.user)
+            SiraFolderHistory.objects.create(
+                affair_id=affair.id,
+                previous_progression=affair.progression,
+                new_progression=affair.progression,
+                action_type="AJOUT_COMMENTAIRE",
+                document_title=comment.document.title if comment.document else affair.title,
+                author=author_name,
+                details=f"Nouveau commentaire ajouté par {author_name}.",
+            )
+
+        out = AffairCommentSerializer(comment, context={'request': request, 'affair': affair})
+        return Response(out.data, status=status.HTTP_201_CREATED)
+
+
+class AffairCommentDetailView(BaseFirmView):
+    """Modifie ou supprime un commentaire existant."""
+    permission_classes = [IsAuthenticated]
+
+    def _get_comment(self, request, comment_id):
+        firm = self.get_firm(request.user)
+        try:
+            return AffairComment.objects.select_related('affair', 'author', 'document').get(
+                id=comment_id,
+                affair__firm=firm,
+                affair__is_deleted=False,
+            )
+        except AffairComment.DoesNotExist:
+            return None
+
+    def patch(self, request, comment_id):
+        comment = self._get_comment(request, comment_id)
+        if not comment:
+            return Response({"error": "Commentaire introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        if comment.author_id != request.user.id:
+            return Response(
+                {"error": "Seul l'auteur du commentaire peut le modifier."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = AffairCommentSerializer(
+            comment,
+            data={"content": request.data.get("content", "")},
+            partial=True,
+            context={'request': request, 'affair': comment.affair},
+        )
+        if not serializer.is_valid():
+            return Response(
+                {"error": _extract_first_error(serializer.errors), **serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        updated = serializer.save(is_edited=True)
+        out = AffairCommentSerializer(updated, context={'request': request, 'affair': comment.affair})
+        return Response(out.data, status=status.HTTP_200_OK)
+
+    def delete(self, request, comment_id):
+        comment = self._get_comment(request, comment_id)
+        if not comment:
+            return Response({"error": "Commentaire introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        user = request.user
+        is_author = comment.author_id == user.id
+        is_firm_owner = comment.affair.firm_id == user.id
+        is_firm_admin = (
+            hasattr(user, 'collaborator_profile')
+            and user.collaborator_profile.main_account_id == comment.affair.firm_id
+            and user.collaborator_profile.role == 'admin'
+        )
+
+        if not (is_author or is_firm_owner or is_firm_admin):
+            return Response(
+                {"error": "Vous n'êtes pas autorisé à supprimer ce commentaire."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        comment.delete()
+        return Response({"success": True, "message": "Commentaire supprimé."}, status=status.HTTP_200_OK)
 
 
 class DocumentDownloadView(BaseFirmView):

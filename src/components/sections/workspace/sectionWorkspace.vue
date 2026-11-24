@@ -117,9 +117,9 @@
       :isSuccess="isDeleteSuccess"
       :itemName="dossierToDelete?.title || 'ce dossier'"
       :isFolder="true"
-      title="Supprimer le dossier"
-      description="Êtes-vous sûr de vouloir supprimer définitivement ce dossier ?"
-      subtext="Attention, cette action est irréversible."
+      title="Mettre à la corbeille"
+      description="Êtes-vous sûr de vouloir déplacer ce dossier dans la corbeille ?"
+      subtext="Vous pourrez le restaurer depuis la corbeille du cabinet."
       @close="isDeleteOpen = false; isDeleteSuccess = false"
       @delete="confirmDelete"
     />

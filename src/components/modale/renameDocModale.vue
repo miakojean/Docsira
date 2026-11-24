@@ -4,18 +4,18 @@
       <div v-if="isOpen" class="rename-modal-overlay" @click.self="$emit('close')">
         <div class="rename-modal-card" role="dialog" aria-modal="true">
           <div class="rename-modal-header">
-            <h3 class="rename-modal-title">Renommer le document</h3>
+            <h3 class="rename-modal-title">{{ title }}</h3>
             <button type="button" class="rename-modal-close" @click="$emit('close')">×</button>
           </div>
           <div class="rename-modal-body">
-            <label class="input-label" for="renameDocInput">Titre du document</label>
+            <label class="input-label" for="renameDocInput">{{ label }}</label>
             <input
               ref="inputRef"
               id="renameDocInput"
               type="text"
               v-model="renameValue"
               class="text-input"
-              placeholder="Nom du document"
+              :placeholder="placeholder"
               :disabled="isLoading"
               @keyup.enter="handleConfirm"
             />
@@ -45,11 +45,17 @@ const props = withDefaults(
   defineProps<{
     isOpen: boolean;
     initialName?: string;
+    title?: string;
+    label?: string;
+    placeholder?: string;
     isLoading?: boolean;
     errorMessage?: string;
   }>(),
   {
     initialName: '',
+    title: 'Renommer le document',
+    label: 'Titre du document',
+    placeholder: 'Nom du document',
     isLoading: false,
     errorMessage: '',
   }

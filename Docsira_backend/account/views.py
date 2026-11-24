@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -276,7 +277,12 @@ class CollaborateurView(APIView):
         # Trier par date de création (décroissant)
         collab_data.sort(key=lambda x: x.get('created_at', ''), reverse=True)
 
-        return Response(collab_data, status=status.HTTP_200_OK)
+        paginator = PageNumberPagination()
+        paginator.page_size = 12
+        paginator.page_size_query_param = 'page_size'
+        paginator.max_page_size = 100
+        page = paginator.paginate_queryset(collab_data, request)
+        return paginator.get_paginated_response(page)
 
     def delete(self, request):
         # On peut récupérer l'email depuis le corps de la requête (data) ou l'URL (query_params)

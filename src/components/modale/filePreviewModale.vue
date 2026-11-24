@@ -38,6 +38,7 @@
               </div>
 
               <button
+                v-if="preview.doc"
                 type="button"
                 class="preview-action-btn"
                 title="Télécharger"
@@ -79,7 +80,7 @@
             <!-- Erreur PDF -->
             <div v-if="preview.kind === 'pdf' && pdfError" class="preview-state">
               <p class="state-message">{{ pdfError }}</p>
-              <button type="button" class="preview-action-btn" @click="$emit('download', preview.doc)">
+              <button v-if="preview.doc" type="button" class="preview-action-btn" @click="$emit('download', preview.doc)">
                 Télécharger le PDF
               </button>
             </div>
@@ -94,7 +95,7 @@
               <p class="state-message">
                 {{ preview.message || "L'aperçu intégré n'est pas disponible pour ce format." }}
               </p>
-              <button type="button" class="preview-action-btn" @click="$emit('download', preview.doc)">
+              <button v-if="preview.doc" type="button" class="preview-action-btn" @click="$emit('download', preview.doc)">
                 Télécharger le document
               </button>
             </div>
@@ -117,7 +118,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 export interface PreviewData {
   title: string;
   kind: 'loading' | 'image' | 'pdf' | 'docx' | 'unsupported';
-  doc: DossierDocument;
+  doc?: DossierDocument;
   url?: string;
   data?: ArrayBuffer;
   html?: string;

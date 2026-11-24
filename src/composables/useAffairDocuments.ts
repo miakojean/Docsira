@@ -6,6 +6,7 @@ import mammoth from 'mammoth';
 import { useClientDossierStore, type AffairShareLink, type Dossier } from '../stores/dossierStore';
 import { useDocumentStore, type DocumentShareLink, type DossierDocument, type SiraCategory } from '../stores/documentStore';
 import { useAffairFolderStore, type AffairSubfolder } from '../stores/affairFolderStore';
+import { useCommentStore } from '../stores/commentStore';
 import { DOCUMENT_MIME_BY_EXT, filterAllowedDocuments } from '../helpers/documentFormats';
 import type { PreviewData } from '../components/modale/filePreviewModale.vue';
 import type { MoveDocPayload } from '../components/modale/moveDocModale.vue';
@@ -16,6 +17,7 @@ export function useAffairDocuments() {
   const dossierStore = useClientDossierStore();
   const docStore = useDocumentStore();
   const folderStore = useAffairFolderStore();
+  const commentStore = useCommentStore();
 
   const affairId = computed(() => String(route.params.id));
   const dossier = ref<Dossier | null>(null);
@@ -568,6 +570,37 @@ export function useAffairDocuments() {
     }
   }
 
+  // ---------- Commentaires collaborateurs ----------
+  const isCommentsOpen = ref(true);
+  const commentInitialDocId = ref<string | null>(null);
+  const commentFocusKey = ref(0);
+  const commentsCount = computed(() => commentStore.getCommentCount(affairId.value));
+
+  function openComments(doc?: DossierDocument) {
+    commentInitialDocId.value = doc?.id ?? null;
+    isCommentsOpen.value = true;
+    commentFocusKey.value++;
+    void commentStore.fetchComments(affairId.value);
+  }
+
+  function toggleComments() {
+    isCommentsOpen.value = !isCommentsOpen.value;
+    if (isCommentsOpen.value) {
+      void commentStore.fetchComments(affairId.value);
+    }
+  }
+
+  function closeComments() {
+    isCommentsOpen.value = false;
+  }
+
+  function openDocumentById(docId: string) {
+    const found = docStore.documents.find((d) => d.id === docId);
+    if (found) {
+      void openDocument(found);
+    }
+  }
+
   // ---------- Suppression Document ----------
   const isDeleteOpen = ref(false);
   const docToDelete = ref<DossierDocument | null>(null);
@@ -598,6 +631,7 @@ export function useAffairDocuments() {
     const tasks: Promise<unknown>[] = [
       refreshDossier(),
       docStore.fetchDocuments(affairId.value),
+      commentStore.fetchComments(affairId.value),
     ];
     if (!folderStore.isLoaded) tasks.push(folderStore.loadStore());
     await Promise.all(tasks);
@@ -605,10 +639,12 @@ export function useAffairDocuments() {
 
   watch(affairId, async () => {
     closePreview();
+    commentInitialDocId.value = null;
     currentFolderId.value = null;
     const tasks: Promise<unknown>[] = [
       refreshDossier(),
       docStore.fetchDocuments(affairId.value),
+      commentStore.fetchComments(affairId.value),
     ];
     if (!folderStore.isLoaded) tasks.push(folderStore.loadStore());
     await Promise.all(tasks);
@@ -708,6 +744,15 @@ export function useAffairDocuments() {
     openSiraModal,
     closeSiraModal,
     changeDocumentCategory,
+    // Commentaires collaborateurs
+    isCommentsOpen,
+    commentInitialDocId,
+    commentFocusKey,
+    commentsCount,
+    openComments,
+    toggleComments,
+    closeComments,
+    openDocumentById,
   };
 }
 

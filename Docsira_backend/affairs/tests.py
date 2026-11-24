@@ -10,8 +10,8 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 
 from Client.models import Client as ClientModel
-from account.models import CustomUser
-from .models import Affair, Document
+from account.models import Collaborator, CustomUser
+from .models import Affair, AffairComment, Document
 
 
 class AffairDocumentsApiTests(APITestCase):
@@ -70,8 +70,34 @@ class AffairDocumentsApiTests(APITestCase):
 
 		list_response = self.client.get(self.url)
 		self.assertEqual(list_response.status_code, 200)
-		self.assertEqual(len(list_response.data), 2)
-		self.assertEqual({item["file_name"] for item in list_response.data}, {"contrat.pdf", "annexe.docx"})
+		self.assertEqual(list_response.data["count"], 2)
+		self.assertEqual(len(list_response.data["results"]), 2)
+		self.assertEqual({item["file_name"] for item in list_response.data["results"]}, {"contrat.pdf", "annexe.docx"})
+
+	def test_affair_documents_pagination(self):
+		upload_resp = self.client.post(
+			self.url,
+			{
+				"files": [
+					SimpleUploadedFile("doc1.pdf", b"%PDF-1.4 1", content_type="application/pdf"),
+					SimpleUploadedFile("doc2.pdf", b"%PDF-1.4 2", content_type="application/pdf"),
+					SimpleUploadedFile("doc3.pdf", b"%PDF-1.4 3", content_type="application/pdf"),
+				]
+			},
+			format="multipart",
+		)
+		self.assertEqual(upload_resp.status_code, 201)
+
+		page1 = self.client.get(self.url + "?page=1&page_size=2")
+		self.assertEqual(page1.status_code, 200)
+		self.assertEqual(page1.data["count"], 3)
+		self.assertEqual(len(page1.data["results"]), 2)
+		self.assertIsNotNone(page1.data["next"])
+
+		page2 = self.client.get(self.url + "?page=2&page_size=2")
+		self.assertEqual(page2.status_code, 200)
+		self.assertEqual(len(page2.data["results"]), 1)
+		self.assertIsNone(page2.data["next"])
 
 	def test_reject_disallowed_document_formats_and_allow_images(self):
 		for filename, content_type in [
@@ -313,3 +339,131 @@ class AffairDocumentsApiTests(APITestCase):
 
 		self.client.force_authenticate(user=None)
 		self.assertEqual(self.client.get(public_url).status_code, 404)
+
+	def test_trash_restore_and_permanent_delete_for_affairs_and_documents(self):
+		upload_resp = self.client.post(
+			self.url,
+			{"files": [SimpleUploadedFile("piece_trash.pdf", b"%PDF-1.4 trash", content_type="application/pdf")]},
+			format="multipart",
+		)
+		self.assertEqual(upload_resp.status_code, 201)
+		doc_id = upload_resp.data[0]["id"]
+
+		# 1. Soft-delete document -> va dans la corbeille
+		doc_url = reverse("document-id", kwargs={"document_id": doc_id})
+		del_doc_resp = self.client.delete(doc_url)
+		self.assertEqual(del_doc_resp.status_code, 200)
+		self.assertEqual(self.client.get(self.url).data["results"], [])
+
+		trash_docs_resp = self.client.get(reverse("document-list") + "?trash=true")
+		self.assertEqual(trash_docs_resp.status_code, 200)
+		self.assertEqual([d["id"] for d in trash_docs_resp.data["results"]], [str(doc_id)])
+
+		# 2. Restaurer le document
+		restore_doc_url = reverse("document-restore", kwargs={"document_id": doc_id})
+		self.assertEqual(self.client.post(restore_doc_url).status_code, 200)
+		self.assertEqual(len(self.client.get(self.url).data["results"]), 1)
+
+		# 3. Suppression définitive du document
+		perm_doc_url = reverse("document-permanent-delete", kwargs={"document_id": doc_id})
+		self.assertEqual(self.client.delete(perm_doc_url).status_code, 200)
+		self.assertFalse(Document.objects.filter(pk=doc_id).exists())
+
+		# 4. Soft-delete dossier -> va dans la corbeille
+		affair_detail_url = reverse("affair-detail", kwargs={"affair_id": self.affair.pk})
+		self.assertEqual(self.client.delete(affair_detail_url).status_code, 200)
+		self.assertEqual(self.client.get(reverse("affair-list")).data["results"], [])
+
+		trash_affairs_resp = self.client.get(reverse("affair-list") + "?trash=true")
+		self.assertEqual(trash_affairs_resp.status_code, 200)
+		self.assertEqual([a["id"] for a in trash_affairs_resp.data["results"]], [str(self.affair.pk)])
+
+		# 5. Restaurer le dossier
+		restore_affair_url = reverse("affair-restore", kwargs={"affair_id": self.affair.pk})
+		self.assertEqual(self.client.post(restore_affair_url).status_code, 200)
+		self.assertEqual(len(self.client.get(reverse("affair-list")).data["results"]), 1)
+
+		# 6. Suppression définitive du dossier
+		perm_affair_url = reverse("affair-permanent-delete", kwargs={"affair_id": self.affair.pk})
+		self.assertEqual(self.client.delete(perm_affair_url).status_code, 200)
+		self.assertFalse(Affair.objects.filter(pk=self.affair.pk).exists())
+
+	def test_affair_comments_crud_replies_and_permissions(self):
+		upload_resp = self.client.post(
+			self.url,
+			{"files": [SimpleUploadedFile("note.pdf", b"%PDF-1.4 note", content_type="application/pdf")]},
+			format="multipart",
+		)
+		self.assertEqual(upload_resp.status_code, 201)
+		doc_id = upload_resp.data[0]["id"]
+
+		comments_url = reverse("affair-comments", kwargs={"affair_id": self.affair.pk})
+
+		# 1. Commentaire général par le propriétaire
+		create_root = self.client.post(
+			comments_url,
+			{"content": "Merci de vérifier les statuts avant signature."},
+			format="json",
+		)
+		self.assertEqual(create_root.status_code, 201)
+		root_id = create_root.data["id"]
+		self.assertTrue(create_root.data["can_edit"])
+		self.assertTrue(create_root.data["can_delete"])
+
+		# 2. Réponse par un collaborateur (éditeur) liée à un document
+		collab_user = CustomUser.objects.create_user(
+			username="collab-comment",
+			first_name="Awa",
+			last_name="Kone",
+			password="test-password",
+			account_type=CustomUser.AccountType.COLLABORATOR,
+		)
+		Collaborator.objects.create(main_account=self.user, user=collab_user, role=Collaborator.Roles.EDITOR)
+
+		self.client.force_authenticate(user=collab_user)
+		reply_resp = self.client.post(
+			comments_url,
+			{
+				"content": "Relu et validé pour l'annexe.",
+				"document": doc_id,
+				"parent": root_id,
+			},
+			format="json",
+		)
+		self.assertEqual(reply_resp.status_code, 201)
+		reply_id = reply_resp.data["id"]
+		self.assertEqual(str(reply_resp.data["parent"]), str(root_id))
+		self.assertEqual(reply_resp.data["author_name"], "Awa Kone")
+		self.assertEqual(reply_resp.data["author_initials"], "AK")
+
+		# 3. Liste chronologique + filtre par document
+		list_resp = self.client.get(comments_url)
+		self.assertEqual(list_resp.status_code, 200)
+		self.assertEqual(len(list_resp.data), 2)
+
+		filtered_resp = self.client.get(comments_url + f"?document={doc_id}")
+		self.assertEqual(filtered_resp.status_code, 200)
+		self.assertEqual([c["id"] for c in filtered_resp.data], [reply_id])
+
+		# 4. Le collaborateur ne peut pas modifier/supprimer le commentaire du propriétaire
+		root_detail_url = reverse("affair-comment-detail", kwargs={"comment_id": root_id})
+		self.assertEqual(self.client.patch(root_detail_url, {"content": "Piraté"}, format="json").status_code, 403)
+		self.assertEqual(self.client.delete(root_detail_url).status_code, 403)
+
+		# 5. Le collaborateur peut modifier son propre commentaire
+		reply_detail_url = reverse("affair-comment-detail", kwargs={"comment_id": reply_id})
+		edit_resp = self.client.patch(reply_detail_url, {"content": "Relu et corrigé."}, format="json")
+		self.assertEqual(edit_resp.status_code, 200)
+		self.assertTrue(edit_resp.data["is_edited"])
+		self.assertEqual(edit_resp.data["content"], "Relu et corrigé.")
+
+		# 6. Isolation autre cabinet -> 404
+		other_firm = CustomUser.objects.create_user(username="other-firm-comments", password="test-password")
+		self.client.force_authenticate(user=other_firm)
+		self.assertEqual(self.client.get(comments_url).status_code, 404)
+		self.assertEqual(self.client.delete(root_detail_url).status_code, 404)
+
+		# 7. Le propriétaire du cabinet peut supprimer n'importe quel commentaire du dossier
+		self.client.force_authenticate(user=self.user)
+		self.assertEqual(self.client.delete(reply_detail_url).status_code, 200)
+		self.assertFalse(AffairComment.objects.filter(pk=reply_id).exists())

@@ -21,44 +21,35 @@
       </div>
 
       <div class="header-actions">
-        <!-- Bouton Partager le dossier par lien -->
-        <button
-          type="button"
-          class="new-folder-btn"
-          title="Créer un lien de partage pour ce dossier"
-          @click="openShareDossierModal"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="size-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
-          </svg>
-          <span>Partager</span>
-        </button>
-
         <!-- Bouton Nouveau sous-dossier -->
         <button
           type="button"
           class="new-folder-btn"
+          :class="{ 'is-icon-only': isCommentsOpen }"
           title="Créer un nouveau sous-dossier"
+          aria-label="Créer un nouveau sous-dossier"
           @click="openCreateFolder"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="size-4">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="header-action-icon">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
           </svg>
-          <span>Nouveau dossier</span>
+          <span v-if="!isCommentsOpen">Nouveau dossier</span>
         </button>
 
         <!-- Bouton Ajouter un document -->
         <button
           type="button"
           class="add-btn"
+          :class="{ 'is-icon-only': isCommentsOpen }"
           :disabled="docStore.isUploading"
           title="Ajouter un document et choisir sa catégorie SIRA"
+          aria-label="Ajouter un document"
           @click="openUploadDocModal()"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="header-action-icon">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          <span>{{ docStore.isUploading ? 'Ajout en cours...' : 'Ajouter un document' }}</span>
+          <span v-if="!isCommentsOpen">{{ docStore.isUploading ? 'Ajout en cours...' : 'Ajouter un document' }}</span>
         </button>
       </div>
     </header>
@@ -183,32 +174,41 @@
       </div>
 
       <!-- LISTE / GRILLE DES FICHIERS ET SOUS-DOSSIERS -->
-      <div v-else class="files-content-area file-list--grid">
-        <folderCards
-          v-for="sf in currentSubfolders"
-          :key="sf.id"
-          :folderName="sf.name"
-          :itemCount="folderStore.getDocCount(sf.id, documents)"
-          @open="currentFolderId = sf.id"
-          @rename="openRenameFolder(sf)"
-          @delete="openDeleteFolder(sf)"
-          @dropDoc="onDocDropOnFolder($event, sf.id)"
-        />
+      <div v-else class="files-content-area">
+        <div class="file-list--grid">
+          <folderCards
+            v-for="sf in paginatedSubfolders"
+            :key="sf.id"
+            :folderName="sf.name"
+            :itemCount="folderStore.getDocCount(sf.id, documents)"
+            @open="currentFolderId = sf.id"
+            @rename="openRenameFolder(sf)"
+            @delete="openDeleteFolder(sf)"
+            @dropDoc="onDocDropOnFolder($event, sf.id)"
+          />
 
-        <myfileCards 
-          v-for="doc in currentDocuments"
-          :key="doc.id"
-          :document="doc"
-          @open="openDocument"
-          @preview="openDocument"
-          @details="openDocDetails"
-          @download="downloadDocument"
-          @share="openShareModal"
-          @rename="openRename"
-          @delete="openDelete"
-          @move="openMoveDocModal(doc)"
-        />
+          <myfileCards 
+            v-for="doc in paginatedDocuments"
+            :key="doc.id"
+            :document="doc"
+            @open="openDocument"
+            @preview="openDocument"
+            @details="openDocDetails"
+            @download="downloadDocument"
+            @share="openShareModal"
+            @comment="openComments"
+            @rename="openRename"
+            @delete="openDelete"
+            @move="openMoveDocModal(doc)"
+          />
+        </div>
 
+        <Pagination
+          v-model="currentPage"
+          :totalItems="totalCurrentItems"
+          :pageSize="pageSize"
+          :hideOnSinglePage="true"
+        />
       </div>
     </div>
 
@@ -303,9 +303,9 @@
       :isSuccess="false"
       :itemName="docToDelete?.title || 'ce document'"
       :isFolder="false"
-      title="Supprimer le document"
-      description="Êtes-vous sûr de vouloir supprimer définitivement ce document ?"
-      subtext="Attention, cette action est irréversible."
+      title="Mettre à la corbeille"
+      description="Êtes-vous sûr de vouloir déplacer ce document dans la corbeille ?"
+      subtext="Vous pourrez le restaurer depuis la corbeille du cabinet."
       @close="isDeleteOpen = false"
       @delete="confirmDelete"
     />
@@ -325,6 +325,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue';
 import folderCards from '../../cards/folderCards.vue';
 import myfileCards from '../../cards/myfileCards.vue';
 import renameModale from '../../modale/renameModale.vue';
@@ -336,6 +337,7 @@ import moveDocModale from '../../modale/moveDocModale.vue';
 import linkModale from '../../modale/linkModale.vue';
 import uploadDocModale from '../../modale/uploadDocModale.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
+import Pagination from '../../tools/Pagination.vue';
 import { ALLOWED_DOCUMENT_ACCEPT } from '../../../helpers/documentFormats';
 import type { AffairDocumentsController } from '../../../composables/useAffairDocuments';
 
@@ -399,7 +401,6 @@ const {
   isShareCreating,
   shareError,
   openShareModal,
-  openShareDossierModal,
   closeShareModal,
   createNewShareLink,
   revokeExistingShareLink,
@@ -421,7 +422,38 @@ const {
   openUploadDocModal,
   closeUploadDocModal,
   handleUploadDocs,
+  isCommentsOpen,
+  openComments,
 } = props.affair;
+
+const currentPage = ref(1);
+const pageSize = 12;
+
+watch([currentFolderId, () => dossier.value?.id], () => {
+  currentPage.value = 1;
+});
+
+const totalCurrentItems = computed(
+  () => currentSubfolders.value.length + currentDocuments.value.length
+);
+
+const paginatedSubfolders = computed(() => {
+  const start = (currentPage.value - 1) * pageSize;
+  const end = start + pageSize;
+  const foldersCount = currentSubfolders.value.length;
+  if (start >= foldersCount) return [];
+  return currentSubfolders.value.slice(start, Math.min(end, foldersCount));
+});
+
+const paginatedDocuments = computed(() => {
+  const start = (currentPage.value - 1) * pageSize;
+  const end = start + pageSize;
+  const foldersCount = currentSubfolders.value.length;
+  if (end <= foldersCount) return [];
+  const docStart = Math.max(0, start - foldersCount);
+  const docEnd = Math.max(0, end - foldersCount);
+  return currentDocuments.value.slice(docStart, docEnd);
+});
 </script>
 
 <style scoped>
@@ -595,6 +627,26 @@ const {
 .add-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.header-action-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.new-folder-btn.is-icon-only,
+.add-btn.is-icon-only {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+}
+
+.new-folder-btn.is-icon-only .header-action-icon,
+.add-btn.is-icon-only .header-action-icon {
+  width: 22px;
+  height: 22px;
 }
 
 /* === BARRE DU FIL D'ARIANE / NAVIGATION SOUS-DOSSIERS === */
@@ -875,12 +927,17 @@ const {
   overflow-y: auto;
   scrollbar-width: thin;
   padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .file-list--grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 0.9rem;
+  align-content: start;
 }
 
 .hidden-file-input {
