@@ -63,5 +63,9 @@ export default defineComponent({
 </script>
 
 <style scoped>
-
+.header__nav h3{
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--primary-color);
+}
 </style>
