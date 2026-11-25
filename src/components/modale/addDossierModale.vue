@@ -174,7 +174,7 @@ async function submit() {
   if (ok) emit('created');
 }
 
-watch(() => props.isOpen, (open) => {
+watch(() => props.isOpen, (open:any) => {
   document.body.style.overflow = open ? 'hidden' : '';
   if (open) {
     title.value = '';
@@ -188,7 +188,7 @@ watch(() => props.isOpen, (open) => {
   }
 });
 
-watch(isAddClientOpen, (open) => {
+watch(isAddClientOpen, (open:any) => {
   if (!open && props.isOpen) {
     document.body.style.overflow = 'hidden';
   }
@@ -251,8 +251,13 @@ onUnmounted(() => { document.body.style.overflow = ''; });
 }
 
 .selected-client {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
-  padding: 0.7rem 0.9rem; border: 1px solid var(--primary-color, #2563eb); background: #f8faff; border-radius: 10px;
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem; 
+  background: #f8faff; 
+  border-radius: 10px;
 }
 .info { display: flex; flex-direction: column; min-width: 0; }
 .name { font-size: 0.92rem; font-weight: 500; color: #111827; }
@@ -324,7 +329,9 @@ onUnmounted(() => { document.body.style.overflow = ''; });
   background: #ffffff;
   border: 1px solid #f3f4f6;
 }
-.results li:hover { border-color: var(--primary-color, #2563eb); background: #f0f7ff; }
+.results li:hover { 
+  background: #d3d6d9; 
+}
 .hint { margin: 0; text-align: center; color: #9ca3af; font-size: 0.82rem; padding: 0.5rem 0; }
 .error-text { margin: 0; font-size: 0.8rem; color: #dc2626; }
 
