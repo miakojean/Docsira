@@ -65,7 +65,9 @@ def get_invitations_data(main_account):
             'user': {
                 'id': str(i.user.id),
                 'username': i.user.username,
-                'email': i.user.email
+                'email': i.user.email,
+                'first_name': i.user.first_name,
+                'last_name': i.user.last_name,
             },
             'status': 'pending',
             'created_at': i.created_at.isoformat() if i.created_at else None
@@ -77,11 +79,14 @@ def get_owner_data(main_account):
     return {
         'id': f"main_{main_account.id}",
         'main_account': str(main_account.id),
-        'role': 'admin',
+        'role': 'owner',
+        'is_owner': True,
         'user': {
             'id': str(main_account.id),
             'username': main_account.username,
-            'email': main_account.email
+            'email': main_account.email,
+            'first_name': main_account.first_name,
+            'last_name': main_account.last_name,
         },
         'status': 'accepted',
         'created_at': main_account.date_joined.isoformat() if main_account.date_joined else None

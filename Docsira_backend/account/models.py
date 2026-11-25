@@ -51,13 +51,13 @@ class Collaborator(models.Model):
     # 3. La responsabilité / Le rôle (qui correspond à ton front-end Vue.js)
     class Roles(models.TextChoices):
         VIEWER = "viewer", _("Lecteur")
-        EDITOR = "editor", _("Éditeur")
+        EDITOR = "editor", _("Collaborateur")
         ADMIN = "admin", _("Administrateur")
 
     role = models.CharField(
         max_length=20,
         choices=Roles.choices,
-        default=Roles.VIEWER,
+        default=Roles.EDITOR,
         verbose_name=_("Responsabilité")
     )
 
@@ -93,7 +93,7 @@ class CollaboratorInvitation(models.Model):
     role = models.CharField(
         max_length=20,
         choices=Collaborator.Roles.choices,
-        default=Collaborator.Roles.VIEWER,
+        default=Collaborator.Roles.EDITOR,
         verbose_name=_("Responsabilité")
     )
     created_at = models.DateTimeField(auto_now_add=True)

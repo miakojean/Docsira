@@ -380,6 +380,24 @@ class Document(models.Model):
     )
     relation = models.CharField(_("Type de liaison"), max_length=10, choices=Relation.choices, default=Relation.INITIAL)
     version = models.PositiveIntegerField(_("Version"), default=1)
+    version_note = models.CharField(_("Note de version"), max_length=300, blank=True, default='')
+    uploaded_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_documents',
+        verbose_name=_("Ajouté par"),
+    )
+    updated_by = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='updated_documents',
+        verbose_name=_("Mis à jour par"),
+    )
+    updated_at = models.DateTimeField(_("Dernière mise à jour"), auto_now=True)
 
     category = models.CharField(
         _("Catégorie SIRA"), 
@@ -410,6 +428,8 @@ class Document(models.Model):
     def _resolve_author_name(self, actor=None):
         if actor is not None:
             return get_user_display_name(actor)
+        if self.uploaded_by is not None:
+            return get_user_display_name(self.uploaded_by)
         if self.affair.collaborator:
             return get_user_display_name(self.affair.collaborator.user)
         if self.affair.created_by:
@@ -419,6 +439,11 @@ class Document(models.Model):
     def save(self, *args, **kwargs):
         actor = kwargs.pop('actor', None) or getattr(self, '_actor', None)
         log_history = kwargs.pop('log_history', getattr(self, '_log_history', True))
+        custom_action = kwargs.pop('history_action', getattr(self, '_history_action', None))
+        custom_details = kwargs.pop('history_details', getattr(self, '_history_details', None))
+        self._history_action = None
+        self._history_details = None
+
         is_new = self._state.adding
         old_progression = self.affair.progression
 
@@ -434,8 +459,12 @@ class Document(models.Model):
         if log_history:
             author_name = self._resolve_author_name(actor)
             if is_new and self.relation == self.Relation.UPDATED:
-                action_type = "MAJ_DOCUMENT"
-                details = f"Nouvelle version (v{self.version}) du document '{self.title}' ({self.category}) par {author_name}."
+                action_type = "NOUVELLE_VERSION"
+                note_suffix = f" — {self.version_note}" if self.version_note else ""
+                details = f"Nouvelle version (v{self.version}) du document '{self.title}' ({self.category}) par {author_name}{note_suffix}."
+            elif custom_action:
+                action_type = custom_action
+                details = custom_details or f"Mise à jour du document '{self.title}' ({self.category}) par {author_name}."
             else:
                 action_type = "AJOUT_DOCUMENT" if is_new else "MAJ_DOCUMENT"
                 action_verb = "Ajout" if is_new else "Modification"
@@ -618,3 +647,37 @@ class AffairComment(models.Model):
 
     def __str__(self):
         return f"Commentaire de {self.author} sur {self.affair.reference_affair}"
+
+
+class AffairCommentRead(models.Model):
+    """Horodatage du dernier accès aux commentaires d'un dossier pour un utilisateur donné."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='affair_comment_reads',
+        verbose_name=_("Utilisateur"),
+    )
+    affair = models.ForeignKey(
+        Affair,
+        on_delete=models.CASCADE,
+        related_name='comment_reads',
+        verbose_name=_("Dossier"),
+    )
+    last_read_at = models.DateTimeField(_("Dernière lecture"), default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('user', 'affair'),
+                name='unique_user_affair_comment_read',
+            )
+        ]
+        indexes = [
+            models.Index(fields=['user', 'affair']),
+        ]
+        verbose_name = _("Lecture des commentaires")
+        verbose_name_plural = _("Lectures des commentaires")
+
+    def __str__(self):
+        return f"Lecture {self.user} / {self.affair.reference_affair}"

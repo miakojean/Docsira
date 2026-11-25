@@ -178,3 +178,83 @@ class CollaborateurViewTests(TestCase):
         self.assertEqual(page2.status_code, 200)
         self.assertEqual(len(page2.data["results"]), 1)
         self.assertIsNone(page2.data["next"])
+
+    def test_default_role_is_editor_and_admin_can_assign_roles(self):
+        # 1. Par défaut (sans précision), le rôle invité est "editor" (Collaborateur)
+        inv_default = self.client.post(
+            "/account/collaborators/",
+            {"email": "default.collab@example.com"},
+            format="json",
+        )
+        self.assertEqual(inv_default.status_code, 201)
+        self.assertEqual(inv_default.data["role"], "editor")
+
+        # 2. Changer le rôle d'une invitation en attente (admin / viewer / editor)
+        inv_id = inv_default.data["id"]
+        patch_inv = self.client.patch(
+            f"/account/collaborators/{inv_id}/role/",
+            {"role": "viewer"},
+            format="json",
+        )
+        self.assertEqual(patch_inv.status_code, 200)
+        self.assertEqual(patch_inv.data["role"], "viewer")
+
+        # 3. Créer un administrateur, un collaborateur et un lecteur actifs
+        admin_user = get_user_model().objects.create_user(
+            username="admin-col",
+            email="admin-col@example.com",
+            password="Secret123!",
+            account_type="collaborator",
+        )
+        Collaborator.objects.create(main_account=self.user, user=admin_user, role=Collaborator.Roles.ADMIN)
+
+        editor_user = get_user_model().objects.create_user(
+            username="editor-col",
+            email="editor-col@example.com",
+            password="Secret123!",
+            account_type="collaborator",
+        )
+        editor_collab = Collaborator.objects.create(
+            main_account=self.user, user=editor_user, role=Collaborator.Roles.EDITOR
+        )
+
+        # 4. L'éditeur (Collaborateur) NE PEUT PAS inviter ni modifier les rôles
+        self.client.force_authenticate(user=editor_user)
+        self.assertEqual(
+            self.client.patch(
+                f"/account/collaborators/{editor_collab.id}/role/",
+                {"role": "admin"},
+                format="json",
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.post(
+                "/account/collaborators/",
+                {"email": "forbidden@example.com"},
+                format="json",
+            ).status_code,
+            403,
+        )
+        me_editor = self.client.get("/account/me/")
+        self.assertEqual(me_editor.status_code, 200)
+        self.assertEqual(me_editor.data["role"], "editor")
+        self.assertFalse(me_editor.data["can_manage_collaborators"])
+        self.assertTrue(me_editor.data["can_edit"])
+
+        # 5. L'admin collaborateur PEUT rétrograder un collaborateur en viewer (Lecteur) et inviter
+        self.client.force_authenticate(user=admin_user)
+        patch_role = self.client.patch(
+            f"/account/collaborators/{editor_collab.id}/role/",
+            {"role": "viewer"},
+            format="json",
+        )
+        self.assertEqual(patch_role.status_code, 200)
+        self.assertEqual(patch_role.data["role"], "viewer")
+
+        editor_user.refresh_from_db()
+        self.client.force_authenticate(user=editor_user)
+        me_viewer = self.client.get("/account/me/")
+        self.assertEqual(me_viewer.data["role"], "viewer")
+        self.assertFalse(me_viewer.data["can_edit"])
+        self.assertFalse(me_viewer.data["can_manage_collaborators"])

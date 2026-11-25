@@ -3,6 +3,7 @@ import io
 import mimetypes
 import os
 import zipfile
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import F
 from django.http import FileResponse
@@ -24,12 +25,14 @@ from .serializers import (
 from .models import (
     Affair,
     AffairComment,
+    AffairCommentRead,
     AffairShareLink,
     Document,
     DocumentShareLink,
     get_user_display_name,
     resolve_document_file_path,
 )
+from account.permissions import IsFirmEditorOrReadOnly, is_firm_admin
 from sira.models import SiraFolderHistory
 
 
@@ -66,7 +69,7 @@ class BaseFirmView(APIView):
         return user
 
 class AffairView(BaseFirmView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def post(self, request):
         serializer = AffairSerializer(data=request.data)
@@ -103,7 +106,7 @@ class AffairView(BaseFirmView):
                     .prefetch_related('documents')
                     .get(id=affair_id, firm=firm, is_deleted=False)
                 )
-                serializer = AffairSerializer(affair)
+                serializer = AffairSerializer(affair, context={'request': request})
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except Affair.DoesNotExist:
                 return Response({"error": "Affair not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -131,7 +134,7 @@ class AffairView(BaseFirmView):
             paginator = PageNumberPagination()
             paginator.page_size = 10 
             paginated_affairs = paginator.paginate_queryset(affairs, request)
-            serializer = AffairSerializer(paginated_affairs, many=True)
+            serializer = AffairSerializer(paginated_affairs, many=True, context={'request': request})
             return paginator.get_paginated_response(serializer.data)
 
     def patch(self, request, affair_id):
@@ -170,7 +173,7 @@ class AffairView(BaseFirmView):
 
 class ArchivedAffairsView(BaseFirmView):
     """Liste paginée des dossiers archivés du cabinet connecté."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def get(self, request):
         affairs = (
@@ -182,12 +185,12 @@ class ArchivedAffairsView(BaseFirmView):
         paginator = PageNumberPagination()
         paginator.page_size = 10
         page = paginator.paginate_queryset(affairs, request)
-        return paginator.get_paginated_response(AffairSerializer(page, many=True).data)
+        return paginator.get_paginated_response(AffairSerializer(page, many=True, context={'request': request}).data)
 
 
 class AffairArchiveView(BaseFirmView):
     """Archive un dossier (POST) ou le restaure (DELETE), sans le supprimer."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def post(self, request, affair_id):
         return self._set_archived(request, affair_id, archived=True)
@@ -223,7 +226,7 @@ def _touch_affair(affair):
 
 class AffairDocumentsView(BaseFirmView):
     """Liste et ajoute plusieurs documents dans un dossier du cabinet."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
     parser_classes = [MultiPartParser, FormParser]
 
     def get_affair(self, request, affair_id):
@@ -301,7 +304,7 @@ class AffairDocumentsView(BaseFirmView):
         )
 
 class DocumentView(BaseFirmView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def post(self, request):
         serializer = DocumentSerializer(data=request.data, context={'request': request})
@@ -445,7 +448,7 @@ class DocumentView(BaseFirmView):
 
 class RestoreAffairView(BaseFirmView):
     """Restaure un dossier depuis la corbeille."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def post(self, request, affair_id):
         firm = self.get_firm(request.user)
@@ -477,7 +480,7 @@ class PermanentDeleteAffairView(BaseFirmView):
 
     def delete(self, request, affair_id):
         user = request.user
-        if hasattr(user, 'collaborator_profile') and user.collaborator_profile.role != 'admin':
+        if not is_firm_admin(user):
             return Response(
                 {"success": False, "message": "Action refusée : Seul un administrateur peut supprimer définitivement un dossier."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -495,7 +498,7 @@ class PermanentDeleteAffairView(BaseFirmView):
 
 class RestoreDocumentView(BaseFirmView):
     """Restaure un document depuis la corbeille."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def post(self, request, document_id):
         firm = self.get_firm(request.user)
@@ -534,7 +537,7 @@ class PermanentDeleteDocumentView(BaseFirmView):
 
     def delete(self, request, document_id):
         user = request.user
-        if hasattr(user, 'collaborator_profile') and user.collaborator_profile.role != 'admin':
+        if not is_firm_admin(user):
             return Response(
                 {"success": False, "message": "Action refusée : Seul un administrateur peut supprimer définitivement un document."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -596,6 +599,11 @@ class AffairCommentsView(BaseFirmView):
         with transaction.atomic():
             comment = serializer.save(affair=affair, author=request.user)
             _touch_affair(affair)
+            AffairCommentRead.objects.update_or_create(
+                user=request.user,
+                affair=affair,
+                defaults={'last_read_at': timezone.now()},
+            )
             author_name = get_user_display_name(request.user)
             SiraFolderHistory.objects.create(
                 affair_id=affair.id,
@@ -609,6 +617,69 @@ class AffairCommentsView(BaseFirmView):
 
         out = AffairCommentSerializer(comment, context={'request': request, 'affair': affair})
         return Response(out.data, status=status.HTTP_201_CREATED)
+
+
+class AffairCommentsUnreadView(BaseFirmView):
+    """Retourne le nombre et le dernier aperçu des commentaires non lus d'un dossier pour l'utilisateur courant."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, affair_id):
+        firm = self.get_firm(request.user)
+        try:
+            affair = Affair.objects.get(id=affair_id, firm=firm, is_deleted=False)
+        except Affair.DoesNotExist:
+            return Response({"error": "Dossier introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        qs = affair.comments.select_related('author').exclude(author=request.user)
+        read_state = AffairCommentRead.objects.filter(user=request.user, affair=affair).first()
+        if read_state:
+            qs = qs.filter(created_at__gt=read_state.last_read_at)
+
+        unread_count = qs.count()
+        latest = qs.order_by('-created_at').first()
+        latest_unread = None
+        if latest:
+            latest_unread = {
+                "id": str(latest.id),
+                "author_name": get_user_display_name(latest.author),
+                "content": latest.content[:140],
+                "created_at": latest.created_at.isoformat(),
+            }
+
+        return Response(
+            {
+                "unread_count": unread_count,
+                "total_count": affair.comments.count(),
+                "latest_unread": latest_unread,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class AffairCommentsMarkReadView(BaseFirmView):
+    """Marque tous les commentaires d'un dossier comme lus pour l'utilisateur courant."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, affair_id):
+        firm = self.get_firm(request.user)
+        try:
+            affair = Affair.objects.get(id=affair_id, firm=firm, is_deleted=False)
+        except Affair.DoesNotExist:
+            return Response({"error": "Dossier introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        read_state, _ = AffairCommentRead.objects.update_or_create(
+            user=request.user,
+            affair=affair,
+            defaults={'last_read_at': timezone.now()},
+        )
+        return Response(
+            {
+                "success": True,
+                "unread_count": 0,
+                "last_read_at": read_state.last_read_at.isoformat(),
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class AffairCommentDetailView(BaseFirmView):
@@ -704,15 +775,73 @@ class DocumentDownloadView(BaseFirmView):
         )
 
 
+def _get_document_version_chain(doc):
+    """Retourne la lignée chronologique complète (v1 -> ... -> latest) d'un document."""
+    visited = set()
+    root = doc
+    while root.relation == Document.Relation.UPDATED and root.parent_id and root.parent_id not in visited:
+        visited.add(root.pk)
+        parent = Document.objects.filter(pk=root.parent_id, affair_id=doc.affair_id, is_deleted=False).first()
+        if not parent:
+            break
+        root = parent
+
+    chain = [root]
+    seen_ids = {root.pk}
+    queue = [root]
+    while queue:
+        current = queue.pop(0)
+        children = Document.objects.filter(
+            parent_id=current.pk,
+            affair_id=doc.affair_id,
+            relation=Document.Relation.UPDATED,
+            is_deleted=False,
+        ).order_by('version', 'uploaded_at')
+        for child in children:
+            if child.pk not in seen_ids:
+                seen_ids.add(child.pk)
+                chain.append(child)
+                queue.append(child)
+
+    chain.sort(key=lambda item: (item.version or 1, item.uploaded_at))
+    return chain
+
+
 class DocumentVersionView(BaseFirmView):
-    """Ajoute une nouvelle version (v+1) reliée au document parent."""
-    permission_classes = [IsAuthenticated]
+    """Liste l'historique des versions d'un document et ajoute une nouvelle version (v+1)."""
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
     parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request, document_id):
+        firm = self.get_firm(request.user)
+        try:
+            base_doc = Document.objects.select_related('affair').get(
+                id=document_id,
+                affair__firm=firm,
+                is_deleted=False,
+            )
+        except Document.DoesNotExist:
+            return Response({"error": "Document introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        chain = _get_document_version_chain(base_doc)
+        versions = list(reversed(chain))
+
+        paginator = PageNumberPagination()
+        paginator.page_size = 20
+        paginator.page_size_query_param = 'page_size'
+        paginator.max_page_size = 100
+        page = paginator.paginate_queryset(versions, request)
+        serializer = DocumentSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def post(self, request, document_id):
         firm = self.get_firm(request.user)
         try:
-            base_doc = Document.objects.select_related('affair').get(id=document_id, affair__firm=firm)
+            base_doc = Document.objects.select_related('affair').get(
+                id=document_id,
+                affair__firm=firm,
+                is_deleted=False,
+            )
         except Document.DoesNotExist:
             return Response({"error": "Document introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -723,11 +852,15 @@ class DocumentVersionView(BaseFirmView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        chain = _get_document_version_chain(base_doc)
+        latest_doc = chain[-1]
+
         doc_data = {
-            "affair": str(base_doc.affair_id),
-            "title": (request.data.get("title") or base_doc.title)[:200],
+            "affair": str(latest_doc.affair_id),
+            "title": (request.data.get("title") or latest_doc.title)[:200],
             "file": uploaded_file,
-            "category": request.data.get("category") or base_doc.category,
+            "category": request.data.get("category") or latest_doc.category,
+            "version_note": (request.data.get("version_note") or "")[:300],
         }
         for coord in ("pos_x", "pos_y"):
             raw_val = request.data.get(coord)
@@ -749,18 +882,72 @@ class DocumentVersionView(BaseFirmView):
 
         with transaction.atomic():
             new_doc = serializer.save(
-                parent=base_doc,
+                parent=latest_doc,
                 relation=Document.Relation.UPDATED,
-                version=(base_doc.version or 1) + 1,
+                version=(latest_doc.version or 1) + 1,
+                uploaded_by=request.user,
+                updated_by=request.user,
             )
-            _touch_affair(base_doc.affair)
+            _touch_affair(latest_doc.affair)
 
         return Response(DocumentSerializer(new_doc).data, status=status.HTTP_201_CREATED)
 
 
+class DocumentVersionRestoreView(BaseFirmView):
+    """Restaure une ancienne version d'un document en créant une nouvelle version (façon Git)."""
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
+
+    def post(self, request, document_id):
+        firm = self.get_firm(request.user)
+        try:
+            target_doc = Document.objects.select_related('affair').get(
+                id=document_id,
+                affair__firm=firm,
+                is_deleted=False,
+            )
+        except Document.DoesNotExist:
+            return Response({"error": "Version introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        file_path = resolve_document_file_path(target_doc)
+        if not file_path:
+            return Response(
+                {"error": "Le fichier physique de cette version est introuvable."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        chain = _get_document_version_chain(target_doc)
+        latest_doc = chain[-1]
+        note = (request.data.get("version_note") or f"Restauré depuis la v{target_doc.version}").strip()[:300]
+        base_filename = os.path.basename(file_path)
+
+        with open(file_path, "rb") as fh:
+            raw_bytes = fh.read()
+
+        with transaction.atomic():
+            restored_doc = Document(
+                affair=latest_doc.affair,
+                title=latest_doc.title,
+                category=latest_doc.category,
+                parent=latest_doc,
+                relation=Document.Relation.UPDATED,
+                version=(latest_doc.version or 1) + 1,
+                version_note=note,
+                uploaded_by=request.user,
+                updated_by=request.user,
+                pos_x=latest_doc.pos_x,
+                pos_y=latest_doc.pos_y,
+            )
+            restored_doc._actor = request.user
+            restored_doc.file.save(base_filename, ContentFile(raw_bytes), save=False)
+            restored_doc.save()
+            _touch_affair(latest_doc.affair)
+
+        return Response(DocumentSerializer(restored_doc).data, status=status.HTTP_201_CREATED)
+
+
 class DocumentShareLinkView(BaseFirmView):
     """Liste, crée et révoque les liens de partage publics d'un document."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def _get_document(self, request, document_id):
         firm = self.get_firm(request.user)
@@ -851,7 +1038,7 @@ class PublicDocumentShareView(APIView):
 
 class AffairShareLinkView(BaseFirmView):
     """Liste, crée et révoque les liens de partage publics d'un dossier (affaire)."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def _get_affair(self, request, affair_id):
         firm = self.get_firm(request.user)

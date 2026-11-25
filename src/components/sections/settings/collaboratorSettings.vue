@@ -1,6 +1,6 @@
 <template>
     <div class="main-section gap-2">
-        <headerNav title="Mes collaborateurs" :showToolsButton="isOwner" @handleEvent="handleAdd" v-model="searchQuery"/>
+        <headerNav title="Mes collaborateurs" :showToolsButton="canManageTeam" @handleEvent="handleAdd" v-model="searchQuery"/>
 
         <div v-if="authStore.collaborators.length > 0" class="content-container">
 
@@ -11,15 +11,27 @@
                         :name="getCollaboratorName(collaborator.user)"
                         :email="collaborator.user.email"
                         :typeLabel="String(collaborator.id).startsWith('main_') ? 'Entreprise' : 'Collaborateur'"
-                        :canDelete="isOwner"
+                        :memberId="String(collaborator.id)"
+                        :role="collaborator.role || 'editor'"
+                        :isOwnerCard="String(collaborator.id).startsWith('main_')"
+                        :isSelf="String(collaborator.user?.id) === String(authStore.user?.id)"
+                        :canManageRoles="canManageTeam"
+                        :canDelete="canManageTeam"
+                        :isUpdatingRole="updatingRoleId === String(collaborator.id)"
+                        @changeRole="handleRoleChange"
                         @delete="handleDelete"
                     />
                     <PendingCollaboratorCard
                         v-else
                         :email="collaborator.user.email"
                         :isLoading="resendingEmail === collaborator.user.email"
-                        :canDelete="isOwner"
-                        @resend="handleResend"
+                        :memberId="String(collaborator.id)"
+                        :role="collaborator.role || 'editor'"
+                        :canManageRoles="canManageTeam"
+                        :canDelete="canManageTeam"
+                        :isUpdatingRole="updatingRoleId === String(collaborator.id)"
+                        @changeRole="handleRoleChange"
+                        @resend="handleResend(collaborator.user.email, collaborator.role)"
                         @delete="handleDelete"
                     />
                 </template>
@@ -48,7 +60,7 @@
         </div>
 
         <div v-else class="h-full w-full flex justify-center items-center">
-            <emptyCards :showAddButton="isOwner" @add="handleAdd"/>
+            <emptyCards :showAddButton="canManageTeam" @add="handleAdd"/>
         </div>
 
         <inviteModale
@@ -56,7 +68,7 @@
             :backendError="authStore.message.errorMessage"
             :isLoading="authStore.isLoading"
             @close="()=> {isOpen = false}"
-            @invite="(email:string) => { handleInvite(email)  }"
+            @invite="handleInvite"
         />
 
         <SuccesModale
@@ -93,7 +105,7 @@ import inviteModale from '../../modale/inviteModale.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
 import Pagination from '../../tools/Pagination.vue';
 import { ref, onMounted, computed, watch } from 'vue';
-import { useAuthStore } from '../../../stores/authStore';
+import { useAuthStore, type CollaboratorRole } from '../../../stores/authStore';
 import SuccesModale from '../../modale/succesModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 
@@ -102,15 +114,14 @@ const isOpen = ref(false);
 const isSuccess = ref(false);
 const successSubtitle = ref("Une invitation de collaboration a été envoyée dans le mail du collaborateur");
 const resendingEmail = ref<string | null>(null);
+const updatingRoleId = ref<string | null>(null);
 
 const isDeleteModalOpen = ref(false);
 const isDeleting = ref(false);
 const isDeleteSuccess = ref(false);
 const collaboratorToDelete = ref<string | null>(null);
 
-const isOwner = computed(() => {
-    return !authStore.collaborators.some(c => String(c.id).startsWith('main_'));
-});
+const canManageTeam = computed(() => authStore.isAdmin);
 
 const searchQuery = ref("");
 const currentPage = ref(1);
@@ -146,10 +157,10 @@ onMounted(async () => {
     await authStore.fetchCollaborators();
 });
 
-async function handleResend(email: string) {
+async function handleResend(email: string, role: CollaboratorRole = 'editor') {
     resendingEmail.value = email;
     try {
-        const response = await authStore.addCollaborator(email);
+        const response = await authStore.addCollaborator(email, role);
         if (response) {
             successSubtitle.value = "L'invitation a été renvoyée avec succès.";
             isSuccess.value = true;
@@ -159,8 +170,18 @@ async function handleResend(email: string) {
     }
 }
 
+async function handleRoleChange(payload: { id: string; role: CollaboratorRole }) {
+    if (!canManageTeam.value) return;
+    updatingRoleId.value = payload.id;
+    try {
+        await authStore.updateCollaboratorRole(payload.id, payload.role);
+    } finally {
+        updatingRoleId.value = null;
+    }
+}
+
 function handleAdd() {
-    if (!isOwner.value) return;
+    if (!canManageTeam.value) return;
     isOpen.value = true;
 }
 
@@ -186,15 +207,16 @@ async function confirmDeletion() {
     }
 }
 
-async function handleInvite(email: string) {
-    try{
-        const response = await authStore.addCollaborator(email);
-        if(response){
+async function handleInvite(payload: { email: string; role: CollaboratorRole } | string) {
+    try {
+        const email = typeof payload === 'string' ? payload : payload.email;
+        const role = typeof payload === 'string' ? 'editor' : payload.role;
+        const response = await authStore.addCollaborator(email, role);
+        if (response) {
           successSubtitle.value = "Une invitation de collaboration a été envoyée dans le mail du collaborateur";
           isOpen.value = false;
           isSuccess.value = true;
-        }
-        else {
+        } else {
           isSuccess.value = false;
         }
     } catch (error: any) {

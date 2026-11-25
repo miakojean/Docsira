@@ -1,8 +1,8 @@
 <template>
   <div class="collaborator-card">
     <!-- More options (3 dots) -->
-    <div class="dropdown" v-if="canDelete && typeLabel !== 'Entreprise'">
-      <button class="more-btn" @click="toggleMenu">
+    <div class="dropdown" v-if="canDelete && !isOwnerCard && !isSelf && typeLabel !== 'Entreprise'">
+      <button class="more-btn" @click="toggleMenu" aria-label="Actions collaborateur">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="more-icon">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
         </svg>
@@ -30,38 +30,62 @@
     <!-- Divider -->
     <div class="divider"></div>
     <div class="statut-container">
-      <span v-if="typeLabel" class="badge" :class="badgeClass">{{ typeLabel }}</span>
+      <template v-if="canManageRoles && !isOwnerCard && !isSelf && memberId">
+        <label :for="`collab-role-${memberId}`" class="sr-only">Rôle</label>
+        <select
+          :id="`collab-role-${memberId}`"
+          class="role-select"
+          :value="role"
+          :disabled="isUpdatingRole"
+          @change="onRoleSelect"
+        >
+          <option value="editor">Collaborateur</option>
+          <option value="viewer">Lecteur</option>
+          <option value="admin">Administrateur</option>
+        </select>
+      </template>
+      <span v-else class="role-text" :class="{ 'is-owner': isOwnerCard || role === 'owner' }">
+        {{ displayRoleLabel }}
+      </span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-const props = defineProps({
-  name: {
-    type: String,
-    required: true,
-  },
-  avatarUrl: {
-    type: String,
-    default: '',
-  },
-  email: {
-    type: String,
-    required: true,
-  },
-  typeLabel: {
-    type: String,
-    default: 'Collaborateur', // 'Entreprise' ou 'Collaborateur'
-  },
-  canDelete: {
-    type: Boolean,
-    default: false,
-  }
-});
-
-const emit = defineEmits(['delete']);
-
 import { computed, ref } from 'vue';
+import type { CollaboratorRole, UserRole } from '../../stores/authStore';
+
+const props = withDefaults(
+  defineProps<{
+    name: string;
+    avatarUrl?: string;
+    email: string;
+    typeLabel?: string;
+    memberId?: string;
+    role?: UserRole;
+    isOwnerCard?: boolean;
+    canManageRoles?: boolean;
+    isSelf?: boolean;
+    isUpdatingRole?: boolean;
+    canDelete?: boolean;
+  }>(),
+  {
+    avatarUrl: '',
+    typeLabel: 'Collaborateur',
+    memberId: '',
+    role: 'editor',
+    isOwnerCard: false,
+    canManageRoles: false,
+    isSelf: false,
+    isUpdatingRole: false,
+    canDelete: false,
+  }
+);
+
+const emit = defineEmits<{
+  (e: 'delete', email: string): void;
+  (e: 'changeRole', payload: { id: string; role: CollaboratorRole }): void;
+}>();
 
 const isMenuOpen = ref(false);
 
@@ -74,9 +98,21 @@ function handleDeleteClick() {
   isMenuOpen.value = false;
 }
 
-const badgeClass = computed(() => {
-  if (props.typeLabel === 'Entreprise') return 'badge-entreprise';
-  return 'badge-collaborator';
+function onRoleSelect(event: Event) {
+  const select = event.target as HTMLSelectElement;
+  const nextRole = select.value as CollaboratorRole;
+  if (props.memberId && nextRole !== props.role) {
+    emit('changeRole', { id: props.memberId, role: nextRole });
+  }
+}
+
+const displayRoleLabel = computed(() => {
+  if (props.isOwnerCard || props.role === 'owner' || props.typeLabel === 'Entreprise') {
+    return 'Propriétaire · Administrateur';
+  }
+  if (props.role === 'admin') return 'Administrateur';
+  if (props.role === 'viewer') return 'Lecteur (lecture seule)';
+  return 'Collaborateur';
 });
 </script>
 
@@ -209,31 +245,55 @@ const badgeClass = computed(() => {
   font-weight: 500;
 }
 
-/* Container du statut (badge) */
+/* Container du rôle (sobre, sans badge ni pill) */
 .statut-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
   text-align: center;
+  padding-top: 4px;
 }
 
-/* Badge (Entreprise / Collaborateur) */
-.badge {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 4px 20px;
-  border-radius: 9999px;
-  font-size: 11px;
+.role-select {
+  width: 100%;
+  max-width: 185px;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.8rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: #334155;
+  background-color: #f8fafc;
+  cursor: pointer;
+  outline: none;
 }
 
-.badge-entreprise {
-  background-color: #dbeafe;
-  color: #1e40af;
+.role-select:focus {
+  border-color: var(--primary-color, #005792);
+  background-color: #ffffff;
 }
 
-.badge-collaborator {
-  background-color: #f3f4f6;
-  color: #4b5563;
+.role-select:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.role-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.role-text.is-owner {
+  color: var(--primary-color, #005792);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
 }
 
 /* Ligne de séparation */

@@ -5,19 +5,6 @@
     </div>
 
     <div v-else-if="clientStore.archivedClients.length > 0" class="content-container">
-      <div class="controls-bar">
-        <div class="sort-control">
-          <span class="sort-label">Trier par</span>
-          <div class="sort-select">
-            <BaseSelectInput
-              v-model="sortBy"
-              :options="sortOptions"
-              inputId="archive-clients-sort"
-            />
-          </div>
-        </div>
-      </div>
-
       <div v-if="filteredClients.length > 0" class="flex-1 flex flex-col justify-between gap-4">
         <div class="clients-grid">
           <customerCard
@@ -111,7 +98,6 @@ import customerCard from '../../cards/customerCard.vue';
 import emptyCards from '../../cards/emptyCards.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
 import Pagination from '../../tools/Pagination.vue';
-import BaseSelectInput from '../../BaseInput/BaseSelectInput.vue';
 import viewClientModale from '../../modale/viewClientModale.vue';
 import clientDossiersModale from '../../modale/clientDossiersModale.vue';
 import editClientModale from '../../modale/editClientModale.vue';
@@ -122,9 +108,11 @@ import { useClientStore } from '../../../stores/clientStore';
 const props = withDefaults(
   defineProps<{
     searchQuery?: string;
+    sortBy?: string;
   }>(),
   {
     searchQuery: '',
+    sortBy: 'date_desc',
   }
 );
 
@@ -132,18 +120,8 @@ const clientStore = useClientStore();
 
 const pageSize = 12;
 const currentPage = ref(1);
-const sortBy = ref('date_desc');
 
-const sortOptions = [
-  { value: 'date_desc', label: "Plus récents d'abord" },
-  { value: 'date_asc', label: "Plus anciens d'abord" },
-  { value: 'alpha_asc', label: 'Ordre alphabétique (A → Z)' },
-  { value: 'alpha_desc', label: 'Ordre alphabétique (Z → A)' },
-  { value: 'ref_asc', label: 'Référence (croissante)' },
-  { value: 'ville_asc', label: 'Ville (A → Z)' },
-];
-
-watch([() => props.searchQuery, sortBy], () => {
+watch([() => props.searchQuery, () => props.sortBy], () => {
   currentPage.value = 1;
 });
 
@@ -159,7 +137,7 @@ const filteredClients = computed(() => {
 
 const sortedClients = computed(() => {
   const list = [...filteredClients.value];
-  switch (sortBy.value) {
+  switch (props.sortBy) {
     case 'date_asc':
       return list.sort((a, b) => new Date(a.date_creation || 0).getTime() - new Date(b.date_creation || 0).getTime());
     case 'alpha_asc':

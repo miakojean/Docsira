@@ -8,7 +8,7 @@
     @drop.prevent="onDrop"
   >
     <!-- Menu d'actions (Renommer / Supprimer) -->
-    <div class="folder-card__actions" @click.stop>
+    <div v-if="canEdit" class="folder-card__actions" @click.stop>
       <button
         type="button"
         class="action-kebab-btn"
@@ -58,10 +58,16 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 
-defineProps<{
-  folderName: string;
-  itemCount?: number;
-}>();
+withDefaults(
+  defineProps<{
+    folderName: string;
+    itemCount?: number;
+    canEdit?: boolean;
+  }>(),
+  {
+    canEdit: true,
+  }
+);
 
 const emit = defineEmits<{
   open: [];

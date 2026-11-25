@@ -1,6 +1,17 @@
 <template>
   <div class="git-panel">
-    <!-- Arbre de commit Git des jalons & documents -->
+    <!-- Résumé sobre de l'avancement SIRA (sans pill ni badge) -->
+    <div class="sira-summary-card">
+      <div class="sira-summary-top">
+        <span class="sira-summary-label">Progression SIRA</span>
+        <span class="sira-summary-value">{{ currentProgression }}% · {{ currentMilestoneLabel }}</span>
+      </div>
+      <div class="sira-progress-track" aria-hidden="true">
+        <div class="sira-progress-fill" :style="{ width: `${currentProgression}%` }"></div>
+      </div>
+    </div>
+
+    <!-- Arbre de commit Git des jalons, lignées de documents et versions -->
     <div class="git-graph-tree">
       <div
         v-for="(node, idx) in gitNodes"
@@ -21,7 +32,6 @@
 
         <!-- Ligne principale du commit (Jalon) -->
         <div class="git-commit-line">
-          <!-- Bullet du commit -->
           <div class="git-bullet-slot">
             <div class="git-bullet">
               <svg v-if="node.status === 'completed'" class="bullet-check" viewBox="0 0 20 20" fill="currentColor">
@@ -31,7 +41,6 @@
             </div>
           </div>
 
-          <!-- Détail du commit / jalon -->
           <div class="git-commit-meta">
             <div class="git-commit-title-row">
               <span class="git-hash">{{ node.threshold }}%</span>
@@ -40,36 +49,92 @@
           </div>
         </div>
 
-        <!-- Sous-branches Git : Fichiers actifs et supprimés dans ce jalon -->
-        <div v-if="node.documents.length > 0 || node.deletedDocuments.length > 0" class="git-sub-branch">
-          <!-- Fichiers actifs -->
+        <!-- Sous-branches Git : Lignées actives et fichiers supprimés -->
+        <div v-if="node.lineages.length > 0 || node.deletedDocuments.length > 0" class="git-sub-branch">
+          <!-- Lignées de documents actives -->
           <div
-            v-for="(doc, docIdx) in node.documents"
-            :key="doc.id"
-            class="git-doc-row"
+            v-for="(lineage, linIdx) in node.lineages"
+            :key="lineage.rootId"
+            class="git-lineage-block"
           >
-            <!-- Connecteur de branche ├── ou └── -->
-            <div
-              class="git-elbow"
-              :class="{ 'is-last': docIdx === node.documents.length - 1 && node.deletedDocuments.length === 0 }"
-            ></div>
-            
-            <button
-              type="button"
-              class="git-doc-btn"
-              :title="`Cliquer pour ouvrir ${doc.title}`"
-              @click="emit('openDocument', doc)"
-            >
-              <div class="git-doc-bullet"></div>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="git-doc-icon" :class="extClass(doc.extension)">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-              </svg>
-              <span class="git-doc-name">{{ doc.title }}</span>
-              <span class="git-doc-ext">{{ (doc.extension || 'doc').toUpperCase() }}</span>
-            </button>
+            <div class="git-doc-row">
+              <div
+                class="git-elbow"
+                :class="{ 'is-last': linIdx === node.lineages.length - 1 && node.deletedDocuments.length === 0 }"
+              ></div>
+
+              <div class="git-doc-wrapper">
+                <!-- Bouton dépliage des versions antérieures si v > 1 -->
+                <button
+                  v-if="lineage.versions.length > 1"
+                  type="button"
+                  class="lineage-expand-btn"
+                  :title="isLineageExpanded(lineage.rootId) ? 'Masquer les versions précédentes' : `Afficher les ${lineage.versions.length} versions`"
+                  @click.stop="toggleLineage(lineage.rootId)"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="2.2"
+                    stroke="currentColor"
+                    class="expand-chevron"
+                    :class="{ rotated: isLineageExpanded(lineage.rootId) }"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </button>
+
+                <button
+                  type="button"
+                  class="git-doc-btn"
+                  :title="`Voir les détails de ${lineage.latest.title} (v${lineage.latest.version || 1})`"
+                  @click="emit('openDetails', lineage.latest)"
+                >
+                  <div class="git-doc-bullet"></div>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="git-doc-icon" :class="extClass(lineage.latest.extension)">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                  <span class="git-doc-name">{{ lineage.latest.title }}</span>
+                  <span class="git-doc-ver">v{{ lineage.latest.version || 1 }}</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="git-ver-trigger"
+                  title="Gérer les versions"
+                  aria-label="Gérer les versions"
+                  @click.stop="emit('openVersions', lineage.latest)"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="ver-trigger-icon">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Liste des commits de versions antérieures (v2, v1...) -->
+            <ul v-if="lineage.versions.length > 1 && isLineageExpanded(lineage.rootId)" class="git-versions-branch">
+              <li
+                v-for="ver in lineage.versions.slice(1)"
+                :key="ver.id"
+                class="git-version-node"
+              >
+                <button
+                  type="button"
+                  class="git-version-btn"
+                  :title="ver.version_note ? `v${ver.version} : ${ver.version_note}` : `Voir les détails de la version v${ver.version || 1}`"
+                  @click="emit('openDetails', ver)"
+                >
+                  <span class="ver-branch-dot"></span>
+                  <span class="ver-tag">v{{ ver.version || 1 }}</span>
+                  <span class="ver-meta">{{ ver.version_note || formatDate(ver.uploaded_at) }}</span>
+                </button>
+              </li>
+            </ul>
           </div>
 
-          <!-- Fichiers supprimés (visualisables directement dans le graph) -->
+          <!-- Fichiers supprimés -->
           <div
             v-for="(delDoc, delIdx) in node.deletedDocuments"
             :key="delDoc.id"
@@ -89,68 +154,9 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
               </svg>
               <span class="git-del-name">{{ delDoc.title }}</span>
-              <span v-if="delDoc.author" class="git-del-author" :title="delDoc.author">
-                par {{ delDoc.author }}
-              </span>
               <span v-if="delDoc.previous_progression > delDoc.new_progression" class="git-del-drop">
                 -{{ delDoc.previous_progression - delDoc.new_progression }}%
               </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>    
-
-    <!-- Journal Git compact (pliable) -->
-    <div class="git-log-section">
-      <button
-        type="button"
-        class="git-log-btn"
-        @click="isHistoryOpen = !isHistoryOpen"
-      >
-        <div class="git-log-btn-left">
-          <svg class="size-3-5 text-slate-500" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M8 0a8 8 0 1 0 8 8A8 8 0 0 0 8 0zm0 14.5a6.5 6.5 0 1 1 6.5-6.5 6.51 6.51 0 0 1-6.5 6.5z"/>
-            <path d="M8 4a.75.75 0 0 0-.75.75v3.5c0 .2.08.39.22.53l2.5 2.5a.75.75 0 0 0 1.06-1.06L8.75 7.94V4.75A.75.75 0 0 0 8 4z"/>
-          </svg>
-          <span>git log (historique)</span>
-          <span class="git-log-count">{{ siraStore.histories.length }}</span>
-        </div>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="2.2"
-          stroke="currentColor"
-          class="git-log-chevron"
-          :class="{ rotated: isHistoryOpen }"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-        </svg>
-      </button>
-
-      <div v-if="isHistoryOpen" class="git-log-body">
-        <div v-if="siraStore.isLoading" class="git-log-empty">
-          <LogoLoader size="sm" label="Chargement des commits..." />
-        </div>
-        <div v-else-if="siraStore.histories.length === 0" class="git-log-empty">
-          <span>Aucune modification enregistrée.</span>
-        </div>
-        <div v-else class="git-log-list">
-          <div v-for="h in siraStore.histories" :key="h.id" class="git-log-entry">
-            <div class="log-dot" :class="getActionClass(h.action_type)"></div>
-            <div class="log-info">
-              <div class="log-title-row">
-                <span class="log-action">{{ formatActionType(h.action_type) }}</span>
-                <span class="log-date">{{ formatDate(h.timestamp) }}</span>
-              </div>
-              <div v-if="h.document_title" class="log-doc">{{ h.document_title }}</div>
-              <div v-if="h.author" class="log-author">
-                Par <span>{{ h.author }}</span>
-              </div>
-              <div class="log-diff">
-                <code>{{ h.previous_progression }}% → {{ h.new_progression }}%</code>
-              </div>
             </div>
           </div>
         </div>
@@ -162,9 +168,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import type { Dossier } from '../../stores/dossierStore';
-import type { DossierDocument } from '../../stores/documentStore';
+import { buildDocumentVersionLineages, type DossierDocument } from '../../stores/documentStore';
 import { useSiraStore } from '../../stores/siraStore';
-import LogoLoader from '../tools/LogoLoader.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -178,17 +183,28 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  (e: 'openDocument', doc: DossierDocument): void;
+  (e: 'openDetails', doc: DossierDocument): void;
+  (e: 'openVersions', doc: DossierDocument): void;
 }>();
 
 const siraStore = useSiraStore();
-const isHistoryOpen = ref(false);
+const expandedLineages = ref<Set<string>>(new Set());
 
 const currentProgression = computed(() => {
   if (props.currentDossier?.statut === 'CLOTURE' || props.currentDossier?.statut === 'TERMINE') {
     return 100;
   }
   return props.currentDossier?.progression ?? 10;
+});
+
+const currentMilestoneLabel = computed(() => {
+  const p = currentProgression.value;
+  if (p >= 100) return 'Clôture';
+  if (p >= 90) return 'Livrables';
+  if (p >= 75) return 'Procédures';
+  if (p >= 60) return 'Constitution';
+  if (p >= 45) return 'Identification';
+  return 'Initialisation';
 });
 
 const activeMilestoneIndex = computed(() => {
@@ -200,6 +216,20 @@ const activeMilestoneIndex = computed(() => {
   if (p >= 45) return 1;
   return 0;
 });
+
+const allLineages = computed(() => buildDocumentVersionLineages(props.documents));
+
+function isLineageExpanded(rootId: string) {
+  return expandedLineages.value.has(rootId);
+}
+
+function toggleLineage(rootId: string) {
+  if (expandedLineages.value.has(rootId)) {
+    expandedLineages.value.delete(rootId);
+  } else {
+    expandedLineages.value.add(rootId);
+  }
+}
 
 function getDeletedDocsForCategory(cat: string) {
   const isInit = cat === 'INIT';
@@ -239,15 +269,14 @@ function getDeletedDocsForCategory(cat: string) {
 }
 
 const gitNodes = computed(() => {
+  const known = ['IDENTIFICATION', 'CONSTITUTION', 'PROCEDURES', 'LIVRABLES', 'CLOTURE'];
   const nodes = [
     {
       id: 'init',
       category: 'INIT',
       threshold: 10,
       label: 'Initialisation',
-      documents: props.documents.filter(
-        (d) => !d.category || !['IDENTIFICATION', 'CONSTITUTION', 'PROCEDURES', 'LIVRABLES', 'CLOTURE'].includes(d.category)
-      ),
+      lineages: allLineages.value.filter((l) => !l.latest.category || !known.includes(l.latest.category)),
       deletedDocuments: getDeletedDocsForCategory('INIT'),
     },
     {
@@ -255,7 +284,7 @@ const gitNodes = computed(() => {
       category: 'IDENTIFICATION',
       threshold: 45,
       label: 'Identification',
-      documents: props.documents.filter((d) => d.category === 'IDENTIFICATION'),
+      lineages: allLineages.value.filter((l) => l.latest.category === 'IDENTIFICATION'),
       deletedDocuments: getDeletedDocsForCategory('IDENTIFICATION'),
     },
     {
@@ -263,7 +292,7 @@ const gitNodes = computed(() => {
       category: 'CONSTITUTION',
       threshold: 60,
       label: 'Constitution',
-      documents: props.documents.filter((d) => d.category === 'CONSTITUTION'),
+      lineages: allLineages.value.filter((l) => l.latest.category === 'CONSTITUTION'),
       deletedDocuments: getDeletedDocsForCategory('CONSTITUTION'),
     },
     {
@@ -271,7 +300,7 @@ const gitNodes = computed(() => {
       category: 'PROCEDURES',
       threshold: 75,
       label: 'Procédures',
-      documents: props.documents.filter((d) => d.category === 'PROCEDURES'),
+      lineages: allLineages.value.filter((l) => l.latest.category === 'PROCEDURES'),
       deletedDocuments: getDeletedDocsForCategory('PROCEDURES'),
     },
     {
@@ -279,7 +308,7 @@ const gitNodes = computed(() => {
       category: 'LIVRABLES',
       threshold: 90,
       label: 'Livrables',
-      documents: props.documents.filter((d) => d.category === 'LIVRABLES'),
+      lineages: allLineages.value.filter((l) => l.latest.category === 'LIVRABLES'),
       deletedDocuments: getDeletedDocsForCategory('LIVRABLES'),
     },
     {
@@ -287,7 +316,7 @@ const gitNodes = computed(() => {
       category: 'CLOTURE',
       threshold: 100,
       label: 'Clôture',
-      documents: props.documents.filter((d) => d.category === 'CLOTURE'),
+      lineages: allLineages.value.filter((l) => l.latest.category === 'CLOTURE'),
       deletedDocuments: getDeletedDocsForCategory('CLOTURE'),
     },
   ];
@@ -298,45 +327,13 @@ const gitNodes = computed(() => {
       status = 'completed';
     } else if (idx === activeMilestoneIndex.value) {
       status = 'head';
-    } else {
-      status = 'pending';
     }
-
     return {
       ...n,
       status,
     };
   });
 });
-
-function formatActionType(action: string) {
-  switch (action) {
-    case 'CREATION_DOSSIER':
-      return 'init: création dossier';
-    case 'AJOUT_DOCUMENT':
-      return 'commit: ajout doc';
-    case 'MAJ_DOCUMENT':
-      return 'commit: modification';
-    case 'SUPPRESSION_DOCUMENT':
-      return 'revert: suppression';
-    default:
-      return action;
-  }
-}
-
-function getActionClass(action: string) {
-  switch (action) {
-    case 'CREATION_DOSSIER':
-    case 'AJOUT_DOCUMENT':
-      return 'dot-add';
-    case 'SUPPRESSION_DOCUMENT':
-      return 'dot-del';
-    case 'MAJ_DOCUMENT':
-      return 'dot-upd';
-    default:
-      return 'dot-def';
-  }
-}
 
 function formatDate(iso: string) {
   if (!iso) return '';
@@ -357,14 +354,14 @@ function extClass(ext: string) {
 }
 
 const documentsSignature = computed(() =>
-  props.documents.map((d) => `${d.id}:${d.title}:${d.category}:${d.valide}`).join('|')
+  props.documents.map((d) => `${d.id}:${d.title}:${d.version}:${d.category}`).join('|')
 );
 
 watch(
   () => [props.currentId, documentsSignature.value],
   ([id]) => {
     if (id) {
-      siraStore.fetchHistory(String(id));
+      void siraStore.fetchHistory(String(id));
     }
   },
   { immediate: true }
@@ -372,34 +369,65 @@ watch(
 
 onMounted(() => {
   if (props.currentId) {
-    siraStore.fetchHistory(props.currentId);
+    void siraStore.fetchHistory(props.currentId);
   }
 });
 </script>
 
 <style scoped>
-/* ==================== VOLET 2 : GRAPH GIT SIRA ==================== */
 .git-panel {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0.35rem 0.75rem 1.25rem;
+  padding: 0.45rem 0.75rem 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   scrollbar-width: thin;
 }
 
-/* En-tête Git */
-
-.git-branch-icon {
-  width: 14px;
-  height: 14px;
-  color: #64748b;
-  flex-shrink: 0;
+.sira-summary-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
-/* Arbre Git Rail */
+.sira-summary-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.sira-summary-label {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.sira-summary-value {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sira-progress-track {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.sira-progress-fill {
+  height: 100%;
+  background: var(--primary-color, #005792);
+  transition: width 0.25s ease;
+}
+
 .git-graph-tree {
   display: flex;
   flex-direction: column;
@@ -420,7 +448,6 @@ onMounted(() => {
   padding-bottom: 0;
 }
 
-/* Rail vertical */
 .git-main-rail {
   position: absolute;
   top: 14px;
@@ -433,10 +460,9 @@ onMounted(() => {
 }
 
 .git-main-rail.rail-active {
-  background: #2563eb;
+  background: var(--primary-color, #005792);
 }
 
-/* Ligne de commit */
 .git-commit-line {
   position: relative;
   display: flex;
@@ -470,13 +496,11 @@ onMounted(() => {
   background: #10b981;
   border-color: #10b981;
   color: #ffffff;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .is-head .git-bullet {
-  border-color: #2563eb;
+  border-color: var(--primary-color, #005792);
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
 }
 
 .bullet-check {
@@ -488,7 +512,7 @@ onMounted(() => {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #2563eb;
+  background: var(--primary-color, #005792);
 }
 
 .git-commit-meta {
@@ -500,17 +524,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  flex-wrap: wrap;
 }
 
 .git-hash {
   font-family: ui-monospace, SFMono-Regular, monospace;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: #475569;
-  background: #f1f5f9;
-  padding: 0.05rem 0.3rem;
-  border-radius: 4px;
+  color: #64748b;
 }
 
 .git-step-name {
@@ -520,14 +540,13 @@ onMounted(() => {
 }
 
 .is-head .git-step-name {
-  color: #1d4ed8;
+  color: var(--primary-color, #005792);
 }
 
 .is-pending .git-step-name {
   color: #64748b;
 }
 
-/* Sous-branches pour les fichiers rattachés */
 .git-sub-branch {
   margin-left: 9px;
   padding-left: 11px;
@@ -537,6 +556,11 @@ onMounted(() => {
   margin-top: 0.35rem;
   position: relative;
   z-index: 1;
+}
+
+.git-lineage-block {
+  display: flex;
+  flex-direction: column;
 }
 
 .git-doc-row {
@@ -573,21 +597,47 @@ onMounted(() => {
   border-bottom-style: dashed;
 }
 
-.git-elbow.is-del-elbow:not(.is-last)::after {
-  background: repeating-linear-gradient(
-    to bottom,
-    #fca5a5 0px,
-    #fca5a5 3px,
-    transparent 3px,
-    transparent 6px
-  );
+.git-doc-wrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.lineage-expand-btn {
+  width: 18px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.lineage-expand-btn:hover {
+  color: #0f172a;
+}
+
+.expand-chevron {
+  width: 11px;
+  height: 11px;
+  transition: transform 0.15s ease;
+}
+
+.expand-chevron.rotated {
+  transform: rotate(90deg);
 }
 
 .git-doc-btn {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.2rem 0.45rem;
+  padding: 0.2rem 0.35rem;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -595,13 +645,10 @@ onMounted(() => {
   text-align: left;
   min-width: 0;
   flex: 1;
-  transition: all 0.15s ease;
 }
 
 .git-doc-btn:hover {
   background: #f1f5f9;
-  border-color: #cbd5e1;
-  transform: translateX(2px);
 }
 
 .git-doc-bullet {
@@ -610,10 +657,6 @@ onMounted(() => {
   border-radius: 50%;
   background: #94a3b8;
   flex-shrink: 0;
-}
-
-.git-doc-btn:hover .git-doc-bullet {
-  background: #2563eb;
 }
 
 .git-doc-icon {
@@ -627,7 +670,7 @@ onMounted(() => {
 .git-doc-icon.is-word { color: #3b82f6; }
 
 .git-doc-name {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 500;
   color: #334155;
   white-space: nowrap;
@@ -636,35 +679,97 @@ onMounted(() => {
   flex: 1;
 }
 
-.git-doc-ext {
-  font-size: 0.6rem;
-  font-weight: 700;
+.git-doc-ver {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
   color: #64748b;
-  background: #f1f5f9;
-  padding: 0.05rem 0.25rem;
-  border-radius: 3px;
   flex-shrink: 0;
 }
 
-/* Fichiers supprimés */
+.git-ver-trigger {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.git-ver-trigger:hover {
+  background: #f1f5f9;
+  color: var(--primary-color, #005792);
+}
+
+.ver-trigger-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.git-versions-branch {
+  list-style: none;
+  margin: 0.15rem 0 0.25rem 0.9rem;
+  padding: 0 0 0 0.6rem;
+  border-left: 1px dashed #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.git-version-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  background: transparent;
+  padding: 0.15rem 0.3rem;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+
+.git-version-btn:hover {
+  background: #f8fafc;
+}
+
+.ver-branch-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #94a3b8;
+  flex-shrink: 0;
+}
+
+.ver-tag {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.ver-meta {
+  font-size: 0.68rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .git-del-item {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.2rem 0.45rem;
-  background: #fef2f2;
-  border: 1px dashed #fecaca;
-  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
   min-width: 0;
   flex: 1;
-  opacity: 0.9;
-  transition: all 0.15s ease;
-}
-
-.git-del-item:hover {
-  background: #fee2e2;
-  border-color: #f87171;
-  opacity: 1;
 }
 
 .git-del-bullet {
@@ -684,7 +789,6 @@ onMounted(() => {
 
 .git-del-name {
   font-size: 0.72rem;
-  font-weight: 500;
   color: #991b1b;
   text-decoration: line-through;
   white-space: nowrap;
@@ -694,177 +798,10 @@ onMounted(() => {
 }
 
 .git-del-drop {
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   font-weight: 700;
   font-family: ui-monospace, SFMono-Regular, monospace;
   color: #dc2626;
-  background: #fee2e2;
-  padding: 0.04rem 0.25rem;
-  border-radius: 3px;
   flex-shrink: 0;
-}
-
-.is-deleted-stat {
-  color: #dc2626;
-}
-
-/* Section git log */
-.git-log-section {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.git-log-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.45rem 0.65rem;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-}
-
-.git-log-btn:hover {
-  background: #f8fafc;
-}
-
-.git-log-btn-left {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #334155;
-}
-
-.git-log-count {
-  font-size: 0.65rem;
-  background: #f1f5f9;
-  color: #475569;
-  padding: 0.05rem 0.35rem;
-  border-radius: 999px;
-}
-
-.git-log-chevron {
-  width: 13px;
-  height: 13px;
-  color: #94a3b8;
-  transition: transform 0.2s ease;
-}
-
-.git-log-chevron.rotated {
-  transform: rotate(90deg);
-}
-
-.git-log-body {
-  padding: 0.5rem 0.65rem;
-  border-top: 1px solid #f1f5f9;
-}
-
-.git-log-empty {
-  font-size: 0.72rem;
-  color: #94a3b8;
-  text-align: center;
-  padding: 0.5rem 0;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-}
-
-.git-log-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.git-log-entry {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.45rem;
-}
-
-.log-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  margin-top: 4px;
-  flex-shrink: 0;
-}
-
-.dot-add { background: #10b981; }
-.dot-del { background: #ef4444; }
-.dot-upd { background: #3b82f6; }
-.dot-def { background: #94a3b8; }
-
-.log-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.log-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.3rem;
-}
-
-.log-action {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #1e293b;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-}
-
-.log-date {
-  font-size: 0.65rem;
-  color: #94a3b8;
-}
-
-.log-doc {
-  font-size: 0.7rem;
-  color: #475569;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: 0.05rem;
-}
-
-.log-author {
-  font-size: 0.67rem;
-  color: #64748b;
-  margin-top: 0.05rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.log-author span {
-  font-weight: 600;
-  color: #334155;
-}
-
-.git-del-author {
-  font-size: 0.65rem;
-  color: #9f1239;
-  opacity: 0.85;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 90px;
-}
-
-.log-diff code {
-  font-size: 0.65rem;
-  color: #2563eb;
-  background: #eff6ff;
-  padding: 0.05rem 0.3rem;
-  border-radius: 3px;
-}
-
-.size-3-5 {
-  width: 0.875rem;
-  height: 0.875rem;
 }
 </style>

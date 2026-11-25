@@ -767,7 +767,7 @@ async function executeVersionUpload(doc: DossierDocument, file: File) {
     y: parentPos.y + (offsetIndex === 0 ? 0 : offsetIndex * 150),
   };
 
-  const newDoc = await docStore.uploadNewVersion(doc.id, file, newPos.x, newPos.y);
+  const newDoc = await docStore.uploadNewVersion(doc.id, file, { posX: newPos.x, posY: newPos.y });
   if (newDoc) {
     localPositions.value[newDoc.id] = newPos;
     selectedDocId.value = newDoc.id;

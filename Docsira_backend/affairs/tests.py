@@ -152,6 +152,9 @@ class AffairDocumentsApiTests(APITestCase):
 		)
 		self.assertEqual(upload_resp.status_code, 201)
 		v1_id = upload_resp.data[0]["id"]
+		self.assertTrue(upload_resp.data[0]["created_by_name"])
+		self.assertIsNone(upload_resp.data[0]["updated_by_name"])
+		v1_creator_name = upload_resp.data[0]["created_by_name"]
 		version_url = reverse("document-versions", kwargs={"document_id": v1_id})
 
 		# Rejeter les formats autres que PDF/Word
@@ -162,19 +165,84 @@ class AffairDocumentsApiTests(APITestCase):
 		)
 		self.assertEqual(bad_resp.status_code, 400)
 
-		# Accepter v2 Word/PDF
+		# Collaborateur qui dépose v2 : Créé par reste v1, Mis à jour par = collaborateur
+		collab_ver = CustomUser.objects.create_user(
+			username="collab-ver",
+			first_name="Moussa",
+			last_name="Diop",
+			password="test-password",
+			account_type=CustomUser.AccountType.COLLABORATOR,
+		)
+		Collaborator.objects.create(main_account=self.user, user=collab_ver, role=Collaborator.Roles.EDITOR)
+		self.client.force_authenticate(user=collab_ver)
+
+		# Accepter v2 Word/PDF avec note de version
 		v2_resp = self.client.post(
 			version_url,
-			{"file": SimpleUploadedFile("contrat_v2.docx", b"v2 content", content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+			{
+				"file": SimpleUploadedFile("contrat_v2.docx", b"v2 content", content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+				"version_note": "Correction clause 4",
+			},
 			format="multipart",
 		)
 		self.assertEqual(v2_resp.status_code, 201)
+		v2_id = v2_resp.data["id"]
 		self.assertEqual(v2_resp.data["version"], 2)
+		self.assertEqual(v2_resp.data["version_note"], "Correction clause 4")
 		self.assertEqual(v2_resp.data["relation"], Document.Relation.UPDATED)
 		self.assertEqual(str(v2_resp.data["parent"]), str(v1_id))
+		self.assertEqual(v2_resp.data["created_by_name"], v1_creator_name)
+		self.assertEqual(v2_resp.data["updated_by_name"], "Moussa Diop (Collaborateur)")
+		self.client.force_authenticate(user=self.user)
+
+		# Poster v3 sur v1 alors que v2 existe déjà doit rattacher v3 à v2
+		v3_resp = self.client.post(
+			version_url,
+			{
+				"file": SimpleUploadedFile("contrat_v3.pdf", b"%PDF-1.4 v3 content", content_type="application/pdf"),
+				"version_note": "Version signée",
+			},
+			format="multipart",
+		)
+		self.assertEqual(v3_resp.status_code, 201)
+		self.assertEqual(v3_resp.data["version"], 3)
+		self.assertEqual(str(v3_resp.data["parent"]), str(v2_id))
+
+		# GET /versions/ renvoie la lignée complète (v3 -> v2 -> v1) sans mélanger d'autres documents
+		versions_resp = self.client.get(version_url)
+		self.assertEqual(versions_resp.status_code, 200)
+		self.assertEqual(versions_resp.data["count"], 3)
+		self.assertEqual([item["version"] for item in versions_resp.data["results"]], [3, 2, 1])
+
+		# Restaurer v1 -> crée v4 non destructive avec contenu binaire de v1
+		restore_url = reverse("document-version-restore", kwargs={"document_id": v1_id})
+		restore_resp = self.client.post(restore_url, {}, format="json")
+		self.assertEqual(restore_resp.status_code, 201)
+		v4_id = restore_resp.data["id"]
+		self.assertEqual(restore_resp.data["version"], 4)
+		self.assertIn("v1", restore_resp.data["version_note"])
+		dl_resp = self.client.get(reverse("document-download", kwargs={"document_id": v4_id}))
+		self.assertEqual(b"".join(dl_resp.streaming_content), b"v1 content")
+		dl_resp.close()
+
+		# Validation du document -> journalisée dans SiraFolderHistory
+		val_resp = self.client.patch(reverse("document-id", kwargs={"document_id": v4_id}), {"valide": True}, format="json")
+		self.assertEqual(val_resp.status_code, 200)
+		self.assertTrue(val_resp.data["valide"])
+
+		history_url = reverse("sira-affair-history", kwargs={"affair_id": self.affair.pk})
+		ver_history = self.client.get(history_url + "?action_type=NOUVELLE_VERSION")
+		self.assertEqual(ver_history.status_code, 200)
+		self.assertGreaterEqual(ver_history.data["count"], 3)
+
+		val_history = self.client.get(history_url + "?action_type=VALIDATION_DOCUMENT")
+		self.assertEqual(val_history.status_code, 200)
+		self.assertEqual(val_history.data["count"], 1)
 
 		other_user = CustomUser.objects.create_user(username="other-firm-ver", password="test-password")
 		self.client.force_authenticate(user=other_user)
+		self.assertEqual(self.client.get(version_url).status_code, 404)
+		self.assertEqual(self.client.get(history_url).status_code, 404)
 		other_resp = self.client.post(
 			version_url,
 			{"file": SimpleUploadedFile("hack.pdf", b"hack", content_type="application/pdf")},
@@ -467,3 +535,86 @@ class AffairDocumentsApiTests(APITestCase):
 		self.client.force_authenticate(user=self.user)
 		self.assertEqual(self.client.delete(reply_detail_url).status_code, 200)
 		self.assertFalse(AffairComment.objects.filter(pk=reply_id).exists())
+
+	def test_unread_comments_notification_and_viewer_permissions(self):
+		viewer_user = CustomUser.objects.create_user(
+			username="viewer-col",
+			first_name="Lucie",
+			last_name="Bernadette",
+			password="test-password",
+			account_type=CustomUser.AccountType.COLLABORATOR,
+		)
+		Collaborator.objects.create(
+			main_account=self.user,
+			user=viewer_user,
+			role=Collaborator.Roles.VIEWER,
+		)
+
+		comments_url = reverse("affair-comments", kwargs={"affair_id": self.affair.pk})
+		unread_url = reverse("affair-comments-unread", kwargs={"affair_id": self.affair.pk})
+		mark_read_url = reverse("affair-comments-mark-read", kwargs={"affair_id": self.affair.pk})
+
+		# 1. Le lecteur peut consulter les dossiers et documents (GET)
+		self.client.force_authenticate(user=viewer_user)
+		self.assertEqual(self.client.get(reverse("affair-list")).status_code, 200)
+		self.assertEqual(self.client.get(self.url).status_code, 200)
+
+		# 2. Le lecteur est bloqué (403) sur toute modification dossier / document / lien de partage
+		self.assertEqual(
+			self.client.post(
+				reverse("affair-list"),
+				{"title": "Tentative", "type_affair": "CONTRAT", "client_id": str(self.client_record.pk)},
+				format="json",
+			).status_code,
+			403,
+		)
+		self.assertEqual(
+			self.client.patch(
+				reverse("affair-detail", kwargs={"affair_id": self.affair.pk}),
+				{"title": "Modifié"},
+				format="json",
+			).status_code,
+			403,
+		)
+		self.assertEqual(
+			self.client.post(
+				self.url,
+				{"files": [SimpleUploadedFile("test.pdf", b"%PDF-1.4 data", content_type="application/pdf")]},
+				format="multipart",
+			).status_code,
+			403,
+		)
+		self.assertEqual(
+			self.client.post(
+				reverse("affair-share-links", kwargs={"affair_id": self.affair.pk}),
+				{"expires_in_days": 7},
+				format="json",
+			).status_code,
+			403,
+		)
+
+		# 3. Mais le lecteur PEUT laisser, modifier et supprimer son propre commentaire
+		viewer_comment = self.client.post(
+			comments_url,
+			{"content": "Pouvez-vous vérifier la clause 2 ?"},
+			format="json",
+		)
+		self.assertEqual(viewer_comment.status_code, 201)
+		self.assertEqual(self.client.get(unread_url).data["unread_count"], 0)
+
+		# 4. Le propriétaire reçoit 1 commentaire non lu (sur /affairs/ et /comments/unread/)
+		self.client.force_authenticate(user=self.user)
+		affair_list_resp = self.client.get(reverse("affair-list"))
+		self.assertEqual(affair_list_resp.data["results"][0]["unread_comments_count"], 1)
+
+		unread_resp = self.client.get(unread_url)
+		self.assertEqual(unread_resp.status_code, 200)
+		self.assertEqual(unread_resp.data["unread_count"], 1)
+		self.assertEqual(unread_resp.data["latest_unread"]["content"], "Pouvez-vous vérifier la clause 2 ?")
+
+		# 5. Marquer comme lu remet le compteur à 0 pour le propriétaire
+		mark_resp = self.client.post(mark_read_url)
+		self.assertEqual(mark_resp.status_code, 200)
+		self.assertEqual(mark_resp.data["unread_count"], 0)
+		self.assertEqual(self.client.get(unread_url).data["unread_count"], 0)
+		self.assertEqual(self.client.get(reverse("affair-list")).data["results"][0]["unread_comments_count"], 0)

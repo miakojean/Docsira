@@ -5,31 +5,6 @@
     </div>
 
     <div v-else-if="dossierStore.archivedDossiers.length > 0" class="content-container">
-      <!-- Filtres par statut et tri -->
-      <div class="controls-bar">
-        <div class="sort-control">
-          <span class="sort-label">Statut</span>
-          <div class="sort-select">
-            <BaseSelectInput
-              v-model="dossierStatutFilter"
-              :options="DOSSIER_STATUT_OPTIONS"
-              inputId="archive-dossiers-statut"
-            />
-          </div>
-        </div>
-
-        <div class="sort-control">
-          <span class="sort-label">Trier par</span>
-          <div class="sort-select">
-            <BaseSelectInput
-              v-model="sortBy"
-              :options="DOSSIER_SORT_OPTIONS"
-              inputId="archive-dossiers-sort"
-            />
-          </div>
-        </div>
-      </div>
-
       <div v-if="filteredDossiers.length > 0" class="flex-1 flex flex-col justify-between gap-4">
         <div class="dossiers-grid">
           <affairsCards
@@ -121,20 +96,23 @@ import affairsCards from '../../cards/affairsCards.vue';
 import emptyCards from '../../cards/emptyCards.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
 import Pagination from '../../tools/Pagination.vue';
-import BaseSelectInput from '../../BaseInput/BaseSelectInput.vue';
 import detailsModale, { type ItemDetails } from '../../modale/detailsModale.vue';
 import editDossierModale from '../../modale/editDossierModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
 import { useClientDossierStore, type Dossier } from '../../../stores/dossierStore';
-import { DOSSIER_STATUT_OPTIONS, DOSSIER_SORT_OPTIONS, sortDossiers } from '../../../helpers/dossierSort';
+import { sortDossiers } from '../../../helpers/dossierSort';
 
 const props = withDefaults(
   defineProps<{
     searchQuery?: string;
+    statutFilter?: string;
+    sortBy?: string;
   }>(),
   {
     searchQuery: '',
+    statutFilter: 'ALL',
+    sortBy: 'date_desc',
   }
 );
 
@@ -143,16 +121,14 @@ const dossierStore = useClientDossierStore();
 
 const pageSize = 10;
 const currentPage = ref(1);
-const dossierStatutFilter = ref('ALL');
-const sortBy = ref('date_desc');
 
-watch([() => props.searchQuery, dossierStatutFilter, sortBy], () => {
+watch([() => props.searchQuery, () => props.statutFilter, () => props.sortBy], () => {
   currentPage.value = 1;
 });
 
 const filteredDossiers = computed(() => {
   const q = props.searchQuery.trim().toLowerCase();
-  const filter = dossierStatutFilter.value;
+  const filter = props.statutFilter;
 
   return dossierStore.archivedDossiers.filter((d) => {
     const matchesStatut = filter === 'ALL' || d.statut === filter;
@@ -167,7 +143,7 @@ const filteredDossiers = computed(() => {
   });
 });
 
-const sortedDossiers = computed(() => sortDossiers(filteredDossiers.value, sortBy.value));
+const sortedDossiers = computed(() => sortDossiers(filteredDossiers.value, props.sortBy));
 
 const paginatedDossiers = computed(() => {
   const start = (currentPage.value - 1) * pageSize;

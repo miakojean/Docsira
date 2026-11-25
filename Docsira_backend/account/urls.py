@@ -6,6 +6,7 @@ from .views import (
     ProfileView, 
     ChangePasswordView,
     CollaborateurView,
+    CollaboratorRoleView,
     CollaboratorCodeView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -18,6 +19,7 @@ urlpatterns = [
     path('change-password/', ChangePasswordView.as_view(), name='change_password'),
     # Manage Collaborators endpoints
     path('collaborators/', CollaborateurView.as_view(), name='collaborators'),
+    path('collaborators/<uuid:member_id>/role/', CollaboratorRoleView.as_view(), name='collaborator-role'),
     path('collaboratos/code/', CollaboratorCodeView.as_view(), name="Collaborator_code"),
     # JWT token refresh endpoint
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh')

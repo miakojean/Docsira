@@ -58,8 +58,10 @@ const toggleInviteModal = () => {
   isInviteModalOpen.value = !isInviteModalOpen.value;
 };
 
-const handleInvite = async (email: string) => {
-  const response = await authStore.addCollaborator(email);
+const handleInvite = async (payload: { email: string; role?: 'admin' | 'editor' | 'viewer' } | string) => {
+  const email = typeof payload === 'string' ? payload : payload.email;
+  const role = typeof payload === 'string' ? 'editor' : (payload.role || 'editor');
+  const response = await authStore.addCollaborator(email, role);
   if (response) {
     toggleInviteModal();
   }

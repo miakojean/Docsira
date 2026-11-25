@@ -30,6 +30,18 @@ export interface AddCommentPayload {
   parent?: string | null;
 }
 
+export interface UnreadCommentPreview {
+  id: string;
+  author_name: string;
+  content: string;
+  created_at: string;
+}
+
+export interface UnreadCommentState {
+  unreadCount: number;
+  latestUnread: UnreadCommentPreview | null;
+}
+
 function extractError(data: any, fallback: string): string {
   if (!data) return fallback;
   if (typeof data.error === 'string' && data.error) return data.error;
@@ -41,6 +53,7 @@ function extractError(data: any, fallback: string): string {
 export const useCommentStore = defineStore('comments', () => {
   // States
   const commentsByAffair = ref<Record<string, AffairComment[]>>({});
+  const unreadByAffair = ref<Record<string, UnreadCommentState>>({});
   const isLoading = ref(false);
   const isSubmitting = ref(false);
   const errorMessage = ref('');
@@ -52,6 +65,14 @@ export const useCommentStore = defineStore('comments', () => {
 
   function getCommentCount(affairId: string): number {
     return getComments(affairId).length;
+  }
+
+  function getUnreadCount(affairId: string): number {
+    return unreadByAffair.value[affairId]?.unreadCount ?? 0;
+  }
+
+  function getLatestUnread(affairId: string): UnreadCommentPreview | null {
+    return unreadByAffair.value[affairId]?.latestUnread ?? null;
   }
 
   function getThreads(affairId: string, documentId: string | null = null): AffairCommentThread[] {
@@ -133,6 +154,10 @@ export const useCommentStore = defineStore('comments', () => {
         ...commentsByAffair.value,
         [affairId]: [...current, created],
       };
+      unreadByAffair.value = {
+        ...unreadByAffair.value,
+        [affairId]: { unreadCount: 0, latestUnread: null },
+      };
       return created;
     } catch (error) {
       console.error(error);
@@ -200,15 +225,57 @@ export const useCommentStore = defineStore('comments', () => {
     }
   }
 
+  async function fetchUnreadStatus(affairId: string): Promise<UnreadCommentState | null> {
+    if (!affairId) return null;
+    try {
+      const response = await api(`/affairs/${affairId}/comments/unread/`, 'GET');
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data) return null;
+      const state: UnreadCommentState = {
+        unreadCount: Number(data.unread_count ?? 0),
+        latestUnread: data.latest_unread ?? null,
+      };
+      unreadByAffair.value = {
+        ...unreadByAffair.value,
+        [affairId]: state,
+      };
+      return state;
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
+  }
+
+  async function markAsRead(affairId: string): Promise<boolean> {
+    if (!affairId) return false;
+    try {
+      const response = await api(`/affairs/${affairId}/comments/mark-read/`, 'POST', {});
+      if (!response.ok) return false;
+      unreadByAffair.value = {
+        ...unreadByAffair.value,
+        [affairId]: { unreadCount: 0, latestUnread: null },
+      };
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
   return {
     commentsByAffair,
+    unreadByAffair,
     isLoading,
     isSubmitting,
     errorMessage,
     getComments,
     getCommentCount,
+    getUnreadCount,
+    getLatestUnread,
     getThreads,
     fetchComments,
+    fetchUnreadStatus,
+    markAsRead,
     addComment,
     updateComment,
     deleteComment,

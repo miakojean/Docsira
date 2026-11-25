@@ -1,18 +1,6 @@
 <template>
   <div class="research-wrapper">
     <div class="flex items-center">
-      <button 
-        class="research-btn" 
-        type="button" 
-        aria-label="Rechercher"
-        @click="focusInput"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-            stroke-width="1.8" stroke="currentColor" class="size-6">
-          <path stroke-linecap="round" stroke-linejoin="round"
-              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-        </svg>
-      </button>
 
       <div class="input-container">
         <input 
@@ -66,10 +54,6 @@ function onInput(event: Event) {
   }
 }
 
-function focusInput() {
-  inputRef.value?.focus();
-}
-
 function clearInput() {
   emit('update:modelValue', '');
   inputRef.value?.focus();
@@ -84,32 +68,6 @@ function clearInput() {
 .flex {
   display: flex;
   align-items: center;
-}
-
-/* ---------- Button ---------- */
-.research-btn {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--primary-color-dark, #005380);
-  width: 40px;
-  height: 40px;
-  padding: 0.5rem;
-  color: #fff;
-  border: none;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.research-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.research-btn:active {
-  transform: scale(0.97);
 }
 
 /* ---------- Input container ---------- */

@@ -1,6 +1,49 @@
 <template>
   <section class="main-section archives-section">
     <div class="archives-detail">
+      <headerNav
+        :title="headerTitle"
+        :placeholder="searchPlaceholder"
+        :showToolsButton="false"
+        v-model="searchQuery"
+      >
+        <template #actions>
+          <div v-if="activeCategory === 'dossiers' && dossierStore.archivedDossiers.length > 0" class="controls-bar">
+            <div class="sort-control">
+              <div class="sort-select">
+                <BaseSelectInput
+                  v-model="dossierStatutFilter"
+                  :options="DOSSIER_STATUT_OPTIONS"
+                  inputId="archive-dossiers-statut"
+                />
+              </div>
+            </div>
+
+            <div class="sort-control">
+              <div class="sort-select">
+                <BaseSelectInput
+                  v-model="dossierSortBy"
+                  :options="DOSSIER_SORT_OPTIONS"
+                  inputId="archive-dossiers-sort"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="activeCategory === 'clients' && clientStore.archivedClients.length > 0" class="controls-bar">
+            <div class="sort-control">
+              <div class="sort-select">
+                <BaseSelectInput
+                  v-model="clientSortBy"
+                  :options="clientSortOptions"
+                  inputId="archive-clients-sort"
+                />
+              </div>
+            </div>
+          </div>
+        </template>
+      </headerNav>
+
       <div class="archives-topbar">
         <div class="category-tabs">
           <button
@@ -16,23 +59,19 @@
         </div>
       </div>
 
-      <headerNav
-        :title="headerTitle"
-        :placeholder="searchPlaceholder"
-        :showToolsButton="false"
-        v-model="searchQuery"
-      />
-
       <!-- Onglet Dossiers par défaut -->
       <archiveDossiersTab
         v-if="activeCategory === 'dossiers'"
         :searchQuery="searchQuery"
+        :statutFilter="dossierStatutFilter"
+        :sortBy="dossierSortBy"
       />
 
       <!-- Onglet Clients -->
       <archiveClientsTab
         v-else-if="activeCategory === 'clients'"
         :searchQuery="searchQuery"
+        :sortBy="clientSortBy"
       />
     </div>
   </section>
@@ -42,11 +81,13 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import headerNav from '../../navbar/headerNav.vue';
+import BaseSelectInput from '../../BaseInput/BaseSelectInput.vue';
 import archiveDossiersTab from './archiveDossiersTab.vue';
 import archiveClientsTab from './archiveClientsTab.vue';
 
 import { useClientDossierStore } from '../../../stores/dossierStore';
 import { useClientStore } from '../../../stores/clientStore';
+import { DOSSIER_STATUT_OPTIONS, DOSSIER_SORT_OPTIONS } from '../../../helpers/dossierSort';
 
 type ArchiveCategory = 'dossiers' | 'clients';
 
@@ -58,6 +99,18 @@ const clientStore = useClientStore();
 // Par défaut : tomber directement sur les dossiers
 const activeCategory = ref<ArchiveCategory>('dossiers');
 const searchQuery = ref('');
+const dossierStatutFilter = ref('ALL');
+const dossierSortBy = ref('date_desc');
+const clientSortBy = ref('date_desc');
+
+const clientSortOptions = [
+  { value: 'date_desc', label: "Plus récents d'abord" },
+  { value: 'date_asc', label: "Plus anciens d'abord" },
+  { value: 'alpha_asc', label: 'Ordre alphabétique (A → Z)' },
+  { value: 'alpha_desc', label: 'Ordre alphabétique (Z → A)' },
+  { value: 'ref_asc', label: 'Référence (croissante)' },
+  { value: 'ville_asc', label: 'Ville (A → Z)' },
+];
 
 const categories = computed(() => [
   { key: 'dossiers' as const, label: 'Dossiers', count: dossierStore.archivedDossiers.length },
@@ -113,6 +166,29 @@ onMounted(() => {
   gap: 0.85rem;
   height: 100%;
   width: 100%;
+}
+
+.controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sort-select {
+  min-width: fit-content;
+}
+
+.sort-select :deep(.select-input) {
+  padding: 0.5rem 2.2rem 0.5rem 0.8rem;
+  font-size: 0.85rem;
 }
 
 .archives-topbar {

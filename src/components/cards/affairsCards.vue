@@ -115,6 +115,15 @@
         </svg>
         <span class="progress-ring__text">{{ effectiveProgress }}%</span>
       </div>
+
+      <!-- Indicateur de commentaires non lus -->
+      <div
+        v-if="!isClientCard && (dossier?.unread_comments_count ?? 0) > 0"
+        class="unread-comment-indicator"
+        :title="`${dossier?.unread_comments_count} nouveau(x) commentaire(s)`"
+      >
+        {{ (dossier?.unread_comments_count ?? 0) > 9 ? '9+' : dossier?.unread_comments_count }}
+      </div>
     </div>
 
     <!-- Informations sous le dossier -->
@@ -160,7 +169,7 @@
             </svg>
             <span>Ouvrir</span>
           </li>
-          <li @click="onAction('addDossier')">
+          <li v-if="canEdit" @click="onAction('addDossier')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
@@ -181,13 +190,13 @@
             </svg>
             <span>Détails</span>
           </li>
-          <li @click="onAction('edit')">
+          <li v-if="canEdit" @click="onAction('edit')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
             </svg>
             <span>Modifier</span>
           </li>
-          <li @click="onAction('share')">
+          <li v-if="canEdit" @click="onAction('share')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
             </svg>
@@ -199,13 +208,13 @@
             </svg>
             <span>Télécharger</span>
           </li>
-          <li @click="onAction(dossier?.is_archived ? 'unarchive' : 'archive')">
+          <li v-if="canEdit" @click="onAction(dossier?.is_archived ? 'unarchive' : 'archive')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
             </svg>
             <span>{{ dossier?.is_archived ? 'Désarchiver' : 'Archiver' }}</span>
           </li>
-          <li class="danger" @click="onAction('delete')">
+          <li v-if="canEdit" class="danger" @click="onAction('delete')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
             </svg>
@@ -233,6 +242,7 @@ const props = withDefaults(
     color?: string;
     isClientCard?: boolean;
     previewExtensions?: string[];
+    canEdit?: boolean;
   }>(),
   {
     dossier: null,
@@ -245,6 +255,7 @@ const props = withDefaults(
     color: undefined,
     isClientCard: false,
     previewExtensions: () => [],
+    canEdit: true,
   }
 );
 
@@ -473,6 +484,26 @@ function onAction(action: CardAction) {
   width: 135px;
   height: 125px;
   user-select: none;
+}
+
+.unread-comment-indicator {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  z-index: 6;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
 }
 
 /* Partie arrière sombre */

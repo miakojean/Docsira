@@ -72,8 +72,19 @@
                       <h4>Informations</h4>
                       <dl class="file-metadata">
                         <div><dt>Ajouté le</dt><dd>{{ uploadedAt }}</dd></div>
+                        <div><dt>Créé par</dt><dd>{{ file.created_by_name || file.uploaded_by_name || '—' }}</dd></div>
+                        <div><dt>Mis à jour par</dt><dd>{{ file.updated_by_name || '—' }}</dd></div>
                         <div><dt>Type</dt><dd>{{ file.extension || 'Inconnu' }}</dd></div>
-                        <div><dt>Version</dt><dd>v{{ file.version || 1 }}</dd></div>
+                        <div>
+                          <dt>Version</dt>
+                          <dd class="version-dd">
+                            <span>v{{ file.version || 1 }}</span>
+                            <button type="button" class="inline-text-link" @click="$emit('versions')">
+                              Historique
+                            </button>
+                          </dd>
+                        </div>
+                        <div v-if="file.version_note"><dt>Note</dt><dd>{{ file.version_note }}</dd></div>
                         <div v-if="folderName"><dt>Dossier</dt><dd>{{ folderName }}</dd></div>
                         <div class="category-row">
                           <dt>Catégorie SIRA</dt>
@@ -81,6 +92,7 @@
                             <select
                               class="sira-category-select"
                               :value="file.category || ''"
+                              :disabled="!canEdit"
                               @change="onCategoryChange"
                             >
                               <option value="" disabled>Choisir...</option>
@@ -107,9 +119,19 @@
 
                     <div class="divider"></div>
 
-                    <!-- Actions (Share, Download, Rename, Delete) -->
+                    <!-- Actions (Preview, Share, Download, Rename, Delete) -->
                     <div class="file-actions">
-                        <button class="action-btn" @click="$emit('share')">
+                        <button class="action-btn" @click="$emit('preview')">
+                            <div class="action-icon bg-blue-light">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                </svg>
+                            </div>
+                            <span>Visualiser</span>
+                        </button>
+
+                        <button v-if="canEdit" class="action-btn" @click="$emit('share')">
                             <div class="action-icon bg-blue-light">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -127,7 +149,7 @@
                             <span>Télécharger</span>
                           </button>
 
-                          <button class="action-btn" @click="$emit('edit')">
+                          <button v-if="canEdit" class="action-btn" @click="$emit('edit')">
                             <div class="action-icon bg-blue-light">
                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -136,7 +158,7 @@
                             <span>Renommer</span>
                         </button>
 
-                        <button class="action-btn" @click="$emit('delete')">
+                        <button v-if="canEdit" class="action-btn" @click="$emit('delete')">
                             <div class="action-icon bg-red-light">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -174,9 +196,13 @@ export default {
         folderName: {
             type: String,
             default: ''
+        },
+        canEdit: {
+            type: Boolean,
+            default: true
         }
     },
-    emits: ['close', 'share', 'download', 'edit', 'delete', 'changeCategory'],
+    emits: ['close', 'preview', 'share', 'download', 'edit', 'delete', 'changeCategory', 'versions'],
     setup(props, { emit }) {
 
         const closeModal = () => {
@@ -269,6 +295,7 @@ export default {
 }
 
 .modal-top-bar {
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -329,6 +356,10 @@ export default {
   width: 100%;
 }
 
+.file-section {
+  width: 100%;
+}
+
 .file-section h4 {
   font-size: 0.9rem;
   font-weight: 600;
@@ -370,6 +401,26 @@ export default {
   align-items: center;
 }
 
+.version-dd {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inline-text-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary-color, #005792);
+  cursor: pointer;
+}
+
+.inline-text-link:hover {
+  text-decoration: underline;
+}
+
 .sira-category-select {
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -387,9 +438,11 @@ export default {
 }
 
 .file-actions {
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-around;
+  justify-content: space-between;
+  gap: 0.35rem;
   margin-top: auto;
   padding-top: 1rem;
 }
@@ -401,13 +454,15 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   cursor: pointer;
+  padding: 0;
+  min-width: 0;
 }
 
 .action-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -419,7 +474,7 @@ export default {
 .bg-red-light { background-color: #ffebee; color: #e53935; }
 
 .action-btn span {
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   font-weight: 500;
   color: #555;
 }

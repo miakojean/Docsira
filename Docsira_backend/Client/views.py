@@ -6,6 +6,7 @@ from rest_framework.pagination import PageNumberPagination
 from .serializers import ClientSerializer
 from .models import Client
 from account.models import CustomUser
+from account.permissions import IsFirmEditorOrReadOnly, is_firm_admin
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 
@@ -23,7 +24,7 @@ def get_firm_users(user):
 
 class ManageClient(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def post(self, request):
         # 1- On va serializer la requête (on nomme la variable 'serializer' pour plus de clarté)
@@ -195,7 +196,7 @@ class ArchivedClientsView(APIView):
 
 class ClientArchiveView(APIView):
     """Archive un client (POST) ou le restaure (DELETE), sans corbeille."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def post(self, request, client_id):
         return self._set_archived(request, client_id, archived=True)
@@ -223,7 +224,7 @@ class ClientArchiveView(APIView):
         return Response({'success': True, 'message': message}, status=status.HTTP_200_OK)
 
 class RestoreClient(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def post(self, request, client_id, *args, **kwargs):
         try:
@@ -257,17 +258,11 @@ class PermanentDeleteClient(APIView):
     def delete(self, request, client_id, *args, **kwargs):
         try:
             user = request.user
-            
-            # 1. Vérifier les permissions pour les collaborateurs
-            if hasattr(user, 'collaborator_profile'):
-                collab_profile = user.collaborator_profile
-
-                # Si le collaborateur n'est pas un administrateur, on bloque l'action
-                if collab_profile.role != 'admin':
-                    return Response({
-                        'success': False,
-                        'message': 'Action refusée : Seul un administrateur peut supprimer définitivement un client.'
-                    }, status=status.HTTP_403_FORBIDDEN)
+            if not is_firm_admin(user):
+                return Response({
+                    'success': False,
+                    'message': 'Action refusée : Seul un administrateur peut supprimer définitivement un client.'
+                }, status=status.HTTP_403_FORBIDDEN)
 
             # 2. Récupérer le client en s'assurant qu'il appartient bien au cabinet
             users_to_include = get_firm_users(user)

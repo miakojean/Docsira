@@ -13,6 +13,8 @@
       :activeTab="activeTreeTab"
       @update:activeTab="activeTreeTab = $event"
       @openDocument="openDocument"
+      @openDetails="openDocDetails"
+      @openVersions="openVersionsModal"
       @selectFolder="currentFolderId = $event"
     />
 
@@ -28,6 +30,9 @@
       :documents="documents"
       :initialDocumentId="commentInitialDocId"
       :focusKey="commentFocusKey"
+      :unreadCount="unreadCommentsCount"
+      :latestUnread="latestUnreadComment"
+      :canShare="authStore.canEdit"
       @toggle="toggleComments"
       @share="openShareDossierModal"
       @openDocument="openDocumentById"
@@ -42,7 +47,9 @@ import affairTree from '../../components/navbar/affairTree.vue';
 import affairDetailSection from '../../components/sections/workspace/affairDetailSection.vue';
 import affairCommentsDrawer from '../../components/sections/workspace/affairCommentsDrawer.vue';
 import { useAffairDocuments } from '../../composables/useAffairDocuments';
+import { useAuthStore } from '../../stores/authStore';
 
+const authStore = useAuthStore();
 const affair = useAffairDocuments();
 const {
   affairId,
@@ -50,10 +57,14 @@ const {
   subfolders,
   currentFolderId,
   openDocument,
+  openDocDetails,
+  openVersionsModal,
   dossier,
   isCommentsOpen,
   commentInitialDocId,
   commentFocusKey,
+  unreadCommentsCount,
+  latestUnreadComment,
   toggleComments,
   openShareDossierModal,
   openDocumentById,

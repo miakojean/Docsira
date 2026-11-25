@@ -4,6 +4,7 @@ from .models import (
     ALLOWED_DOCUMENT_EXTENSIONS,
     Affair,
     AffairComment,
+    AffairCommentRead,
     AffairShareLink,
     Document,
     DocumentShareLink,
@@ -36,6 +37,8 @@ class AffairSerializer(serializers.ModelSerializer):
     client = ClientSerializer(read_only=True)
     documents_count = serializers.SerializerMethodField()
     documents_preview = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
+    unread_comments_count = serializers.SerializerMethodField()
 
     def get_created_by_name(self, obj):
         if obj.created_by:
@@ -56,6 +59,20 @@ class AffairSerializer(serializers.ModelSerializer):
             os.path.splitext(d.file.name)[1].lstrip('.').lower() if d.file else ''
             for d in docs
         ]
+
+    def get_comments_count(self, obj):
+        return obj.comments.count()
+
+    def get_unread_comments_count(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return 0
+        qs = obj.comments.exclude(author=user)
+        read_state = AffairCommentRead.objects.filter(user=user, affair=obj).first()
+        if read_state:
+            qs = qs.filter(created_at__gt=read_state.last_read_at)
+        return qs.count()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -80,22 +97,29 @@ class DocumentSerializer(serializers.ModelSerializer):
     download_url = serializers.SerializerMethodField()
     affair_title = serializers.CharField(source='affair.title', read_only=True)
     affair_reference = serializers.CharField(source='affair.reference_affair', read_only=True)
+    uploaded_by_name = serializers.SerializerMethodField()
+    created_by_name = serializers.SerializerMethodField()
+    updated_by_name = serializers.SerializerMethodField()
     file = serializers.FileField(required=False)
 
     class Meta:
         model = Document
         fields = ['id', 'affair', 'affair_title', 'affair_reference', 'title', 'file',
-                  'file_name', 'extension', 'size', 'download_url', 'uploaded_at',
-                  'parent', 'relation', 'version', 'category', 'valide', 'pos_x', 'pos_y',
+                  'file_name', 'extension', 'size', 'download_url', 'uploaded_at', 'updated_at',
+                  'parent', 'relation', 'version', 'version_note', 'uploaded_by_name',
+                  'created_by_name', 'updated_by_name',
+                  'category', 'valide', 'pos_x', 'pos_y',
                   'is_deleted', 'deleted_at']
         read_only_fields = ['file_name', 'extension', 'size', 'download_url',
-                            'affair_title', 'affair_reference',
+                            'affair_title', 'affair_reference', 'uploaded_by_name',
+                            'created_by_name', 'updated_by_name', 'updated_at',
                             'parent', 'relation', 'version', 'is_deleted', 'deleted_at']
 
     def create(self, validated_data):
         request = self.context.get('request')
         instance = Document(**validated_data)
         if request and request.user and request.user.is_authenticated:
+            instance.uploaded_by = request.user
             instance._actor = request.user
         instance.save()
         return instance
@@ -103,13 +127,66 @@ class DocumentSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         request = self.context.get('request')
         meaningful_fields = set(validated_data.keys()) - {'pos_x', 'pos_y'}
+        old_valide = instance.valide
+        old_category = instance.category
+        old_title = instance.title
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        if request and request.user and request.user.is_authenticated:
-            instance._actor = request.user
+
+        actor = request.user if (request and request.user and request.user.is_authenticated) else None
+        if actor is not None:
+            instance._actor = actor
+            if meaningful_fields:
+                instance.updated_by = actor
+        actor_label = instance._resolve_author_name(actor)
+
+        if 'valide' in validated_data and validated_data['valide'] != old_valide:
+            instance._history_action = 'VALIDATION_DOCUMENT'
+            state_label = 'validé' if instance.valide else 'validation retirée'
+            instance._history_details = f"Document '{instance.title}' {state_label} par {actor_label}."
+        elif 'category' in validated_data and validated_data['category'] != old_category:
+            instance._history_action = 'CHANGEMENT_CATEGORIE'
+            instance._history_details = (
+                f"Catégorie SIRA de '{instance.title}' modifiée ({old_category} → {instance.category}) par {actor_label}."
+            )
+        elif 'title' in validated_data and validated_data['title'] != old_title:
+            instance._history_action = 'RENOMMAGE_DOCUMENT'
+            instance._history_details = f"Document renommé '{old_title}' → '{instance.title}' par {actor_label}."
+
         instance._log_history = bool(meaningful_fields)
         instance.save()
         return instance
+
+    def get_uploaded_by_name(self, obj):
+        return get_user_display_name(obj.uploaded_by) if obj.uploaded_by else None
+
+    def get_created_by_name(self, obj):
+        curr = obj
+        visited = {curr.pk}
+        while (
+            curr.relation == Document.Relation.UPDATED
+            and curr.parent_id
+            and curr.parent_id not in visited
+        ):
+            parent = curr.parent
+            if not parent:
+                break
+            visited.add(parent.pk)
+            curr = parent
+        creator = (
+            curr.uploaded_by
+            or obj.uploaded_by
+            or (obj.affair.created_by if obj.affair_id else None)
+        )
+        return get_user_display_name(creator) if creator else None
+
+    def get_updated_by_name(self, obj):
+        if obj.updated_by:
+            return get_user_display_name(obj.updated_by)
+        if obj.relation == Document.Relation.UPDATED and obj.uploaded_by:
+            return get_user_display_name(obj.uploaded_by)
+        return None
 
     def validate_file(self, value):
         if value:

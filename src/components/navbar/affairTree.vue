@@ -4,7 +4,7 @@
     <div class="tree-header">
       <div class="header-title-box">
         <h2 class="tree-title">{{ tab === 'folders' ? 'Dossiers' : 'Historique' }}</h2>
-        <span v-if="tab === 'sira' && currentDossier" class="header-dossier-pill" :title="currentDossier.title">
+        <span v-if="tab === 'sira' && currentDossier" class="header-dossier-ref" :title="currentDossier.title">
           {{ currentDossier.reference_affair || currentDossier.title }}
         </span>
       </div>
@@ -87,12 +87,12 @@
           <span class="row-label">{{ d.title }}</span>
           <span
             v-if="typeof d.progression === 'number'"
-            class="sira-mini-pill"
+            class="row-progress-text"
             :title="`Progression SIRA : ${d.progression}%`"
           >
             {{ d.progression }}%
           </span>
-          <span class="row-count">{{ d.id === currentId ? documents.length : (d.documents_count ?? 0) }}</span>
+          <span class="row-count">{{ d.id === currentId ? latestDocumentsCount : (d.documents_count ?? 0) }}</span>
         </button>
 
         <!-- Sous-dossiers et documents du dossier actuellement ouvert -->
@@ -103,7 +103,7 @@
             :key="sf.id"
             :folder="sf"
             :allSubfolders="subfolders || []"
-            :allDocuments="documents"
+            :allDocuments="latestDocuments"
             :docFolderMap="folderStore.docFolderMap"
             :currentFolderId="currentFolderId"
             :expandedFolderIds="expandedFolderIds"
@@ -133,7 +133,8 @@
       :currentId="currentId"
       :currentDossier="currentDossier"
       :documents="documents"
-      @openDocument="emit('openDocument', $event)"
+      @openDetails="emit('openDetails', $event)"
+      @openVersions="emit('openVersions', $event)"
     />
   </aside>
 </template>
@@ -143,7 +144,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useClientDossierStore, type Dossier } from '../../stores/dossierStore';
 import { useClientStore, type ClientListItem } from '../../stores/clientStore';
-import type { DossierDocument } from '../../stores/documentStore';
+import { buildDocumentVersionLineages, type DossierDocument } from '../../stores/documentStore';
 import { useAffairFolderStore, type AffairSubfolder } from '../../stores/affairFolderStore';
 import { useSiraStore } from '../../stores/siraStore';
 import affairTreeFolderItem from './affairTreeFolderItem.vue';
@@ -168,6 +169,8 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'openDocument', doc: DossierDocument): void;
+  (e: 'openDetails', doc: DossierDocument): void;
+  (e: 'openVersions', doc: DossierDocument): void;
   (e: 'selectFolder', folderId: string | null): void;
   (e: 'update:activeTab', tab: 'folders' | 'sira'): void;
 }>();
@@ -244,10 +247,16 @@ const rootSubfolders = computed(() => {
   return (props.subfolders || []).filter((sf) => !sf.parentId);
 });
 
+const latestDocuments = computed(() =>
+  buildDocumentVersionLineages(props.documents).map((l) => l.latest)
+);
+
+const latestDocumentsCount = computed(() => latestDocuments.value.length);
+
 // Documents situés à la racine
 const rootDocuments = computed(() => {
   const subfolderIds = new Set((props.subfolders || []).map((sf) => sf.id));
-  return props.documents.filter((doc) => {
+  return latestDocuments.value.filter((doc) => {
     const assignedFolderId = folderStore.docFolderMap[doc.id];
     return !assignedFolderId || !subfolderIds.has(assignedFolderId);
   });
@@ -341,15 +350,11 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-.header-dossier-pill {
-  font-size: 0.7rem;
+.header-dossier-ref {
+  font-size: 0.76rem;
   font-weight: 600;
-  color: var(--primary-color);
-  background: #eff6ff;
-  border: 1px solid #dbeafe;
-  border-radius: 999px;
-  padding: 0.1rem 0.45rem;
-  max-width: 105px;
+  color: #64748b;
+  max-width: 115px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -539,31 +544,17 @@ onMounted(async () => {
 }
 
 .row-count {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  color: #4b5563;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  border-radius: 999px;
-  padding: 0.05rem 0.55rem;
-  min-width: 1.6rem;
-  text-align: center;
-}
-
-.sira-mini-pill {
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.1rem 0.4rem;
-  border-radius: 999px;
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
+  color: #64748b;
   flex-shrink: 0;
-  line-height: 1.1;
 }
 
-.tree-row.active .row-count {
-  background: #ffffff;
+.row-progress-text {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--primary-color, #005792);
+  flex-shrink: 0;
 }
 
 .tree-children {

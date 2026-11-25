@@ -20,7 +20,7 @@
         </div>
       </div>
 
-      <div class="header-actions">
+      <div v-if="authStore.canEdit" class="header-actions">
         <!-- Bouton Nouveau sous-dossier -->
         <button
           type="button"
@@ -84,7 +84,7 @@
       </div>
 
       <!-- Actions sur le sous-dossier actuel si ouvert -->
-      <div v-if="currentFolder" class="current-folder-actions">
+      <div v-if="currentFolder && authStore.canEdit" class="current-folder-actions">
         <button
           type="button"
           class="folder-quick-btn"
@@ -119,8 +119,8 @@
     <!-- Zone de contenu des fichiers -->
     <div
       class="files-workspace"
-      :class="{ 'is-drag-over': isDraggingOver }"
-      @dragover.prevent="isDraggingOver = true"
+      :class="{ 'is-drag-over': isDraggingOver && authStore.canEdit }"
+      @dragover.prevent="isDraggingOver = authStore.canEdit"
       @dragleave.prevent="isDraggingOver = false"
       @drop.prevent="onDropFiles"
     >
@@ -132,7 +132,7 @@
 
       <!-- ÉTAT VIDE -->
       <div v-else-if="isEmptyCurrentView" class="empty-state-wrapper">
-        <div class="empty-state" @click="openUploadDocModal()">
+        <div class="empty-state" :class="{ 'is-readonly': !authStore.canEdit }" @click="authStore.canEdit && openUploadDocModal()">
           <div class="empty-icon-circle">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.3" stroke="currentColor" class="size-12 empty-icon">
               <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -142,10 +142,10 @@
             {{ currentFolder ? `Le sous-dossier "${currentFolder.name}" est vide` : 'Ce dossier est vide' }}
           </h3>
           <p class="empty-text">
-            {{ currentFolder ? 'Vous pouvez y ajouter des documents ou créer des sous-dossiers imbriqués.' : "Aucun document ni sous-dossier n'a encore été ajouté à ce dossier client." }}
+            {{ currentFolder ? 'Aucun document dans ce sous-dossier pour le moment.' : "Aucun document ni sous-dossier n'a encore été ajouté à ce dossier client." }}
           </p>
 
-          <div class="empty-buttons-row" @click.stop>
+          <div v-if="authStore.canEdit" class="empty-buttons-row" @click.stop>
             <button
               type="button"
               class="empty-cta-btn"
@@ -169,7 +169,8 @@
               <span>Nouveau sous-dossier</span>
             </button>
           </div>
-          <span class="empty-hint">Ou glissez-déposez vos documents PDF, Word ou images ici</span>
+          <span v-if="authStore.canEdit" class="empty-hint">Ou glissez-déposez vos documents PDF, Word ou images ici</span>
+          <span v-else class="empty-hint">Accès en lecture seule — vous pouvez laisser un commentaire dans le panneau à droite.</span>
         </div>
       </div>
 
@@ -180,7 +181,8 @@
             v-for="sf in paginatedSubfolders"
             :key="sf.id"
             :folderName="sf.name"
-            :itemCount="folderStore.getDocCount(sf.id, documents)"
+            :itemCount="folderStore.getDocCount(sf.id, latestDocuments)"
+            :canEdit="authStore.canEdit"
             @open="currentFolderId = sf.id"
             @rename="openRenameFolder(sf)"
             @delete="openDeleteFolder(sf)"
@@ -191,12 +193,14 @@
             v-for="doc in paginatedDocuments"
             :key="doc.id"
             :document="doc"
+            :canEdit="authStore.canEdit"
             @open="openDocument"
             @preview="openDocument"
             @details="openDocDetails"
             @download="downloadDocument"
             @share="openShareModal"
             @comment="openComments"
+            @versions="openVersionsModal"
             @rename="openRename"
             @delete="openDelete"
             @move="openMoveDocModal(doc)"
@@ -225,8 +229,11 @@
     <!-- MODALES -->
     <filePreviewModale
       :preview="preview"
+      :allowNewVersion="authStore.canEdit"
+      :isUploadingVersion="docStore.isUploading"
       @close="closePreview"
       @download="downloadDocument"
+      @uploadNewVersion="handleReplaceFromPreview"
     />
 
     <renameDocModale
@@ -289,12 +296,29 @@
       :isOpen="isDetailsOpen"
       :file="docForDetails || {}"
       :folder-name="dossier?.title || ''"
+      :canEdit="authStore.canEdit"
       @close="isDetailsOpen = false"
+      @preview="previewDetailsDocument"
       @share="openCollaboratorSettings"
       @download="downloadDetailsDocument"
       @edit="renameDetailsDocument"
       @delete="deleteDetailsDocument"
+      @versions="openDetailsVersions"
       @changeCategory="changeDocumentCategory($event.doc, $event.category)"
+    />
+
+    <!-- Historique et ajout de versions -->
+    <documentVersionsModale
+      :isOpen="isVersionsModalOpen"
+      :document="versionsModalDoc"
+      :canEdit="authStore.canEdit"
+      :isUploading="docStore.isUploading"
+      :errorMessage="docStore.errorMessage"
+      @close="closeVersionsModal"
+      @preview="openDocument"
+      @download="downloadDocument"
+      @uploadVersion="handleUploadNewVersion"
+      @restoreVersion="handleRestoreVersion"
     />
 
     <deleteModale
@@ -336,10 +360,14 @@ import renameDocModale from '../../modale/renameDocModale.vue';
 import moveDocModale from '../../modale/moveDocModale.vue';
 import linkModale from '../../modale/linkModale.vue';
 import uploadDocModale from '../../modale/uploadDocModale.vue';
+import documentVersionsModale from '../../modale/documentVersionsModale.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
 import Pagination from '../../tools/Pagination.vue';
 import { ALLOWED_DOCUMENT_ACCEPT } from '../../../helpers/documentFormats';
 import type { AffairDocumentsController } from '../../../composables/useAffairDocuments';
+import { useAuthStore } from '../../../stores/authStore';
+
+const authStore = useAuthStore();
 
 const props = defineProps<{
   affair: AffairDocumentsController;
@@ -353,7 +381,7 @@ const {
   dossier,
   docStore,
   folderStore,
-  documents,
+  latestDocuments,
   currentFolderId,
   subfolders,
   currentSubfolders,
@@ -407,6 +435,7 @@ const {
   isDetailsOpen,
   docForDetails,
   openDocDetails,
+  previewDetailsDocument,
   openCollaboratorSettings,
   downloadDetailsDocument,
   renameDetailsDocument,
@@ -417,6 +446,14 @@ const {
   openDelete,
   confirmDelete,
   changeDocumentCategory,
+  isVersionsModalOpen,
+  versionsModalDoc,
+  openVersionsModal,
+  closeVersionsModal,
+  openDetailsVersions,
+  handleUploadNewVersion,
+  handleRestoreVersion,
+  handleReplaceFromPreview,
   isUploadDocModalOpen,
   filesForUpload,
   openUploadDocModal,

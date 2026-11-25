@@ -9,7 +9,8 @@
       <button
         type="button"
         class="comment-icon-btn"
-        title="Ouvrir les commentaires"
+        :class="{ 'has-unread': unreadCount > 0 }"
+        :title="unreadCount > 0 ? `${unreadCount} nouveau(x) commentaire(s) — Cliquer pour ouvrir` : 'Ouvrir les commentaires'"
         aria-label="Ouvrir les commentaires"
         :aria-expanded="false"
         @click="$emit('toggle')"
@@ -17,9 +18,13 @@
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="comment-icon-svg">
           <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
         </svg>
+        <span v-if="unreadCount > 0" class="unread-dot-count">
+          {{ unreadCount > 9 ? '9+' : unreadCount }}
+        </span>
       </button>
 
       <button
+        v-if="canShare"
         type="button"
         class="comment-icon-btn"
         title="Partager le dossier par lien"
@@ -325,7 +330,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
-import { useCommentStore, type AffairComment } from '../../../stores/commentStore';
+import { useCommentStore, type AffairComment, type UnreadCommentPreview } from '../../../stores/commentStore';
 import type { DossierDocument } from '../../../stores/documentStore';
 import LogoLoader from '../../tools/LogoLoader.vue';
 
@@ -336,11 +341,17 @@ const props = withDefaults(
     documents?: DossierDocument[];
     initialDocumentId?: string | null;
     focusKey?: number;
+    unreadCount?: number;
+    latestUnread?: UnreadCommentPreview | null;
+    canShare?: boolean;
   }>(),
   {
     documents: () => [],
     initialDocumentId: null,
     focusKey: 0,
+    unreadCount: 0,
+    latestUnread: null,
+    canShare: true,
   }
 );
 
@@ -532,6 +543,7 @@ function formatFullDate(iso: string): string {
 }
 
 .comment-icon-btn {
+  position: relative;
   width: 40px;
   height: 40px;
   border-radius: 10px;
@@ -544,6 +556,31 @@ function formatFullDate(iso: string): string {
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.15s ease;
+}
+
+.comment-icon-btn.has-unread {
+  border-color: var(--primary-color, #005792);
+  color: var(--primary-color, #005792);
+  background: #f0f7ff;
+}
+
+.unread-dot-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fafafa;
+  line-height: 1;
 }
 
 .comment-icon-btn:hover {

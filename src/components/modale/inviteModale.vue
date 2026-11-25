@@ -19,6 +19,15 @@
                         v-model="email"
                         :errorMessage="errorMessage"
                     />
+
+                    <div class="role-field">
+                        <label for="invite-role-select" class="role-label">Rôle du collaborateur</label>
+                        <select id="invite-role-select" v-model="role" class="role-select">
+                            <option value="editor">Collaborateur — consulter et modifier</option>
+                            <option value="viewer">Lecteur — consulter et commenter uniquement</option>
+                            <option value="admin">Administrateur — gestion complète et rôles</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="error-content" v-if="backendError">
@@ -45,6 +54,7 @@
 import { watch, onUnmounted, ref, onMounted } from 'vue';
 import BaseInput from '../BaseInput/BaseInput.vue';
 import mainButton from '../buttons/mainButton.vue';
+import type { CollaboratorRole } from '../../stores/authStore';
 
 const props = defineProps({
     isOpen: {
@@ -72,16 +82,18 @@ const closeModal = () => {
 };
 
 const email = ref<string>('');
+const role = ref<CollaboratorRole>('editor');
 const errorMessage = ref<string>('');
 
 
 async function handleInvite() {
-    if (email.value === "") {
+    const trimmedEmail = email.value.trim();
+    if (!trimmedEmail) {
         errorMessage.value = 'Veuillez saisir une adresse e-mail valide.';
         return;
     }
     errorMessage.value = "";
-    emit('invite', email.value);
+    emit('invite', { email: trimmedEmail, role: role.value });
 }
 
 onMounted(() => {
@@ -93,6 +105,9 @@ watch(() => props.isOpen, (newVal) => {
     document.body.style.overflow = 'hidden';
   } else {
     document.body.style.overflow = '';
+    email.value = '';
+    role.value = 'editor';
+    errorMessage.value = '';
   }
 });
 
@@ -184,6 +199,34 @@ onUnmounted(() => {
 
 .email-input:focus {
   border-color: #3b82f6;
+}
+
+.role-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.role-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.role-select {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  color: #111827;
+  background-color: #ffffff;
+  outline: none;
+  cursor: pointer;
+}
+
+.role-select:focus {
+  border-color: var(--primary-color, #005792);
 }
 
 /* --- Bouton d'action --- */

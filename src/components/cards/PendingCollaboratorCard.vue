@@ -6,9 +6,9 @@
       </svg>
     </button>
     <!-- Options or status indicator -->
-    <div class="status-badge">
+    <div class="status-line">
       <span class="status-dot"></span>
-      En attente
+      <span>En attente</span>
     </div>
 
     <!-- Avatar (Placeholder for pending) -->
@@ -26,10 +26,25 @@
       <p class="role">Invitation envoyée</p>
     </div>
 
+    <div class="role-row">
+      <select
+        v-if="canManageRoles && memberId"
+        class="role-select"
+        :value="role"
+        :disabled="isUpdatingRole"
+        @change="onRoleSelect"
+      >
+        <option value="editor">Collaborateur</option>
+        <option value="viewer">Lecteur</option>
+        <option value="admin">Administrateur</option>
+      </select>
+      <span v-else class="role-plain">{{ displayRoleLabel }}</span>
+    </div>
+
     <!-- Divider -->
     <div class="divider"></div>
 
-    <button class="resend-btn" @click="$emit('resend', email)" :disabled="isLoading">
+    <button v-if="canManageRoles || canDelete" class="resend-btn" @click="$emit('resend', email)" :disabled="isLoading">
         <span v-if="!isLoading">Renvoyer l'invitation</span>
         <LogoLoader v-else size="sm" :inline="true" />
     </button>
@@ -37,23 +52,49 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import LogoLoader from '../tools/LogoLoader.vue';
-defineProps({
-    email: {
-        type: String,
-        required: true,
-    },
-    isLoading: {
-        type: Boolean,
-        default: false,
-    },
-    canDelete: {
-        type: Boolean,
-        default: false,
-    }
-});
+import type { CollaboratorRole } from '../../stores/authStore';
 
-const emit = defineEmits(['resend', 'delete']);
+const props = withDefaults(
+  defineProps<{
+    email: string;
+    isLoading?: boolean;
+    canDelete?: boolean;
+    memberId?: string;
+    role?: CollaboratorRole;
+    canManageRoles?: boolean;
+    isUpdatingRole?: boolean;
+  }>(),
+  {
+    isLoading: false,
+    canDelete: false,
+    memberId: '',
+    role: 'editor',
+    canManageRoles: false,
+    isUpdatingRole: false,
+  }
+);
+
+const emit = defineEmits<{
+  (e: 'resend', email: string): void;
+  (e: 'delete', email: string): void;
+  (e: 'changeRole', payload: { id: string; role: CollaboratorRole }): void;
+}>();
+
+function onRoleSelect(event: Event) {
+  const select = event.target as HTMLSelectElement;
+  const nextRole = select.value as CollaboratorRole;
+  if (props.memberId && nextRole !== props.role) {
+    emit('changeRole', { id: props.memberId, role: nextRole });
+  }
+}
+
+const displayRoleLabel = computed(() => {
+  if (props.role === 'admin') return 'Administrateur';
+  if (props.role === 'viewer') return 'Lecteur';
+  return 'Collaborateur';
+});
 </script>
 
 <style scoped>
@@ -85,7 +126,7 @@ const emit = defineEmits(['resend', 'delete']);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
 }
 
-.status-badge {
+.status-line {
   position: absolute;
   top: 16px;
   left: 16px;
@@ -94,10 +135,7 @@ const emit = defineEmits(['resend', 'delete']);
   gap: 6px;
   font-size: 11px;
   font-weight: 600;
-  color: #f59e0b; /* Orange/amber for pending */
-  background: #fffbeb;
-  padding: 4px 8px;
-  border-radius: 12px;
+  color: #b45309;
 }
 
 .status-dot {
@@ -105,6 +143,33 @@ const emit = defineEmits(['resend', 'delete']);
   height: 6px;
   border-radius: 50%;
   background-color: #f59e0b;
+}
+
+.role-row {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.role-select {
+  width: 100%;
+  max-width: 185px;
+  padding: 0.32rem 0.6rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  background-color: #f8fafc;
+  cursor: pointer;
+  outline: none;
+}
+
+.role-plain {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
 }
 
 /* Avatar */

@@ -6,11 +6,13 @@
           <div class="preview-header">
             <div class="preview-title-box truncate">
               <h3 class="preview-title truncate">{{ preview.title }}</h3>
-              <span v-if="preview.kind === 'pdf' && pdfPageCount > 0" class="preview-badge">
-                {{ pdfPageCount }} page{{ pdfPageCount > 1 ? 's' : '' }}
+              <span v-if="preview.doc || (preview.kind === 'pdf' && pdfPageCount > 0) || preview.kind === 'docx' || preview.kind === 'image'" class="preview-meta-text">
+                <template v-if="preview.doc">v{{ preview.doc.version || 1 }}</template>
+                <template v-if="preview.doc && ((preview.kind === 'pdf' && pdfPageCount > 0) || preview.kind === 'docx' || preview.kind === 'image')"> · </template>
+                <template v-if="preview.kind === 'pdf' && pdfPageCount > 0">{{ pdfPageCount }} page{{ pdfPageCount > 1 ? 's' : '' }}</template>
+                <template v-else-if="preview.kind === 'docx'">Word</template>
+                <template v-else-if="preview.kind === 'image'">Image</template>
               </span>
-              <span v-else-if="preview.kind === 'docx'" class="preview-badge is-word">Word</span>
-              <span v-else-if="preview.kind === 'image'" class="preview-badge is-image">Image</span>
             </div>
 
             <div class="preview-actions">
@@ -38,6 +40,29 @@
               </div>
 
               <button
+                v-if="preview.doc && allowNewVersion"
+                type="button"
+                class="preview-action-btn is-replace"
+                title="Téléverser une nouvelle version pour remplacer ce document"
+                :disabled="isUploadingVersion"
+                @click="triggerReplaceFile"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="size-4">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                </svg>
+                <span>{{ isUploadingVersion ? 'Envoi...' : `Nouvelle version (v${(preview.doc.version || 1) + 1})` }}</span>
+              </button>
+
+              <input
+                v-if="preview.doc && allowNewVersion"
+                ref="replaceInputRef"
+                type="file"
+                :accept="ALLOWED_DOCUMENT_ACCEPT"
+                class="hidden-file-input"
+                @change="onReplaceFileChange"
+              />
+
+              <button
                 v-if="preview.doc"
                 type="button"
                 class="preview-action-btn"
@@ -58,6 +83,11 @@
                 ×
               </button>
             </div>
+          </div>
+
+          <div v-if="replaceError" class="preview-error-strip">
+            <span>{{ replaceError }}</span>
+            <button type="button" class="preview-error-close" @click="replaceError = ''">×</button>
           </div>
 
           <div class="preview-body" :class="{ 'is-document-bg': preview.kind === 'pdf' || preview.kind === 'docx' }">
@@ -111,6 +141,7 @@ import { nextTick, ref, watch } from 'vue';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type { DossierDocument } from '../../stores/documentStore';
+import { ALLOWED_DOCUMENT_ACCEPT, filterAllowedDocuments } from '../../helpers/documentFormats';
 import LogoLoader from '../tools/LogoLoader.vue';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -125,21 +156,53 @@ export interface PreviewData {
   message?: string;
 }
 
-const props = defineProps<{
-  preview: PreviewData | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    preview: PreviewData | null;
+    allowNewVersion?: boolean;
+    isUploadingVersion?: boolean;
+  }>(),
+  {
+    allowNewVersion: false,
+    isUploadingVersion: false,
+  }
+);
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'download', doc: DossierDocument): void;
+  (e: 'uploadNewVersion', payload: { doc: DossierDocument; file: File }): void;
 }>();
 
 const pdfContainerRef = ref<HTMLDivElement | null>(null);
+const replaceInputRef = ref<HTMLInputElement | null>(null);
+const replaceError = ref('');
 const isRenderingPdf = ref(false);
 const pdfError = ref('');
 const pdfPageCount = ref(0);
 const pdfScale = ref(1.2);
 let renderGeneration = 0;
+
+function triggerReplaceFile() {
+  replaceError.value = '';
+  replaceInputRef.value?.click();
+}
+
+function onReplaceFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const files = Array.from(input.files ?? []);
+  input.value = '';
+  if (files.length === 0 || !props.preview?.doc) return;
+
+  const { valid, errorMessage } = filterAllowedDocuments(files);
+  if (errorMessage) {
+    replaceError.value = errorMessage;
+  }
+  if (valid.length > 0) {
+    replaceError.value = '';
+    emit('uploadNewVersion', { doc: props.preview.doc, file: valid[0] });
+  }
+}
 
 function changeZoom(delta: number) {
   const next = Math.min(2.4, Math.max(0.6, Number((pdfScale.value + delta).toFixed(1))));
@@ -237,6 +300,7 @@ watch(
   () => props.preview?.doc?.id,
   () => {
     pdfScale.value = 1.2;
+    replaceError.value = '';
   }
 );
 </script>
@@ -290,24 +354,36 @@ watch(
   color: #111827;
 }
 
-.preview-badge {
+.preview-meta-text {
   flex-shrink: 0;
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  background: #fee2e2;
-  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #64748b;
 }
 
-.preview-badge.is-word {
-  background: #dbeafe;
-  color: #1d4ed8;
+.hidden-file-input {
+  display: none;
 }
 
-.preview-badge.is-image {
-  background: #f3e8ff;
-  color: #7e22ce;
+.preview-error-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 1.5rem;
+  background: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.82rem;
+}
+
+.preview-error-close {
+  border: none;
+  background: transparent;
+  color: #b91c1c;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .preview-actions {
@@ -375,8 +451,24 @@ watch(
   transition: all 0.2s;
 }
 
-.preview-action-btn:hover {
+.preview-action-btn:hover:not(:disabled) {
   background: #dbeafe;
+}
+
+.preview-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.preview-action-btn.is-replace {
+  background: var(--primary-color, #005792);
+  color: #ffffff;
+  border-color: var(--primary-color, #005792);
+}
+
+.preview-action-btn.is-replace:hover:not(:disabled) {
+  filter: brightness(0.95);
+  background: var(--primary-color, #005792);
 }
 
 .preview-close-btn {

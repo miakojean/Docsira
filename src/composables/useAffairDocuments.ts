@@ -4,9 +4,17 @@ import { save as saveDialog } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
 import mammoth from 'mammoth';
 import { useClientDossierStore, type AffairShareLink, type Dossier } from '../stores/dossierStore';
-import { useDocumentStore, type DocumentShareLink, type DossierDocument, type SiraCategory } from '../stores/documentStore';
+import {
+  buildDocumentVersionLineages,
+  useDocumentStore,
+  type DocumentShareLink,
+  type DossierDocument,
+  type SiraCategory,
+} from '../stores/documentStore';
 import { useAffairFolderStore, type AffairSubfolder } from '../stores/affairFolderStore';
 import { useCommentStore } from '../stores/commentStore';
+import { useSiraStore } from '../stores/siraStore';
+import { useAuthStore } from '../stores/authStore';
 import { DOCUMENT_MIME_BY_EXT, filterAllowedDocuments } from '../helpers/documentFormats';
 import type { PreviewData } from '../components/modale/filePreviewModale.vue';
 import type { MoveDocPayload } from '../components/modale/moveDocModale.vue';
@@ -18,6 +26,8 @@ export function useAffairDocuments() {
   const docStore = useDocumentStore();
   const folderStore = useAffairFolderStore();
   const commentStore = useCommentStore();
+  const siraStore = useSiraStore();
+  const authStore = useAuthStore();
 
   const affairId = computed(() => String(route.params.id));
   const dossier = ref<Dossier | null>(null);
@@ -26,6 +36,8 @@ export function useAffairDocuments() {
   const diskFileInputRef = ref<HTMLInputElement | null>(null);
 
   const documents = computed(() => docStore.documents);
+  const documentLineages = computed(() => buildDocumentVersionLineages(documents.value));
+  const latestDocuments = computed(() => documentLineages.value.map((l) => l.latest));
 
   // ---------- Sous-dossiers de l'affaire ----------
   const currentFolderId = ref<string | null>(null);
@@ -40,9 +52,9 @@ export function useAffairDocuments() {
     return folderStore.getSubfolders(affairId.value, currentFolderId.value);
   });
 
-  // Documents du niveau actuel
+  // Documents du niveau actuel (dernière version de chaque lignée)
   const currentDocuments = computed<DossierDocument[]>(() => {
-    return folderStore.getFolderDocuments(affairId.value, currentFolderId.value, documents.value);
+    return folderStore.getFolderDocuments(affairId.value, currentFolderId.value, latestDocuments.value);
   });
 
   // Dossier actif
@@ -67,6 +79,7 @@ export function useAffairDocuments() {
   const folderModalName = ref('');
 
   function openCreateFolder() {
+    if (!authStore.canEdit) return;
     folderModalMode.value = 'create';
     folderToRename.value = null;
     folderModalName.value = '';
@@ -186,6 +199,7 @@ export function useAffairDocuments() {
   const filesForUpload = ref<File[]>([]);
 
   function openUploadDocModal(files?: File[]) {
+    if (!authStore.canEdit) return;
     filesForUpload.value = files && files.length > 0 ? [...files] : [];
     isUploadDocModalOpen.value = true;
   }
@@ -231,6 +245,7 @@ export function useAffairDocuments() {
 
   async function onDropFiles(e: DragEvent) {
     isDraggingOver.value = false;
+    if (!authStore.canEdit) return;
     const dt = e.dataTransfer;
     if (!dt) return;
     const files = Array.from(dt.files);
@@ -379,7 +394,11 @@ export function useAffairDocuments() {
       const trimmed = newName.trim();
       if (await docStore.renameDocument(targetId, trimmed)) {
         if (docForDetails.value?.id === targetId) {
-          docForDetails.value = { ...docForDetails.value, title: trimmed };
+          docForDetails.value =
+            docStore.documents.find((d) => d.id === targetId) ?? {
+              ...docForDetails.value,
+              title: trimmed,
+            };
         }
         renamingDoc.value = null;
       }
@@ -523,6 +542,12 @@ export function useAffairDocuments() {
     isDetailsOpen.value = true;
   }
 
+  function previewDetailsDocument() {
+    const selected = docForDetails.value;
+    isDetailsOpen.value = false;
+    if (selected) void openDocument(selected);
+  }
+
   function openCollaboratorSettings() {
     const selected = docForDetails.value;
     isDetailsOpen.value = false;
@@ -564,29 +589,147 @@ export function useAffairDocuments() {
     const ok = await docStore.updateDocumentCategory(doc.id, category);
     if (ok) {
       if (docForDetails.value?.id === doc.id) {
-        docForDetails.value = { ...docForDetails.value, category };
+        docForDetails.value =
+          docStore.documents.find((d) => d.id === doc.id) ?? {
+            ...docForDetails.value,
+            category,
+          };
       }
-      await refreshDossier();
+      await Promise.all([refreshDossier(), siraStore.fetchHistory(affairId.value)]);
+    }
+  }
+
+  // ---------- Versioning des documents ----------
+  const isVersionsModalOpen = ref(false);
+  const versionsModalDoc = ref<DossierDocument | null>(null);
+
+  function openVersionsModal(doc: DossierDocument) {
+    docStore.errorMessage = '';
+    versionsModalDoc.value = doc;
+    isVersionsModalOpen.value = true;
+  }
+
+  function closeVersionsModal() {
+    isVersionsModalOpen.value = false;
+    versionsModalDoc.value = null;
+  }
+
+  function openDetailsVersions() {
+    const selected = docForDetails.value;
+    isDetailsOpen.value = false;
+    if (selected) {
+      openVersionsModal(selected);
+    }
+  }
+
+  async function handleUploadNewVersion(payload: {
+    document: DossierDocument;
+    file: File;
+    versionNote: string;
+  }) {
+    const folderId = folderStore.docFolderMap[payload.document.id] ?? null;
+    const created = await docStore.uploadNewVersion(payload.document.id, payload.file, {
+      versionNote: payload.versionNote,
+    });
+    if (created) {
+      if (folderId) {
+        folderStore.assignDocToFolder(created.id, folderId);
+      }
+      versionsModalDoc.value = created;
+      if (docForDetails.value?.id === payload.document.id) {
+        docForDetails.value = created;
+      }
+      await Promise.all([refreshDossier(), siraStore.fetchHistory(affairId.value)]);
+    }
+  }
+
+  async function handleRestoreVersion(ver: DossierDocument) {
+    const fallbackDocId = versionsModalDoc.value?.id;
+    const folderId =
+      folderStore.docFolderMap[ver.id] ??
+      (fallbackDocId ? folderStore.docFolderMap[fallbackDocId] : null) ??
+      null;
+    const restored = await docStore.restoreDocumentVersion(ver.id);
+    if (restored) {
+      if (folderId) {
+        folderStore.assignDocToFolder(restored.id, folderId);
+      }
+      if (docForDetails.value && (docForDetails.value.id === ver.id || docForDetails.value.id === fallbackDocId)) {
+        docForDetails.value = restored;
+      }
+      versionsModalDoc.value = restored;
+      await Promise.all([refreshDossier(), siraStore.fetchHistory(affairId.value)]);
+    }
+  }
+
+  async function handleReplaceFromPreview(payload: { doc: DossierDocument; file: File }) {
+    const folderId = folderStore.docFolderMap[payload.doc.id] ?? null;
+    const created = await docStore.uploadNewVersion(payload.doc.id, payload.file, {
+      versionNote: '',
+    });
+    if (created) {
+      if (folderId) {
+        folderStore.assignDocToFolder(created.id, folderId);
+      }
+      if (versionsModalDoc.value?.id === payload.doc.id) {
+        versionsModalDoc.value = created;
+      }
+      if (docForDetails.value?.id === payload.doc.id) {
+        docForDetails.value = created;
+      }
+      await Promise.all([refreshDossier(), siraStore.fetchHistory(affairId.value)]);
+      await openDocument(created);
     }
   }
 
   // ---------- Commentaires collaborateurs ----------
-  const isCommentsOpen = ref(true);
+  const isCommentsOpen = ref(false);
+  const isCommentNotifDismissed = ref(false);
   const commentInitialDocId = ref<string | null>(null);
   const commentFocusKey = ref(0);
   const commentsCount = computed(() => commentStore.getCommentCount(affairId.value));
+  const unreadCommentsCount = computed(() => commentStore.getUnreadCount(affairId.value));
+  const latestUnreadComment = computed(() => commentStore.getLatestUnread(affairId.value));
+
+  watch(
+    () => latestUnreadComment.value?.id,
+    (newId, oldId) => {
+      if (newId && newId !== oldId && !isCommentsOpen.value) {
+        isCommentNotifDismissed.value = false;
+      }
+    }
+  );
+
+  function dismissCommentNotification() {
+    isCommentNotifDismissed.value = true;
+  }
+
+  async function markCommentsAsRead() {
+    if (!affairId.value) return;
+    const ok = await commentStore.markAsRead(affairId.value);
+    if (ok) {
+      if (dossier.value && dossier.value.id === affairId.value) {
+        dossier.value = { ...dossier.value, unread_comments_count: 0 };
+      }
+      dossierStore.setDossierUnreadComments(affairId.value, 0);
+    }
+  }
 
   function openComments(doc?: DossierDocument) {
     commentInitialDocId.value = doc?.id ?? null;
     isCommentsOpen.value = true;
+    isCommentNotifDismissed.value = true;
     commentFocusKey.value++;
     void commentStore.fetchComments(affairId.value);
+    void markCommentsAsRead();
   }
 
   function toggleComments() {
     isCommentsOpen.value = !isCommentsOpen.value;
     if (isCommentsOpen.value) {
+      isCommentNotifDismissed.value = true;
       void commentStore.fetchComments(affairId.value);
+      void markCommentsAsRead();
     }
   }
 
@@ -627,30 +770,47 @@ export function useAffairDocuments() {
     }
   }
 
+  let commentPollTimer: number | null = null;
+
   onMounted(async () => {
     const tasks: Promise<unknown>[] = [
       refreshDossier(),
       docStore.fetchDocuments(affairId.value),
-      commentStore.fetchComments(affairId.value),
+      commentStore.fetchUnreadStatus(affairId.value),
     ];
     if (!folderStore.isLoaded) tasks.push(folderStore.loadStore());
     await Promise.all(tasks);
+
+    commentPollTimer = window.setInterval(async () => {
+      if (!affairId.value) return;
+      const state = await commentStore.fetchUnreadStatus(affairId.value);
+      if (isCommentsOpen.value && state && state.unreadCount > 0) {
+        await commentStore.fetchComments(affairId.value);
+        await markCommentsAsRead();
+      }
+    }, 20000);
   });
 
   watch(affairId, async () => {
     closePreview();
+    isCommentsOpen.value = false;
+    isCommentNotifDismissed.value = false;
     commentInitialDocId.value = null;
     currentFolderId.value = null;
     const tasks: Promise<unknown>[] = [
       refreshDossier(),
       docStore.fetchDocuments(affairId.value),
-      commentStore.fetchComments(affairId.value),
+      commentStore.fetchUnreadStatus(affairId.value),
     ];
     if (!folderStore.isLoaded) tasks.push(folderStore.loadStore());
     await Promise.all(tasks);
   });
 
   onUnmounted(() => {
+    if (commentPollTimer !== null) {
+      window.clearInterval(commentPollTimer);
+      commentPollTimer = null;
+    }
     closePreview();
   });
 
@@ -660,6 +820,7 @@ export function useAffairDocuments() {
     docStore,
     folderStore,
     documents,
+    latestDocuments,
     currentFolderId,
     subfolders,
     currentSubfolders,
@@ -729,6 +890,7 @@ export function useAffairDocuments() {
     isDetailsOpen,
     docForDetails,
     openDocDetails,
+    previewDetailsDocument,
     openCollaboratorSettings,
     downloadDetailsDocument,
     renameDetailsDocument,
@@ -744,11 +906,24 @@ export function useAffairDocuments() {
     openSiraModal,
     closeSiraModal,
     changeDocumentCategory,
+    // Versioning
+    isVersionsModalOpen,
+    versionsModalDoc,
+    openVersionsModal,
+    closeVersionsModal,
+    openDetailsVersions,
+    handleUploadNewVersion,
+    handleRestoreVersion,
+    handleReplaceFromPreview,
     // Commentaires collaborateurs
     isCommentsOpen,
+    isCommentNotifDismissed,
     commentInitialDocId,
     commentFocusKey,
     commentsCount,
+    unreadCommentsCount,
+    latestUnreadComment,
+    dismissCommentNotification,
     openComments,
     toggleComments,
     closeComments,

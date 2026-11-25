@@ -117,23 +117,54 @@ export function getSiraCategoryMeta(category?: SiraCategory | string | null) {
 
 export const useSiraStore = defineStore('sira', () => {
   const histories = ref<SiraHistoryItem[]>([]);
+  const totalCount = ref(0);
+  const currentPage = ref(1);
+  const hasMore = ref(false);
+  const activeActionFilter = ref('');
   const isLoading = ref(false);
   const errorMessage = ref('');
 
-  async function fetchHistory(affairId: string) {
+  async function fetchHistory(
+    affairId: string,
+    options?: { actionType?: string; page?: number; append?: boolean }
+  ) {
     if (!affairId) return [];
+    const targetPage = options?.page ?? 1;
+    const actionType = options?.actionType !== undefined ? options.actionType : activeActionFilter.value;
+    if (options?.actionType !== undefined) {
+      activeActionFilter.value = options.actionType;
+    }
+
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const response = await api(`/sira/affairs/${affairId}/history/`, 'GET');
+      const params = new URLSearchParams({ page: String(targetPage) });
+      if (actionType) {
+        params.set('action_type', actionType);
+      }
+
+      const response = await api(`/sira/affairs/${affairId}/history/?${params.toString()}`, 'GET');
       if (!response.ok) {
         errorMessage.value = "Impossible de récupérer l'historique SIRA.";
-        histories.value = [];
+        if (!options?.append) {
+          histories.value = [];
+          totalCount.value = 0;
+          hasMore.value = false;
+        }
         return [];
       }
       const data = await response.json();
       const items: SiraHistoryItem[] = Array.isArray(data) ? data : (data.results ?? []);
-      histories.value = items;
+      totalCount.value = Array.isArray(data) ? items.length : Number(data.count ?? items.length);
+      hasMore.value = Boolean(!Array.isArray(data) && data.next);
+      currentPage.value = targetPage;
+
+      if (options?.append) {
+        const existingIds = new Set(histories.value.map((h) => h.id));
+        histories.value = [...histories.value, ...items.filter((h) => !existingIds.has(h.id))];
+      } else {
+        histories.value = items;
+      }
       return items;
     } catch (err) {
       console.error(err);
@@ -144,10 +175,24 @@ export const useSiraStore = defineStore('sira', () => {
     }
   }
 
+  async function loadMoreHistory(affairId: string) {
+    if (!hasMore.value || isLoading.value) return [];
+    return fetchHistory(affairId, {
+      actionType: activeActionFilter.value,
+      page: currentPage.value + 1,
+      append: true,
+    });
+  }
+
   return {
     histories,
+    totalCount,
+    currentPage,
+    hasMore,
+    activeActionFilter,
     isLoading,
     errorMessage,
     fetchHistory,
+    loadMoreHistory,
   };
 });

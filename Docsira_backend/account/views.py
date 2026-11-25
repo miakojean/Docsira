@@ -1,4 +1,5 @@
 from .models import CustomUser, Collaborator, CollaboratorInvitation, ActivationCode
+from .permissions import get_user_firm, is_firm_admin
 from .serializers import CustomUserSerializer, CollaboratorSerializer, CollaboratorInvitationSerializer, ActivationCodeSerializer
 from .utils import generate_temporary_password, send_invitation_email, get_invitations_data, get_owner_data
 from django.contrib.auth import authenticate
@@ -179,19 +180,37 @@ class CollaborateurView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if not is_firm_admin(request.user):
+            return Response(
+                {'error': 'Action réservée aux administrateurs du cabinet.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        firm = get_user_firm(request.user)
         serializer = CollaboratorSerializer(data=request.data)
 
         if serializer.is_valid():
             email = serializer.validated_data.get('email')
-            role = serializer.validated_data.get('role', Collaborator.Roles.VIEWER)
+            role = serializer.validated_data.get('role') or Collaborator.Roles.EDITOR
 
             try:
                 with transaction.atomic():
                     user = CustomUser.objects.filter(email__iexact=email).first()
+                    if user and user.id == firm.id:
+                        return Response(
+                            {'error': 'Cet utilisateur est déjà le propriétaire du cabinet.'},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+
                     invitation = None
                     if user:
+                        if Collaborator.objects.filter(main_account=firm, user=user).exists():
+                            return Response(
+                                {'error': 'Ce collaborateur est déjà lié à ce compte.'},
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
                         invitation = CollaboratorInvitation.objects.filter(
-                            main_account=request.user,
+                            main_account=firm,
                             user=user,
                         ).first()
                     if invitation and invitation.accepted_at is not None:
@@ -222,7 +241,7 @@ class CollaborateurView(APIView):
                     user.set_password(temporary_password)
                     user.save(update_fields=['password'])
                     invitation, created = CollaboratorInvitation.objects.get_or_create(
-                        main_account=request.user,
+                        main_account=firm,
                         user=user,
                         defaults={'role': role},
                     )
@@ -285,6 +304,12 @@ class CollaborateurView(APIView):
         return paginator.get_paginated_response(page)
 
     def delete(self, request):
+        if not is_firm_admin(request.user):
+            return Response(
+                {"error": "Action réservée aux administrateurs du cabinet."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         # On peut récupérer l'email depuis le corps de la requête (data) ou l'URL (query_params)
         email = request.data.get('email') or request.query_params.get('email')
 
@@ -295,21 +320,28 @@ class CollaborateurView(APIView):
             )
 
         try:
+            firm = get_user_firm(request.user)
             # 1. On cherche l'utilisateur à supprimer
             user_to_delete = CustomUser.objects.get(email__iexact=email)
 
-            # 2. Sécurité : On vérifie si request.user est bien le "main_account" de ce collaborateur
+            if user_to_delete.id == firm.id or user_to_delete.id == request.user.id:
+                return Response(
+                    {"error": "Vous ne pouvez pas supprimer ce compte."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            # 2. Sécurité : On vérifie si le collaborateur appartient bien au cabinet
             is_collaborator = Collaborator.objects.filter(
-                main_account=request.user, 
+                main_account=firm,
                 user=user_to_delete
             ).exists()
 
             is_invited = CollaboratorInvitation.objects.filter(
-                main_account=request.user, 
+                main_account=firm,
                 user=user_to_delete
             ).exists()
 
-            # Si l'utilisateur n'est ni un collaborateur actif ni un invité de ce compte principal
+            # Si l'utilisateur n'est ni un collaborateur actif ni un invité de ce cabinet
             if not is_collaborator and not is_invited:
                 return Response(
                     {"error": "Vous n'avez pas l'autorisation de supprimer ce compte."},
@@ -322,7 +354,7 @@ class CollaborateurView(APIView):
 
             return Response(
                 {"message": "Le collaborateur a été supprimé avec succès."},
-                status=status.HTTP_200_OK # ou status.HTTP_204_NO_CONTENT
+                status=status.HTTP_200_OK
             )
 
         except CustomUser.DoesNotExist:
@@ -330,6 +362,72 @@ class CollaborateurView(APIView):
                 {"error": "Utilisateur introuvable."},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+class CollaboratorRoleView(APIView):
+    """Permet à un administrateur (propriétaire ou admin) de modifier le rôle d'un collaborateur."""
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, member_id):
+        if not is_firm_admin(request.user):
+            return Response(
+                {"error": "Action réservée aux administrateurs du cabinet."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        new_role = request.data.get("role")
+        if new_role not in Collaborator.Roles.values:
+            return Response(
+                {"error": "Rôle invalide."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        firm = get_user_firm(request.user)
+        collaborator = (
+            Collaborator.objects
+            .select_related('user')
+            .filter(id=member_id, main_account=firm)
+            .first()
+        )
+        if collaborator:
+            if collaborator.user_id == request.user.id:
+                return Response(
+                    {"error": "Vous ne pouvez pas modifier votre propre rôle."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            collaborator.role = new_role
+            collaborator.save(update_fields=['role'])
+            CollaboratorInvitation.objects.filter(
+                main_account=firm,
+                user=collaborator.user,
+            ).update(role=new_role)
+            return Response(CollaboratorSerializer(collaborator).data, status=status.HTTP_200_OK)
+
+        invitation = (
+            CollaboratorInvitation.objects
+            .select_related('user')
+            .filter(id=member_id, main_account=firm, accepted_at__isnull=True)
+            .first()
+        )
+        if invitation:
+            invitation.role = new_role
+            invitation.save(update_fields=['role'])
+            return Response(
+                {
+                    "id": str(invitation.id),
+                    "main_account": str(invitation.main_account_id),
+                    "role": invitation.role,
+                    "status": "pending",
+                    "email": invitation.user.email,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        return Response(
+            {"error": "Collaborateur introuvable."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
 class CollaboratorCodeView(APIView):
 

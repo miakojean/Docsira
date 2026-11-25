@@ -2,7 +2,7 @@
   <div class="main-section gap-2">
     <headerNav 
       title="Mes clients" 
-      :showToolsButton="true" 
+      :showToolsButton="authStore.canEdit" 
       @handleEvent="isOpen = true" 
       v-model="searchQuery"
     >
@@ -15,6 +15,7 @@
             v-for="client in paginatedClients"
             :key="client.id"
             :client="client"
+            :canEdit="authStore.canEdit"
             @view="viewClient"
             @edit="editClient"
             @share="shareClient"
@@ -53,6 +54,7 @@
         mainText="Vous n'avez aucun client."
         subtitle="Ajoutez votre premier client."
         btnLabel="Ajouter un client"
+        :showAddButton="authStore.canEdit"
         @add="isOpen = true"
       />
     </div>
@@ -101,8 +103,10 @@ import SuccesModale from '../../modale/succesModale.vue';
 import LogoLoader from '../../tools/LogoLoader.vue';
 import Pagination from '../../tools/Pagination.vue';
 import { useClientStore } from '../../../stores/clientStore';
+import { useAuthStore } from '../../../stores/authStore';
 
 const clientStore = useClientStore();
+const authStore = useAuthStore();
 const isOpen = ref(false);
 const isViewOpen = ref(false);
 const isFoldersOpen = ref(false);

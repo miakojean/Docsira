@@ -19,6 +19,8 @@ export interface Dossier {
   is_archived?: boolean;
   is_deleted?: boolean;
   deleted_at?: string | null;
+  comments_count?: number;
+  unread_comments_count?: number;
   created_by_name?: string | null;
   created_by?: {
     id: string;
@@ -442,6 +444,19 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
     }
   }
 
+  function setDossierUnreadComments(affairId: string, count: number) {
+    allDossiers.value = allDossiers.value.map((d) =>
+      d.id === affairId ? { ...d, unread_comments_count: count } : d
+    );
+    const updatedMap: Record<string, Dossier[]> = {};
+    for (const [clientId, list] of Object.entries(dossiersByClient.value)) {
+      updatedMap[clientId] = list.map((d) =>
+        d.id === affairId ? { ...d, unread_comments_count: count } : d
+      );
+    }
+    dossiersByClient.value = updatedMap;
+  }
+
   return {
     dossiersByClient,
     allDossiers,
@@ -465,5 +480,6 @@ export const useClientDossierStore = defineStore("clientDossier", () => {
     fetchAffairShareLinks,
     createAffairShareLink,
     revokeAffairShareLink,
+    setDossierUnreadComments,
   };
 });

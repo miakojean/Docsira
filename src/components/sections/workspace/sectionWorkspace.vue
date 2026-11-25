@@ -2,7 +2,7 @@
   <div class="main-section gap-2">
     <headerNav
       title="Workspace"
-      :showToolsButton="true"
+      :showToolsButton="authStore.canEdit"
       @handleEvent="openAddRoot"
       v-model="searchQuery"
     >
@@ -41,6 +41,7 @@
               :key="d.id"
               :dossier="d"
               :isClientCard="false"
+              :canEdit="authStore.canEdit"
               @goTo="openDossier(d)"
               @open="openDossier(d)"
               @details="openDetails(d)"
@@ -86,6 +87,7 @@
         mainText="Vous n'avez aucun dossier."
         subtitle="Créez votre premier dossier pour commencer à travailler."
         btnLabel="Ajouter un dossier"
+        :showAddButton="authStore.canEdit"
         @add="openAddRoot"
       />
     </div>
@@ -165,9 +167,11 @@ import LogoLoader from '../../tools/LogoLoader.vue';
 import Pagination from '../../tools/Pagination.vue';
 import BaseSelectInput from '../../BaseInput/BaseSelectInput.vue';
 import { useClientDossierStore, type AffairShareLink, type Dossier } from '../../../stores/dossierStore';
+import { useAuthStore } from '../../../stores/authStore';
 import { DOSSIER_STATUT_OPTIONS, DOSSIER_SORT_OPTIONS, sortDossiers } from '../../../helpers/dossierSort';
 
 const store = useClientDossierStore();
+const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 

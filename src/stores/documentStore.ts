@@ -21,16 +21,81 @@ export interface DossierDocument {
   size: number;
   download_url: string;
   uploaded_at: string;
+  updated_at?: string | null;
   /** Document dont celui-ci découle (null pour la racine). */
   parent: string | null;
   relation: DocumentRelation;
   version: number;
+  version_note?: string;
+  uploaded_by_name?: string | null;
+  created_by_name?: string | null;
+  updated_by_name?: string | null;
   category?: SiraCategory;
   valide?: boolean;
   pos_x: number | null;
   pos_y: number | null;
   is_deleted?: boolean;
   deleted_at?: string | null;
+}
+
+export interface DocumentLineage {
+  rootId: string;
+  latest: DossierDocument;
+  versions: DossierDocument[];
+}
+
+/**
+ * Regroupe les documents d'un dossier par lignée de versions (`UPDATED`).
+ * Chaque lignée contient `latest` (version la plus récente) et `versions` triées du plus récent vers v1.
+ */
+export function buildDocumentVersionLineages(docs: DossierDocument[]): DocumentLineage[] {
+  const byId = new Map<string, DossierDocument>();
+  for (const doc of docs) {
+    byId.set(doc.id, doc);
+  }
+
+  const rootCache = new Map<string, string>();
+  const resolveRootId = (doc: DossierDocument): string => {
+    if (rootCache.has(doc.id)) return rootCache.get(doc.id)!;
+    const visited = new Set<string>([doc.id]);
+    let curr: DossierDocument = doc;
+    while (curr.relation === 'UPDATED' && curr.parent && byId.has(curr.parent) && !visited.has(curr.parent)) {
+      curr = byId.get(curr.parent)!;
+      visited.add(curr.id);
+    }
+    const rootId = curr.id;
+    for (const id of visited) {
+      rootCache.set(id, rootId);
+    }
+    return rootId;
+  };
+
+  const groups = new Map<string, DossierDocument[]>();
+  for (const doc of docs) {
+    const rootId = resolveRootId(doc);
+    const list = groups.get(rootId) ?? [];
+    list.push(doc);
+    groups.set(rootId, list);
+  }
+
+  const lineages: DocumentLineage[] = [];
+  for (const [rootId, items] of groups.entries()) {
+    const sorted = [...items].sort((a, b) => {
+      const verDiff = (b.version || 1) - (a.version || 1);
+      if (verDiff !== 0) return verDiff;
+      return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime();
+    });
+    lineages.push({
+      rootId,
+      latest: sorted[0],
+      versions: sorted,
+    });
+  }
+
+  lineages.sort(
+    (a, b) => new Date(b.latest.uploaded_at).getTime() - new Date(a.latest.uploaded_at).getTime()
+  );
+  return lineages;
 }
 
 export type DocumentRelation = "INITIAL" | "ADDED" | "UPDATED";
@@ -155,15 +220,28 @@ export const useDocumentStore = defineStore("documents", () => {
     }
   }
 
-  /** Dépose une nouvelle version d'un document : elle est reliée à l'ancienne. */
-  async function uploadNewVersion(id: string, file: File, posX?: number, posY?: number) {
+  /** Dépose une nouvelle version d'un document : elle est reliée à la dernière version active. */
+  async function uploadNewVersion(
+    id: string,
+    file: File,
+    options?: {
+      versionNote?: string;
+      title?: string;
+      category?: SiraCategory;
+      posX?: number;
+      posY?: number;
+    }
+  ) {
     isUploading.value = true;
     errorMessage.value = "";
     try {
       const form = new FormData();
       form.append("file", file, file.name);
-      if (posX != null && !isNaN(posX)) form.append("pos_x", String(Math.round(posX)));
-      if (posY != null && !isNaN(posY)) form.append("pos_y", String(Math.round(posY)));
+      if (options?.versionNote?.trim()) form.append("version_note", options.versionNote.trim());
+      if (options?.title?.trim()) form.append("title", options.title.trim());
+      if (options?.category) form.append("category", options.category);
+      if (options?.posX != null && !isNaN(options.posX)) form.append("pos_x", String(Math.round(options.posX)));
+      if (options?.posY != null && !isNaN(options.posY)) form.append("pos_y", String(Math.round(options.posY)));
 
       const response = await api(`/affairs/documents/${id}/versions/`, "POST", form);
       const data = await response.json().catch(() => null);
@@ -185,6 +263,68 @@ export const useDocumentStore = defineStore("documents", () => {
       return null;
     } finally {
       isUploading.value = false;
+    }
+  }
+
+  /** Récupère la lignée complète des versions d'un document (de la plus récente à v1). */
+  async function fetchDocumentVersions(docId: string): Promise<DossierDocument[]> {
+    errorMessage.value = "";
+    try {
+      const items = await fetchAllDocumentPages(`/affairs/documents/${docId}/versions/?page_size=50`);
+      return items ?? [];
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Impossible de récupérer l'historique des versions";
+      return [];
+    }
+  }
+
+  /** Restaure une ancienne version (crée une nouvelle version non destructive). */
+  async function restoreDocumentVersion(docId: string, versionNote?: string): Promise<DossierDocument | null> {
+    isUploading.value = true;
+    errorMessage.value = "";
+    try {
+      const payload = versionNote?.trim() ? { version_note: versionNote.trim() } : {};
+      const response = await api(`/affairs/documents/${docId}/versions/restore/`, "POST", payload);
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data) {
+        errorMessage.value = extractBackendError(data, "Restauration de la version impossible");
+        return null;
+      }
+      const restoredDoc = data as DossierDocument;
+      if (!documents.value.some((d) => d.id === restoredDoc.id)) {
+        documents.value = [restoredDoc, ...documents.value];
+      }
+      if (!allDocuments.value.some((d) => d.id === restoredDoc.id)) {
+        allDocuments.value = [restoredDoc, ...allDocuments.value];
+      }
+      return restoredDoc;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return null;
+    } finally {
+      isUploading.value = false;
+    }
+  }
+
+  /** Valide ou retire la validation d'un document. */
+  async function toggleDocumentValidation(id: string, valide: boolean): Promise<boolean> {
+    errorMessage.value = "";
+    try {
+      const response = await api(`/affairs/documents/${id}/`, "PATCH", { valide });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data) {
+        errorMessage.value = extractBackendError(data, "Mise à jour de la validation impossible");
+        return false;
+      }
+      documents.value = documents.value.map((d) => (d.id === id ? data : d));
+      allDocuments.value = allDocuments.value.map((d) => (d.id === id ? data : d));
+      return true;
+    } catch (error) {
+      console.error(error);
+      errorMessage.value = "Erreur serveur, veuillez réessayer plus tard";
+      return false;
     }
   }
 
@@ -275,8 +415,8 @@ export const useDocumentStore = defineStore("documents", () => {
         errorMessage.value = extractBackendError(data, "Mise à jour de la catégorie impossible");
         return false;
       }
-      documents.value = documents.value.map((d) => (d.id === id ? { ...d, category: data.category } : d));
-      allDocuments.value = allDocuments.value.map((d) => (d.id === id ? { ...d, category: data.category } : d));
+      documents.value = documents.value.map((d) => (d.id === id ? data : d));
+      allDocuments.value = allDocuments.value.map((d) => (d.id === id ? data : d));
       return true;
     } catch (err) {
       console.error(err);
@@ -433,6 +573,9 @@ export const useDocumentStore = defineStore("documents", () => {
     fetchTrashDocuments,
     uploadDocuments,
     uploadNewVersion,
+    fetchDocumentVersions,
+    restoreDocumentVersion,
+    toggleDocumentValidation,
     moveDocument,
     moveDocumentToAffair,
     renameDocument,

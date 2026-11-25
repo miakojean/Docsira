@@ -3,6 +3,9 @@ import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { api, clearAuthSession, getAuthStore } from "../services/api";
 
+export type UserRole = "owner" | "admin" | "editor" | "viewer";
+export type CollaboratorRole = "admin" | "editor" | "viewer";
+
 export interface Customer {
   id?: string | number;
   email: string;
@@ -12,6 +15,10 @@ export interface Customer {
   password: string;
   account_type?: string;
   has_changed_password?: boolean;
+  role?: UserRole;
+  is_firm_owner?: boolean;
+  can_manage_collaborators?: boolean;
+  can_edit?: boolean;
 }
 
 export const useAuthStore = defineStore("auth", () => {
@@ -30,6 +37,27 @@ export const useAuthStore = defineStore("auth", () => {
   });
 
   const getIsAuthenticated = computed(() => isAuthenticated.value);
+
+  const userRole = computed<UserRole>(() => {
+    if (user.value.role) return user.value.role;
+    return user.value.account_type === "collaborator" ? "editor" : "owner";
+  });
+
+  const isAdmin = computed<boolean>(() => {
+    if (typeof user.value.can_manage_collaborators === "boolean") {
+      return user.value.can_manage_collaborators;
+    }
+    return userRole.value === "owner" || userRole.value === "admin";
+  });
+
+  const canEdit = computed<boolean>(() => {
+    if (typeof user.value.can_edit === "boolean") {
+      return user.value.can_edit;
+    }
+    return userRole.value !== "viewer";
+  });
+
+  const isViewer = computed<boolean>(() => userRole.value === "viewer");
 
   function resetLocalAuthState() {
     isAuthenticated.value = false;
@@ -51,6 +79,7 @@ export const useAuthStore = defineStore("auth", () => {
       if (token) {
         isAuthenticated.value = true;
         if (savedUser) user.value = savedUser;
+        void fetchUserProfile();
       } else {
         resetLocalAuthState();
       }
@@ -263,17 +292,20 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
-  async function addCollaborator(email: string) {
+  async function addCollaborator(email: string, role: CollaboratorRole = "editor") {
     isLoading.value = true;
+    message.value.errorMessage = "";
     try {
-      const response = await api("/account/collaborators/", 'POST', { email }, { requireAuth: true });
+      const response = await api("/account/collaborators/", "POST", { email, role }, { requireAuth: true });
       if (response.ok) {
         message.value.succesMessage = "Invitation de collaboration envoyée";
         // Update collaborators list after successful add
         await fetchCollaborators();
         return true;
       } else {
-        message.value.errorMessage = "Erreur lors de l'invitation: ce collaborateur a déjà été invité";
+        const errorData = await response.json().catch(() => null);
+        message.value.errorMessage =
+          errorData?.error || "Erreur lors de l'invitation: ce collaborateur a déjà été invité";
         return false;
       }
     } catch (error) {
@@ -282,6 +314,32 @@ export const useAuthStore = defineStore("auth", () => {
       return false;
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  async function updateCollaboratorRole(memberId: string, role: CollaboratorRole) {
+    message.value.errorMessage = "";
+    try {
+      const response = await api(
+        `/account/collaborators/${memberId}/role/`,
+        "PATCH",
+        { role },
+        { requireAuth: true }
+      );
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        message.value.errorMessage = data?.error || "Impossible de modifier le rôle.";
+        return false;
+      }
+      collaborators.value = collaborators.value.map((c) =>
+        String(c.id) === String(memberId) ? { ...c, role: data?.role ?? role } : c
+      );
+      message.value.succesMessage = "Rôle mis à jour avec succès.";
+      return true;
+    } catch (error) {
+      message.value.errorMessage = "Erreur serveur";
+      console.error(error);
+      return false;
     }
   }
 
@@ -321,6 +379,10 @@ export const useAuthStore = defineStore("auth", () => {
     message,
     collaborators,
     getIsAuthenticated,
+    userRole,
+    isAdmin,
+    canEdit,
+    isViewer,
     hydrateSession,
     resetLocalAuthState,
     Registration,
@@ -329,6 +391,7 @@ export const useAuthStore = defineStore("auth", () => {
     editProfile,
     fetchUserProfile,
     addCollaborator,
+    updateCollaboratorRole,
     fetchCollaborators,
     removeCollaborator,
     ChangePassword,
