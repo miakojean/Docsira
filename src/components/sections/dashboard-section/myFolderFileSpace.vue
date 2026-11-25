@@ -337,6 +337,7 @@
                 <td class="col-actions" @click.stop>
                   <div class="row-actions">
                     <button
+                      v-if="authStore.canEdit"
                       type="button"
                       class="action-icon-btn"
                       title="Envoyer vers le Workspace"
@@ -414,14 +415,14 @@
       >
         <template v-if="activeMenuEntry.isDirectory">
           <button type="button" class="dropdown-row" @click="runEntryAction('open', activeMenuEntry)">Ouvrir</button>
-          <button type="button" class="dropdown-row" @click="runEntryAction('send', activeMenuEntry)">Envoyer vers le Workspace</button>
+          <button v-if="authStore.canEdit" type="button" class="dropdown-row" @click="runEntryAction('send', activeMenuEntry)">Envoyer vers le Workspace</button>
           <button type="button" class="dropdown-row" @click="runEntryAction('rename', activeMenuEntry)">Renommer</button>
           <button type="button" class="dropdown-row is-danger" @click="runEntryAction('delete', activeMenuEntry)">Supprimer</button>
         </template>
         <template v-else>
           <button type="button" class="dropdown-row" @click="runEntryAction('open', activeMenuEntry)">Visualiser / Ouvrir</button>
           <button type="button" class="dropdown-row" @click="runEntryAction('system', activeMenuEntry)">Application système</button>
-          <button type="button" class="dropdown-row" @click="runEntryAction('send', activeMenuEntry)">Envoyer vers le Workspace</button>
+          <button v-if="authStore.canEdit" type="button" class="dropdown-row" @click="runEntryAction('send', activeMenuEntry)">Envoyer vers le Workspace</button>
           <button type="button" class="dropdown-row" @click="runEntryAction('rename', activeMenuEntry)">Renommer</button>
           <button type="button" class="dropdown-row is-danger" @click="runEntryAction('delete', activeMenuEntry)">Supprimer</button>
         </template>
@@ -443,6 +444,7 @@
 
     <!-- Modale Envoi vers le Workspace -->
     <sendToWorkspaceModale
+      v-if="authStore.canEdit"
       :isOpen="isSendModalOpen"
       :sourceName="sendTarget?.name || ''"
       :sourcePath="sendTarget?.path || ''"
@@ -484,6 +486,7 @@ import {
   useLocalManagerStore,
   type LocalEntry,
 } from '../../../stores/localManagerStore';
+import { useAuthStore } from '../../../stores/authStore';
 
 const props = defineProps<{
   folderPath: string;
@@ -491,6 +494,7 @@ const props = defineProps<{
 
 const router = useRouter();
 const store = useLocalManagerStore();
+const authStore = useAuthStore();
 
 const searchQuery = ref('');
 const preview = ref<PreviewData | null>(null);
@@ -638,6 +642,7 @@ function runEntryAction(
 }
 
 function openSendModal(entry: LocalEntry) {
+  if (!authStore.canEdit) return;
   closeMenu();
   sendTarget.value = entry;
   isSendModalOpen.value = true;

@@ -8,14 +8,11 @@
       :currentId="affairId"
       :currentDossier="dossier"
       :documents="documents"
-      :subfolders="subfolders"
-      :currentFolderId="currentFolderId"
       :activeTab="activeTreeTab"
       @update:activeTab="activeTreeTab = $event"
       @openDocument="openDocument"
       @openDetails="openDocDetails"
       @openVersions="openVersionsModal"
-      @selectFolder="currentFolderId = $event"
     />
 
     <!-- Contenu principal -->
@@ -27,9 +24,7 @@
     <affairCommentsDrawer
       :isOpen="isCommentsOpen"
       :affairId="affairId"
-      :documents="documents"
-      :initialDocumentId="commentInitialDocId"
-      :focusKey="commentFocusKey"
+      :documents="latestDocuments"
       :unreadCount="unreadCommentsCount"
       :latestUnread="latestUnreadComment"
       :canShare="authStore.canEdit"
@@ -54,15 +49,12 @@ const affair = useAffairDocuments();
 const {
   affairId,
   documents,
-  subfolders,
-  currentFolderId,
+  latestDocuments,
   openDocument,
   openDocDetails,
   openVersionsModal,
   dossier,
   isCommentsOpen,
-  commentInitialDocId,
-  commentFocusKey,
   unreadCommentsCount,
   latestUnreadComment,
   toggleComments,

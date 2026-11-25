@@ -11,7 +11,6 @@ import {
   type DossierDocument,
   type SiraCategory,
 } from '../stores/documentStore';
-import { useAffairFolderStore, type AffairSubfolder } from '../stores/affairFolderStore';
 import { useCommentStore } from '../stores/commentStore';
 import { useSiraStore } from '../stores/siraStore';
 import { useAuthStore } from '../stores/authStore';
@@ -24,7 +23,6 @@ export function useAffairDocuments() {
   const router = useRouter();
   const dossierStore = useClientDossierStore();
   const docStore = useDocumentStore();
-  const folderStore = useAffairFolderStore();
   const commentStore = useCommentStore();
   const siraStore = useSiraStore();
   const authStore = useAuthStore();
@@ -38,95 +36,12 @@ export function useAffairDocuments() {
   const documents = computed(() => docStore.documents);
   const documentLineages = computed(() => buildDocumentVersionLineages(documents.value));
   const latestDocuments = computed(() => documentLineages.value.map((l) => l.latest));
+  const currentDocuments = computed<DossierDocument[]>(() => latestDocuments.value);
+  const isEmptyCurrentView = computed(() => currentDocuments.value.length === 0);
 
-  // ---------- Sous-dossiers de l'affaire ----------
-  const currentFolderId = ref<string | null>(null);
-
-  // Tous les sous-dossiers de cette affaire
-  const subfolders = computed<AffairSubfolder[]>(() => {
-    return folderStore.folders.filter((f) => String(f.affairId) === affairId.value);
-  });
-
-  // Sous-dossiers enfants du niveau actuel
-  const currentSubfolders = computed<AffairSubfolder[]>(() => {
-    return folderStore.getSubfolders(affairId.value, currentFolderId.value);
-  });
-
-  // Documents du niveau actuel (dernière version de chaque lignée)
-  const currentDocuments = computed<DossierDocument[]>(() => {
-    return folderStore.getFolderDocuments(affairId.value, currentFolderId.value, latestDocuments.value);
-  });
-
-  // Dossier actif
-  const currentFolder = computed<AffairSubfolder | null>(() => {
-    return folderStore.getFolder(currentFolderId.value);
-  });
-
-  // Fil d'Ariane
-  const folderBreadcrumbs = computed<AffairSubfolder[]>(() => {
-    return folderStore.getFolderPath(currentFolderId.value);
-  });
-
-  // État vide : ni sous-dossiers ni documents à ce niveau
-  const isEmptyCurrentView = computed(() => {
-    return currentSubfolders.value.length === 0 && currentDocuments.value.length === 0;
-  });
-
-  // ---------- Modale création / renommage de sous-dossier ----------
-  const isFolderModalOpen = ref(false);
-  const folderModalMode = ref<'create' | 'rename'>('create');
-  const folderToRename = ref<AffairSubfolder | null>(null);
-  const folderModalName = ref('');
-
-  function openCreateFolder() {
-    if (!authStore.canEdit) return;
-    folderModalMode.value = 'create';
-    folderToRename.value = null;
-    folderModalName.value = '';
-    isFolderModalOpen.value = true;
-  }
-
-  function openRenameFolder(folder: AffairSubfolder) {
-    folderModalMode.value = 'rename';
-    folderToRename.value = folder;
-    folderModalName.value = folder.name;
-    isFolderModalOpen.value = true;
-  }
-
-  function confirmSaveFolder(name: string) {
-    if (folderModalMode.value === 'create') {
-      folderStore.createFolder(affairId.value, name, currentFolderId.value);
-    } else if (folderToRename.value) {
-      folderStore.renameFolder(folderToRename.value.id, name);
-    }
-    isFolderModalOpen.value = false;
-  }
-
-  // ---------- Modale suppression de sous-dossier ----------
-  const isDeleteFolderOpen = ref(false);
-  const folderToDelete = ref<AffairSubfolder | null>(null);
-
-  function openDeleteFolder(folder: AffairSubfolder) {
-    folderToDelete.value = folder;
-    isDeleteFolderOpen.value = true;
-  }
-
-  function confirmDeleteFolder() {
-    if (!folderToDelete.value) return;
-    const deletedId = folderToDelete.value.id;
-    const parentId = folderToDelete.value.parentId;
-    folderStore.deleteFolder(deletedId);
-    if (currentFolderId.value === deletedId) {
-      currentFolderId.value = parentId;
-    }
-    isDeleteFolderOpen.value = false;
-    folderToDelete.value = null;
-  }
-
-  // ---------- Déplacement d'un document (sous-dossier ou autre dossier/affaire) ----------
+  // ---------- Déplacement d'un document vers un autre dossier (affaire) ----------
   const isMoveDocModalOpen = ref(false);
   const docToMove = ref<DossierDocument | null>(null);
-  const targetFolderIdForMove = ref<string | null>(null);
   const isMovingDoc = ref(false);
 
   const otherDossiers = computed<Dossier[]>(() => {
@@ -135,7 +50,6 @@ export function useAffairDocuments() {
 
   async function openMoveDocModal(doc: DossierDocument) {
     docToMove.value = doc;
-    targetFolderIdForMove.value = folderStore.docFolderMap[doc.id] ?? null;
     isMoveDocModalOpen.value = true;
     if (dossierStore.allDossiers.length === 0) {
       await dossierStore.fetchAllDossiers();
@@ -143,30 +57,22 @@ export function useAffairDocuments() {
   }
 
   async function confirmMoveDoc(payload: MoveDocPayload) {
-    if (!docToMove.value) return;
-    if (payload.targetAffairId && payload.targetAffairId !== affairId.value) {
-      isMovingDoc.value = true;
-      try {
-        const ok = await docStore.moveDocumentToAffair(docToMove.value.id, payload.targetAffairId);
-        if (ok) {
-          folderStore.assignDocToFolder(docToMove.value.id, null);
-          isMoveDocModalOpen.value = false;
-          docToMove.value = null;
-          await Promise.all([refreshDossier(), dossierStore.fetchAllDossiers()]);
-        }
-      } finally {
-        isMovingDoc.value = false;
-      }
+    if (!docToMove.value || !payload.targetAffairId || payload.targetAffairId === affairId.value) {
+      isMoveDocModalOpen.value = false;
+      docToMove.value = null;
       return;
     }
-
-    folderStore.assignDocToFolder(docToMove.value.id, payload.targetFolderId);
-    isMoveDocModalOpen.value = false;
-    docToMove.value = null;
-  }
-
-  function onDocDropOnFolder(docId: string, folderId: string) {
-    folderStore.assignDocToFolder(docId, folderId);
+    isMovingDoc.value = true;
+    try {
+      const ok = await docStore.moveDocumentToAffair(docToMove.value.id, payload.targetAffairId);
+      if (ok) {
+        isMoveDocModalOpen.value = false;
+        docToMove.value = null;
+        await Promise.all([refreshDossier(), dossierStore.fetchAllDossiers()]);
+      }
+    } finally {
+      isMovingDoc.value = false;
+    }
   }
 
   const mimeByExt: Record<string, string> = {
@@ -211,16 +117,8 @@ export function useAffairDocuments() {
 
   async function handleUploadDocs({ files, category }: { files: File[]; category: SiraCategory }) {
     if (files.length === 0) return;
-    const prevDocIds = new Set(docStore.documents.map((d) => d.id));
     const success = await docStore.uploadDocuments(affairId.value, files, category);
     if (success) {
-      if (currentFolderId.value) {
-        for (const d of docStore.documents) {
-          if (!prevDocIds.has(d.id)) {
-            folderStore.assignDocToFolder(d.id, currentFolderId.value);
-          }
-        }
-      }
       await refreshDossier();
       closeUploadDocModal();
     }
@@ -627,14 +525,10 @@ export function useAffairDocuments() {
     file: File;
     versionNote: string;
   }) {
-    const folderId = folderStore.docFolderMap[payload.document.id] ?? null;
     const created = await docStore.uploadNewVersion(payload.document.id, payload.file, {
       versionNote: payload.versionNote,
     });
     if (created) {
-      if (folderId) {
-        folderStore.assignDocToFolder(created.id, folderId);
-      }
       versionsModalDoc.value = created;
       if (docForDetails.value?.id === payload.document.id) {
         docForDetails.value = created;
@@ -645,15 +539,8 @@ export function useAffairDocuments() {
 
   async function handleRestoreVersion(ver: DossierDocument) {
     const fallbackDocId = versionsModalDoc.value?.id;
-    const folderId =
-      folderStore.docFolderMap[ver.id] ??
-      (fallbackDocId ? folderStore.docFolderMap[fallbackDocId] : null) ??
-      null;
     const restored = await docStore.restoreDocumentVersion(ver.id);
     if (restored) {
-      if (folderId) {
-        folderStore.assignDocToFolder(restored.id, folderId);
-      }
       if (docForDetails.value && (docForDetails.value.id === ver.id || docForDetails.value.id === fallbackDocId)) {
         docForDetails.value = restored;
       }
@@ -663,14 +550,10 @@ export function useAffairDocuments() {
   }
 
   async function handleReplaceFromPreview(payload: { doc: DossierDocument; file: File }) {
-    const folderId = folderStore.docFolderMap[payload.doc.id] ?? null;
     const created = await docStore.uploadNewVersion(payload.doc.id, payload.file, {
       versionNote: '',
     });
     if (created) {
-      if (folderId) {
-        folderStore.assignDocToFolder(created.id, folderId);
-      }
       if (versionsModalDoc.value?.id === payload.doc.id) {
         versionsModalDoc.value = created;
       }
@@ -685,8 +568,6 @@ export function useAffairDocuments() {
   // ---------- Commentaires collaborateurs ----------
   const isCommentsOpen = ref(false);
   const isCommentNotifDismissed = ref(false);
-  const commentInitialDocId = ref<string | null>(null);
-  const commentFocusKey = ref(0);
   const commentsCount = computed(() => commentStore.getCommentCount(affairId.value));
   const unreadCommentsCount = computed(() => commentStore.getUnreadCount(affairId.value));
   const latestUnreadComment = computed(() => commentStore.getLatestUnread(affairId.value));
@@ -713,15 +594,6 @@ export function useAffairDocuments() {
       }
       dossierStore.setDossierUnreadComments(affairId.value, 0);
     }
-  }
-
-  function openComments(doc?: DossierDocument) {
-    commentInitialDocId.value = doc?.id ?? null;
-    isCommentsOpen.value = true;
-    isCommentNotifDismissed.value = true;
-    commentFocusKey.value++;
-    void commentStore.fetchComments(affairId.value);
-    void markCommentsAsRead();
   }
 
   function toggleComments() {
@@ -760,7 +632,6 @@ export function useAffairDocuments() {
     try {
       const ok = await docStore.deleteDocument(docToDelete.value.id);
       if (ok) {
-        folderStore.assignDocToFolder(docToDelete.value.id, null);
         isDeleteOpen.value = false;
         docToDelete.value = null;
         await refreshDossier();
@@ -778,7 +649,6 @@ export function useAffairDocuments() {
       docStore.fetchDocuments(affairId.value),
       commentStore.fetchUnreadStatus(affairId.value),
     ];
-    if (!folderStore.isLoaded) tasks.push(folderStore.loadStore());
     await Promise.all(tasks);
 
     commentPollTimer = window.setInterval(async () => {
@@ -796,13 +666,11 @@ export function useAffairDocuments() {
     isCommentsOpen.value = false;
     isCommentNotifDismissed.value = false;
     commentInitialDocId.value = null;
-    currentFolderId.value = null;
     const tasks: Promise<unknown>[] = [
       refreshDossier(),
       docStore.fetchDocuments(affairId.value),
       commentStore.fetchUnreadStatus(affairId.value),
     ];
-    if (!folderStore.isLoaded) tasks.push(folderStore.loadStore());
     await Promise.all(tasks);
   });
 
@@ -818,38 +686,19 @@ export function useAffairDocuments() {
     affairId,
     dossier,
     docStore,
-    folderStore,
     documents,
     latestDocuments,
-    currentFolderId,
-    subfolders,
-    currentSubfolders,
     currentDocuments,
-    currentFolder,
-    folderBreadcrumbs,
     isEmptyCurrentView,
     isDraggingOver,
     diskFileInputRef,
-    // Modales sous-dossier
-    isFolderModalOpen,
-    folderModalMode,
-    folderModalName,
-    openCreateFolder,
-    openRenameFolder,
-    confirmSaveFolder,
-    isDeleteFolderOpen,
-    folderToDelete,
-    openDeleteFolder,
-    confirmDeleteFolder,
     // Modale déplacer
     isMoveDocModalOpen,
     docToMove,
-    targetFolderIdForMove,
     otherDossiers,
     isMovingDoc,
     openMoveDocModal,
     confirmMoveDoc,
-    onDocDropOnFolder,
     // Actions fichiers / navigation
     goBack,
     refreshDossier,
@@ -918,13 +767,10 @@ export function useAffairDocuments() {
     // Commentaires collaborateurs
     isCommentsOpen,
     isCommentNotifDismissed,
-    commentInitialDocId,
-    commentFocusKey,
     commentsCount,
     unreadCommentsCount,
     latestUnreadComment,
     dismissCommentNotification,
-    openComments,
     toggleComments,
     closeComments,
     openDocumentById,

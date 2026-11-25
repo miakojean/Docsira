@@ -48,7 +48,7 @@
                     </span>
                   </span>
                 </div>
-                <div class="item-actions">
+                <div v-if="authStore.canEdit" class="item-actions">
                   <button type="button" class="action-btn" title="Modifier le dossier" @click.stop="openEdit(d)">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
                       <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
@@ -136,13 +136,13 @@
             <button class="btn" type="button" @click="mode === 'add' ? (mode = 'list') : $emit('close')">
               {{ mode === 'add' ? 'Annuler' : 'Fermer' }}
             </button>
-            <button v-if="mode === 'list'" class="btn btn-primary" type="button" @click="openAdd">
+            <button v-if="mode === 'list' && authStore.canEdit" class="btn btn-primary" type="button" @click="openAdd">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
               Ajouter un dossier
             </button>
-            <button v-else class="btn btn-primary" type="button" :disabled="!canSubmit" @click="submit">
+            <button v-else-if="mode === 'add'" class="btn btn-primary" type="button" :disabled="!canSubmit" @click="submit">
               {{ dossierStore.isLoading ? 'Création...' : 'Créer le dossier' }}
             </button>
           </div>
@@ -179,6 +179,7 @@ import { ref, computed, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useClientDossierStore, type Dossier } from '../../stores/dossierStore';
 import { useClientStore, type ClientListItem } from '../../stores/clientStore';
+import { useAuthStore } from '../../stores/authStore';
 import { DOSSIER_TYPE_GROUPS, getDossierTypeLabel } from '../../helpers/dossierTypes';
 import editDossierModale from './editDossierModale.vue';
 import deleteModale from './deleteModale.vue';
@@ -192,6 +193,7 @@ const props = defineProps<{
 const emit = defineEmits(['close']);
 
 const dossierStore = useClientDossierStore();
+const authStore = useAuthStore();
 const router = useRouter();
 
 function openDossier(d: Dossier) {

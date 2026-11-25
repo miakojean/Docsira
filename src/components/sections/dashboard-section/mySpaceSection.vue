@@ -127,6 +127,7 @@
 
     <!-- Modale envoi vers Workspace -->
     <sendToWorkspaceModale
+      v-if="authStore.canEdit"
       :isOpen="isSendModalOpen"
       :sourceName="sendSourceName"
       :sourcePath="sendSourcePath"
@@ -146,7 +147,7 @@
         <ul>
           <li @click="runMenuAction('open', activeMenuFolderPath)">Ouvrir</li>
           <li @click="runMenuAction('system', activeMenuFolderPath)">Ouvrir dans l'explorateur</li>
-          <li @click="runMenuAction('send', activeMenuFolderPath)">Envoyer vers le Workspace</li>
+          <li v-if="authStore.canEdit" @click="runMenuAction('send', activeMenuFolderPath)">Envoyer vers le Workspace</li>
           <li class="danger" @click="runMenuAction('unpin', activeMenuFolderPath)">Retirer de Mon espace</li>
         </ul>
       </div>
@@ -168,9 +169,11 @@ import {
   extractParentPath,
   useLocalManagerStore,
 } from '../../../stores/localManagerStore';
+import { useAuthStore } from '../../../stores/authStore';
 
 const router = useRouter();
 const store = useLocalManagerStore();
+const authStore = useAuthStore();
 
 const searchQuery = ref('');
 const currentPage = ref(1);
@@ -280,6 +283,7 @@ function runMenuAction(action: 'open' | 'system' | 'send' | 'unpin', folderPath:
     return;
   }
   if (action === 'send') {
+    if (!authStore.canEdit) return;
     sendSourcePath.value = folderPath;
     sendSourceName.value = extractBaseName(folderPath);
     isSendModalOpen.value = true;

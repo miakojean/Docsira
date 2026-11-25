@@ -11,10 +11,6 @@
                 <span class="ref-code">{{ dossier?.reference_affair || 'Dossier' }}</span>
                 <span v-if="dossier?.title" class="title-sep">•</span>
                 <span class="dossier-name">{{ dossier?.title }}</span>
-                <template v-if="targetFolderName">
-                  <span class="title-sep">•</span>
-                  <span class="folder-target-badge">Sous-dossier : {{ targetFolderName }}</span>
-                </template>
               </p>
             </div>
             <button class="close-btn" @click="handleClose" aria-label="Fermer la modale">
@@ -175,13 +171,11 @@ const props = withDefaults(
   defineProps<{
     isOpen: boolean;
     dossier: Dossier | null;
-    targetFolderName?: string | null;
     initialFiles?: File[];
     isUploading?: boolean;
     errorMessage?: string;
   }>(),
   {
-    targetFolderName: null,
     initialFiles: () => [],
     isUploading: false,
     errorMessage: '',

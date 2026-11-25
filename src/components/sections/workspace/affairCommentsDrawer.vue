@@ -55,21 +55,6 @@
         </button>
       </header>
 
-      <!-- Filtre discret par document (uniquement s'il y a des documents dans le dossier) -->
-      <div v-if="documents.length > 0" class="filter-bar">
-        <label for="comment-filter-doc" class="filter-label">Afficher</label>
-        <select
-          id="comment-filter-doc"
-          v-model="filterDocumentId"
-          class="filter-select"
-        >
-          <option :value="null">Tous les échanges ({{ totalCount }})</option>
-          <option v-for="doc in documents" :key="doc.id" :value="doc.id">
-            {{ doc.title || doc.file_name }}
-          </option>
-        </select>
-      </div>
-
       <!-- Erreur éventuelle -->
       <div v-if="errorMessage" class="error-line">
         <span>{{ errorMessage }}</span>
@@ -85,7 +70,7 @@
         <div v-else-if="threads.length === 0" class="empty-box">
           <p class="empty-title">Aucun commentaire pour le moment</p>
           <p class="empty-subtitle">
-            {{ filterDocumentId ? 'Aucun échange lié à ce document.' : 'Démarrez une discussion avec votre équipe ci-dessous.' }}
+            Démarrez une discussion avec votre équipe ci-dessous.
           </p>
         </div>
 
@@ -146,7 +131,29 @@
                 </div>
 
                 <!-- Texte du commentaire -->
-                <p v-else class="comment-text">{{ thread.root.content }}</p>
+                <p v-else class="comment-text">
+                  <template v-for="(seg, idx) in parseCommentSegments(thread.root.content)" :key="idx">
+                    <button
+                      v-if="seg.type === 'doc' && seg.docId"
+                      type="button"
+                      class="doc-mention-chip"
+                      :title="`Ouvrir ${seg.label}`"
+                      @click="onClickDocumentRef(seg.docId)"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="doc-mention-icon">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                      </svg>
+                      <span>{{ seg.label }}</span>
+                    </button>
+                    <span v-else-if="seg.type === 'doc'" class="doc-mention-chip is-missing">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="doc-mention-icon">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                      </svg>
+                      <span>{{ seg.label }}</span>
+                    </span>
+                    <template v-else>{{ seg.text }}</template>
+                  </template>
+                </p>
 
                 <!-- Actions discrètes -->
                 <div v-if="editingId !== thread.root.id" class="comment-actions">
@@ -235,7 +242,29 @@
                     </div>
                   </div>
 
-                  <p v-else class="comment-text">{{ reply.content }}</p>
+                  <p v-else class="comment-text">
+                    <template v-for="(seg, idx) in parseCommentSegments(reply.content)" :key="idx">
+                      <button
+                        v-if="seg.type === 'doc' && seg.docId"
+                        type="button"
+                        class="doc-mention-chip"
+                        :title="`Ouvrir ${seg.label}`"
+                        @click="onClickDocumentRef(seg.docId)"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="doc-mention-icon">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                        </svg>
+                        <span>{{ seg.label }}</span>
+                      </button>
+                      <span v-else-if="seg.type === 'doc'" class="doc-mention-chip is-missing">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="doc-mention-icon">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                        </svg>
+                        <span>{{ seg.label }}</span>
+                      </span>
+                      <template v-else>{{ seg.text }}</template>
+                    </template>
+                  </p>
 
                   <div v-if="editingId !== reply.id" class="comment-actions">
                     <button
@@ -286,34 +315,66 @@
           <button type="button" class="text-action" @click="replyingTo = null">Annuler</button>
         </div>
 
-        <div v-if="!replyingTo && documents.length > 0" class="composer-doc-row">
-          <label for="comment-target-doc" class="composer-doc-label">Objet</label>
-          <select
-            id="comment-target-doc"
-            v-model="composeDocumentId"
-            class="composer-doc-select"
+        <div class="composer-input-wrap">
+          <!-- Popover d'identification de document (@) -->
+          <div v-if="mentionOpen && documents.length > 0" class="mention-popover" role="listbox" aria-label="Identifier un document">
+            <div class="mention-popover-header">
+              <span>Identifier un document</span>
+              <span class="mention-popover-hint">↑↓ · Entrée</span>
+            </div>
+            <div v-if="filteredMentionDocs.length === 0" class="mention-empty">
+              Aucun document correspondant
+            </div>
+            <button
+              v-for="(doc, idx) in filteredMentionDocs"
+              :key="doc.id"
+              type="button"
+              role="option"
+              :aria-selected="idx === mentionActiveIndex"
+              class="mention-option"
+              :class="{ 'is-active': idx === mentionActiveIndex }"
+              @mousedown.prevent="selectMentionDoc(doc)"
+              @mouseenter="mentionActiveIndex = idx"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" class="mention-option-icon">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+              </svg>
+              <span class="mention-option-title">{{ getDocDisplayName(doc) }}</span>
+              <span v-if="doc.extension" class="mention-option-ext">{{ doc.extension.replace(/^\./, '').toUpperCase() }}</span>
+            </button>
+          </div>
+
+          <textarea
+            ref="composerInputRef"
+            v-model="draftContent"
+            rows="3"
+            class="comment-textarea"
+            :placeholder="documents.length > 0 ? 'Écrire un commentaire… Tapez @ pour identifier un document' : 'Écrire un commentaire… (Ctrl + Entrée pour envoyer)'"
             :disabled="isSubmitting"
-          >
-            <option :value="null">Commentaire général sur le dossier</option>
-            <option v-for="doc in documents" :key="doc.id" :value="doc.id">
-              Document : {{ doc.title || doc.file_name }}
-            </option>
-          </select>
+            @input="updateMentionState"
+            @click="updateMentionState"
+            @keydown="onComposerKeydown"
+            @blur="closeMentionPopover"
+          ></textarea>
         </div>
 
-        <textarea
-          ref="composerInputRef"
-          v-model="draftContent"
-          rows="3"
-          class="comment-textarea"
-          placeholder="Écrire un commentaire… (Ctrl + Entrée pour envoyer)"
-          :disabled="isSubmitting"
-          @keydown.ctrl.enter.prevent="submitComment"
-          @keydown.meta.enter.prevent="submitComment"
-        ></textarea>
-
         <div class="composer-footer">
-          <span class="char-hint">{{ draftContent.trim().length }} / 4000</span>
+          <div class="composer-footer-left">
+            <button
+              v-if="documents.length > 0"
+              type="button"
+              class="mention-trigger-btn"
+              :class="{ 'is-active': mentionOpen }"
+              title="Identifier un document (@)"
+              aria-label="Identifier un document"
+              :disabled="isSubmitting"
+              @mousedown.prevent="triggerMentionPicker"
+            >
+              <span class="mention-at-symbol">@</span>
+              <span>Document</span>
+            </button>
+            <span class="char-hint">{{ draftContent.trim().length }} / 4000</span>
+          </div>
           <button
             type="button"
             class="btn-send"
@@ -339,16 +400,12 @@ const props = withDefaults(
     isOpen: boolean;
     affairId: string;
     documents?: DossierDocument[];
-    initialDocumentId?: string | null;
-    focusKey?: number;
     unreadCount?: number;
     latestUnread?: UnreadCommentPreview | null;
     canShare?: boolean;
   }>(),
   {
     documents: () => [],
-    initialDocumentId: null,
-    focusKey: 0,
     unreadCount: 0,
     latestUnread: null,
     canShare: true,
@@ -363,13 +420,17 @@ const emit = defineEmits<{
 
 const commentStore = useCommentStore();
 
-const filterDocumentId = ref<string | null>(null);
-const composeDocumentId = ref<string | null>(null);
 const draftContent = ref('');
 const replyingTo = ref<AffairComment | null>(null);
 const editingId = ref<string | null>(null);
 const editingContent = ref('');
 const confirmDeleteId = ref<string | null>(null);
+
+// Mentions de documents (@)
+const mentionOpen = ref(false);
+const mentionQuery = ref('');
+const mentionTriggerStart = ref(-1);
+const mentionActiveIndex = ref(0);
 
 const listRef = ref<HTMLDivElement | null>(null);
 const composerInputRef = ref<HTMLTextAreaElement | null>(null);
@@ -377,51 +438,183 @@ const composerInputRef = ref<HTMLTextAreaElement | null>(null);
 const isLoading = computed(() => commentStore.isLoading);
 const isSubmitting = computed(() => commentStore.isSubmitting);
 const errorMessage = computed(() => commentStore.errorMessage);
-const totalCount = computed(() => commentStore.getCommentCount(props.affairId));
-const threads = computed(() => commentStore.getThreads(props.affairId, filterDocumentId.value));
+const threads = computed(() => commentStore.getThreads(props.affairId));
+
+function getDocDisplayName(doc: DossierDocument): string {
+  return (doc.title || doc.file_name || 'Document').trim();
+}
+
+const filteredMentionDocs = computed(() => {
+  const q = mentionQuery.value.trim().toLowerCase();
+  if (!q) return props.documents;
+  return props.documents.filter((doc) => {
+    const title = (doc.title || '').toLowerCase();
+    const fileName = (doc.file_name || '').toLowerCase();
+    return title.includes(q) || fileName.includes(q);
+  });
+});
+
+watch(filteredMentionDocs, (list) => {
+  if (mentionActiveIndex.value >= list.length) {
+    mentionActiveIndex.value = 0;
+  }
+});
 
 watch(
   () => props.affairId,
   () => {
-    filterDocumentId.value = null;
-    composeDocumentId.value = null;
     draftContent.value = '';
     replyingTo.value = null;
     editingId.value = null;
     editingContent.value = '';
     confirmDeleteId.value = null;
+    closeMentionPopover();
   }
 );
 
-watch(
-  () => props.focusKey,
-  async () => {
-    filterDocumentId.value = props.initialDocumentId ?? null;
-    composeDocumentId.value = props.initialDocumentId ?? null;
-    confirmDeleteId.value = null;
-    editingId.value = null;
-    replyingTo.value = null;
-    await nextTick();
-    composerInputRef.value?.focus();
-  }
-);
+function closeMentionPopover() {
+  mentionOpen.value = false;
+  mentionQuery.value = '';
+  mentionTriggerStart.value = -1;
+  mentionActiveIndex.value = 0;
+}
 
-watch(
-  () => filterDocumentId.value,
-  (val) => {
-    if (!replyingTo.value) {
-      composeDocumentId.value = val;
+function updateMentionState() {
+  const el = composerInputRef.value;
+  if (!el || props.documents.length === 0) {
+    closeMentionPopover();
+    return;
+  }
+  const cursorPos = el.selectionStart ?? draftContent.value.length;
+  const textBeforeCursor = draftContent.value.slice(0, cursorPos);
+  const match = textBeforeCursor.match(/(^|\s)@([^\n@\]]*)$/);
+  if (!match) {
+    closeMentionPopover();
+    return;
+  }
+  const leadingSpaceLen = match[1].length;
+  mentionTriggerStart.value = cursorPos - match[0].length + leadingSpaceLen;
+  mentionQuery.value = match[2] ?? '';
+  mentionOpen.value = true;
+}
+
+async function triggerMentionPicker() {
+  if (isSubmitting.value || props.documents.length === 0) return;
+  if (mentionOpen.value) {
+    closeMentionPopover();
+    return;
+  }
+  const el = composerInputRef.value;
+  const current = draftContent.value;
+  const start = el?.selectionStart ?? current.length;
+  const end = el?.selectionEnd ?? start;
+  const needsSpace = start > 0 && !/\s/.test(current[start - 1]);
+  const insertion = needsSpace ? ' @' : '@';
+  draftContent.value = current.slice(0, start) + insertion + current.slice(end);
+  const nextCursor = start + insertion.length;
+  await nextTick();
+  if (el) {
+    el.focus();
+    el.setSelectionRange(nextCursor, nextCursor);
+  }
+  updateMentionState();
+}
+
+async function selectMentionDoc(doc: DossierDocument) {
+  const el = composerInputRef.value;
+  const current = draftContent.value;
+  const cursorPos = el?.selectionStart ?? current.length;
+  const replaceStart = mentionTriggerStart.value >= 0 ? mentionTriggerStart.value : cursorPos;
+  const safeName = getDocDisplayName(doc).replace(/[\[\]]/g, '');
+  const token = `@[${safeName}] `;
+  draftContent.value = current.slice(0, replaceStart) + token + current.slice(cursorPos);
+  const nextCursor = replaceStart + token.length;
+  closeMentionPopover();
+  await nextTick();
+  if (el) {
+    el.focus();
+    el.setSelectionRange(nextCursor, nextCursor);
+  }
+}
+
+function onComposerKeydown(event: KeyboardEvent) {
+  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+    event.preventDefault();
+    void submitComment();
+    return;
+  }
+
+  if (!mentionOpen.value) return;
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeMentionPopover();
+    return;
+  }
+
+  const list = filteredMentionDocs.value;
+  if (list.length === 0) return;
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    mentionActiveIndex.value = (mentionActiveIndex.value + 1) % list.length;
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    mentionActiveIndex.value = (mentionActiveIndex.value - 1 + list.length) % list.length;
+  } else if (event.key === 'Enter' || event.key === 'Tab') {
+    event.preventDefault();
+    const chosen = list[mentionActiveIndex.value] ?? list[0];
+    if (chosen) {
+      void selectMentionDoc(chosen);
     }
   }
-);
+}
+
+type CommentSegment =
+  | { type: 'text'; text: string }
+  | { type: 'doc'; label: string; docId: string | null };
+
+function parseCommentSegments(content: string): CommentSegment[] {
+  if (!content) return [];
+  const segments: CommentSegment[] = [];
+  const regex = /@\[([^\]]+)\]/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ type: 'text', text: content.slice(lastIndex, match.index) });
+    }
+    const label = match[1].trim();
+    const normalized = label.toLowerCase();
+    const matchedDoc = props.documents.find(
+      (d) =>
+        getDocDisplayName(d).toLowerCase() === normalized ||
+        (d.file_name || '').trim().toLowerCase() === normalized
+    );
+    segments.push({
+      type: 'doc',
+      label,
+      docId: matchedDoc?.id ?? null,
+    });
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < content.length) {
+    segments.push({ type: 'text', text: content.slice(lastIndex) });
+  }
+  return segments;
+}
 
 async function submitComment() {
   const text = draftContent.value.trim();
   if (!text || isSubmitting.value) return;
 
+  closeMentionPopover();
+
   const created = await commentStore.addComment(props.affairId, {
     content: text,
-    document: replyingTo.value ? replyingTo.value.document : composeDocumentId.value,
+    document: null,
     parent: replyingTo.value ? replyingTo.value.id : null,
   });
 
@@ -597,39 +790,6 @@ function formatFullDate(iso: string): string {
 .comment-icon-svg {
   width: 22px;
   height: 22px;
-}
-
-.filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.65rem 1.1rem;
-  border-bottom: 1px solid #f1f5f9;
-  background: #fafafa;
-  flex-shrink: 0;
-}
-
-.filter-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #64748b;
-  white-space: nowrap;
-}
-
-.filter-select {
-  flex: 1;
-  min-width: 0;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.36rem 0.55rem;
-  font-size: 0.82rem;
-  color: #1e293b;
-  background: #ffffff;
-  outline: none;
-}
-
-.filter-select:focus {
-  border-color: var(--primary-color, #005792);
 }
 
 .error-line {
@@ -844,6 +1004,39 @@ function formatFullDate(iso: string): string {
   flex-shrink: 0;
 }
 
+.doc-mention-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.08rem 0.45rem;
+  margin: 0 0.08rem;
+  border-radius: 6px;
+  color: var(--primary-color, #005792);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  vertical-align: baseline;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.doc-mention-chip:hover {
+  text-decoration: underline;
+}
+
+.doc-mention-chip.is-missing {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #64748b;
+  cursor: default;
+}
+
+.doc-mention-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
 .replying-banner {
   display: flex;
   align-items: center;
@@ -853,33 +1046,143 @@ function formatFullDate(iso: string): string {
   padding-bottom: 0.15rem;
 }
 
-.composer-doc-row {
+.composer-input-wrap {
+  position: relative;
+}
+
+.mention-popover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 6px);
+  max-height: 220px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  z-index: 30;
+  padding: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.mention-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.3rem 0.5rem 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 0.15rem;
+}
+
+.mention-popover-hint {
+  font-weight: 500;
+  text-transform: none;
+  color: #94a3b8;
+}
+
+.mention-empty {
+  padding: 0.65rem 0.5rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.mention-option {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 0.45rem;
+  padding: 0.45rem 0.55rem;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #1e293b;
+  font-size: 0.81rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
 }
 
-.composer-doc-label {
-  font-size: 0.75rem;
-  font-weight: 600;
+.mention-option:hover,
+.mention-option.is-active {
+  background: #eff6ff;
+  color: var(--primary-color, #005792);
+}
+
+.mention-option-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
   color: #64748b;
 }
 
-.composer-doc-select {
-  flex: 1;
-  min-width: 0;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 0.34rem 0.5rem;
-  font-size: 0.78rem;
-  color: #334155;
-  background: #f8fafc;
-  outline: none;
+.mention-option.is-active .mention-option-icon {
+  color: var(--primary-color, #005792);
 }
 
-.composer-doc-select:focus {
-  border-color: var(--primary-color, #005792);
-  background: #ffffff;
+.mention-option-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.mention-option-ext {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.composer-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.mention-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 7px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mention-trigger-btn:hover:not(:disabled),
+.mention-trigger-btn.is-active {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: var(--primary-color, #005792);
+}
+
+.mention-trigger-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mention-at-symbol {
+  font-weight: 700;
+  font-size: 0.82rem;
 }
 
 .comment-textarea {

@@ -10,78 +10,11 @@
 
           <div class="move-modal-body">
             <p class="destination-hint">
-              Choisissez la destination pour <strong>{{ document.title || document.file_name }}</strong> :
+              Choisissez le dossier de destination pour <strong>{{ document.title || document.file_name }}</strong> :
             </p>
 
-            <!-- Onglets : Sous-dossier de l'affaire vs Autre dossier (affaire) -->
-            <div class="mode-tabs">
-              <button
-                type="button"
-                class="mode-tab"
-                :class="{ active: moveMode === 'subfolder' }"
-                @click="moveMode = 'subfolder'"
-              >
-                Dans ce dossier
-              </button>
-              <button
-                type="button"
-                class="mode-tab"
-                :class="{ active: moveMode === 'affair' }"
-                @click="moveMode = 'affair'"
-              >
-                Autre dossier ({{ otherDossiers.length }})
-              </button>
-            </div>
-
-            <!-- Mode 1 : Racine ou sous-dossier de l'affaire actuelle -->
-            <div v-if="moveMode === 'subfolder'" class="folder-destination-list">
-              <label
-                class="destination-option"
-                :class="{ selected: selectedFolderId === null }"
-              >
-                <input
-                  type="radio"
-                  name="destFolder"
-                  :value="null"
-                  v-model="selectedFolderId"
-                />
-                <div class="dest-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="size-5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                  </svg>
-                </div>
-                <div class="dest-label">
-                  <strong>Racine du dossier</strong>
-                  <span>Emplacement principal de l'affaire actuelle</span>
-                </div>
-              </label>
-
-              <label
-                v-for="sf in subfolders"
-                :key="sf.id"
-                class="destination-option"
-                :class="{ selected: selectedFolderId === sf.id }"
-              >
-                <input
-                  type="radio"
-                  name="destFolder"
-                  :value="sf.id"
-                  v-model="selectedFolderId"
-                />
-                <div class="dest-icon folder">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="size-5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
-                  </svg>
-                </div>
-                <div class="dest-label">
-                  <strong>{{ sf.name }}</strong>
-                  <span>Sous-dossier</span>
-                </div>
-              </label>
-            </div>
-
-            <!-- Mode 2 : Autre dossier (affaire) du cabinet -->
-            <div v-else class="affair-picker">
+            <!-- Autre dossier (affaire) du cabinet -->
+            <div class="affair-picker">
               <input
                 v-model="affairSearch"
                 type="text"
@@ -142,26 +75,21 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { DossierDocument } from '../../stores/documentStore';
-import type { AffairSubfolder } from '../../stores/affairFolderStore';
 import type { Dossier } from '../../stores/dossierStore';
 
 export interface MoveDocPayload {
   targetAffairId: string | null;
-  targetFolderId: string | null;
 }
 
 const props = withDefaults(
   defineProps<{
     isOpen: boolean;
     document: DossierDocument | null;
-    subfolders: AffairSubfolder[];
     otherDossiers?: Dossier[];
-    initialFolderId?: string | null;
     isMoving?: boolean;
   }>(),
   {
     otherDossiers: () => [],
-    initialFolderId: null,
     isMoving: false,
   }
 );
@@ -171,8 +99,6 @@ const emit = defineEmits<{
   (e: 'confirm', payload: MoveDocPayload): void;
 }>();
 
-const moveMode = ref<'subfolder' | 'affair'>('subfolder');
-const selectedFolderId = ref<string | null>(null);
 const selectedAffairId = ref<string | null>(null);
 const affairSearch = ref('');
 
@@ -187,19 +113,12 @@ const filteredOtherDossiers = computed(() => {
   );
 });
 
-const canConfirm = computed(() => {
-  if (moveMode.value === 'affair') {
-    return Boolean(selectedAffairId.value);
-  }
-  return true;
-});
+const canConfirm = computed(() => Boolean(selectedAffairId.value));
 
 watch(
-  () => [props.isOpen, props.initialFolderId],
-  () => {
-    if (props.isOpen) {
-      moveMode.value = props.subfolders.length > 0 ? 'subfolder' : (props.otherDossiers.length > 0 ? 'affair' : 'subfolder');
-      selectedFolderId.value = props.initialFolderId ?? null;
+  () => props.isOpen,
+  (open) => {
+    if (open) {
       selectedAffairId.value = null;
       affairSearch.value = '';
     }
@@ -209,11 +128,7 @@ watch(
 
 function handleConfirm() {
   if (!canConfirm.value || props.isMoving) return;
-  if (moveMode.value === 'affair') {
-    emit('confirm', { targetAffairId: selectedAffairId.value, targetFolderId: null });
-  } else {
-    emit('confirm', { targetAffairId: null, targetFolderId: selectedFolderId.value });
-  }
+  emit('confirm', { targetAffairId: selectedAffairId.value });
 }
 </script>
 

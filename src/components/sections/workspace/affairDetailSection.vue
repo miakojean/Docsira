@@ -21,21 +21,6 @@
       </div>
 
       <div v-if="authStore.canEdit" class="header-actions">
-        <!-- Bouton Nouveau sous-dossier -->
-        <button
-          type="button"
-          class="new-folder-btn"
-          :class="{ 'is-icon-only': isCommentsOpen }"
-          title="Créer un nouveau sous-dossier"
-          aria-label="Créer un nouveau sous-dossier"
-          @click="openCreateFolder"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="header-action-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
-          </svg>
-          <span v-if="!isCommentsOpen">Nouveau dossier</span>
-        </button>
-
         <!-- Bouton Ajouter un document -->
         <button
           type="button"
@@ -53,62 +38,6 @@
         </button>
       </div>
     </header>
-
-    <!-- Barre de navigation des dossiers (Fil d'Ariane) -->
-    <div class="folder-nav-bar">
-      <div class="breadcrumbs">
-        <button
-          type="button"
-          class="breadcrumb-item root"
-          :class="{ active: currentFolderId === null }"
-          title="Revenir à la racine du dossier"
-          @click="currentFolderId = null"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="size-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
-          </svg>
-          <span>Racine</span>
-        </button>
-
-        <template v-for="(crumb, idx) in folderBreadcrumbs" :key="crumb.id">
-          <span class="breadcrumb-separator">/</span>
-          <button
-            type="button"
-            class="breadcrumb-item"
-            :class="{ active: idx === folderBreadcrumbs.length - 1 }"
-            @click="currentFolderId = crumb.id"
-          >
-            {{ crumb.name }}
-          </button>
-        </template>
-      </div>
-
-      <!-- Actions sur le sous-dossier actuel si ouvert -->
-      <div v-if="currentFolder && authStore.canEdit" class="current-folder-actions">
-        <button
-          type="button"
-          class="folder-quick-btn"
-          title="Renommer ce sous-dossier"
-          @click="openRenameFolder(currentFolder)"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="size-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-          </svg>
-          <span>Renommer</span>
-        </button>
-        <button
-          type="button"
-          class="folder-quick-btn is-danger"
-          title="Supprimer ce sous-dossier"
-          @click="openDeleteFolder(currentFolder)"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="size-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-          </svg>
-          <span>Supprimer</span>
-        </button>
-      </div>
-    </div>
 
     <!-- Message d'erreur éventuel -->
     <div v-if="docStore.errorMessage" class="error-banner">
@@ -138,11 +67,9 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
             </svg>
           </div>
-          <h3 class="empty-title">
-            {{ currentFolder ? `Le sous-dossier "${currentFolder.name}" est vide` : 'Ce dossier est vide' }}
-          </h3>
+          <h3 class="empty-title">Ce dossier est vide</h3>
           <p class="empty-text">
-            {{ currentFolder ? 'Aucun document dans ce sous-dossier pour le moment.' : "Aucun document ni sous-dossier n'a encore été ajouté à ce dossier client." }}
+            Aucun document n'a encore été ajouté à ce dossier client.
           </p>
 
           <div v-if="authStore.canEdit" class="empty-buttons-row" @click.stop>
@@ -157,38 +84,15 @@
               </svg>
               <span>Ajouter un document</span>
             </button>
-
-            <button
-              type="button"
-              class="empty-secondary-btn"
-              @click="openCreateFolder"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
-              </svg>
-              <span>Nouveau sous-dossier</span>
-            </button>
           </div>
           <span v-if="authStore.canEdit" class="empty-hint">Ou glissez-déposez vos documents PDF, Word ou images ici</span>
           <span v-else class="empty-hint">Accès en lecture seule — vous pouvez laisser un commentaire dans le panneau à droite.</span>
         </div>
       </div>
 
-      <!-- LISTE / GRILLE DES FICHIERS ET SOUS-DOSSIERS -->
+      <!-- LISTE / GRILLE DES FICHIERS -->
       <div v-else class="files-content-area">
         <div class="file-list--grid">
-          <folderCards
-            v-for="sf in paginatedSubfolders"
-            :key="sf.id"
-            :folderName="sf.name"
-            :itemCount="folderStore.getDocCount(sf.id, latestDocuments)"
-            :canEdit="authStore.canEdit"
-            @open="currentFolderId = sf.id"
-            @rename="openRenameFolder(sf)"
-            @delete="openDeleteFolder(sf)"
-            @dropDoc="onDocDropOnFolder($event, sf.id)"
-          />
-
           <myfileCards 
             v-for="doc in paginatedDocuments"
             :key="doc.id"
@@ -199,7 +103,6 @@
             @details="openDocDetails"
             @download="downloadDocument"
             @share="openShareModal"
-            @comment="openComments"
             @versions="openVersionsModal"
             @rename="openRename"
             @delete="openDelete"
@@ -245,34 +148,10 @@
       @rename="confirmRename"
     />
 
-    <renameModale
-      :isOpen="isFolderModalOpen"
-      :title="folderModalMode === 'create' ? 'Nouveau sous-dossier' : 'Renommer le sous-dossier'"
-      :isFolder="true"
-      :currentName="folderModalName"
-      @close="isFolderModalOpen = false"
-      @rename="confirmSaveFolder"
-    />
-
-    <deleteModale
-      :isOpen="isDeleteFolderOpen"
-      :isLoading="false"
-      :isSuccess="false"
-      :itemName="folderToDelete?.name || 'ce sous-dossier'"
-      :isFolder="true"
-      title="Supprimer le sous-dossier"
-      description="Êtes-vous sûr de vouloir supprimer définitivement ce sous-dossier ?"
-      subtext="Les documents présents dans ce dossier seront replacés à la racine de l'affaire."
-      @close="isDeleteFolderOpen = false"
-      @delete="confirmDeleteFolder"
-    />
-
     <moveDocModale
       :isOpen="isMoveDocModalOpen"
       :document="docToMove"
-      :subfolders="subfolders"
       :otherDossiers="otherDossiers"
-      :initialFolderId="targetFolderIdForMove"
       :isMoving="isMovingDoc"
       @close="isMoveDocModalOpen = false"
       @confirm="confirmMoveDoc"
@@ -338,7 +217,6 @@
     <uploadDocModale
       :isOpen="isUploadDocModalOpen"
       :dossier="dossier"
-      :targetFolderName="currentFolder?.name"
       :initialFiles="filesForUpload"
       :isUploading="docStore.isUploading"
       :errorMessage="docStore.errorMessage"
@@ -350,9 +228,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import folderCards from '../../cards/folderCards.vue';
 import myfileCards from '../../cards/myfileCards.vue';
-import renameModale from '../../modale/renameModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 import detailModale from '../../modale/detailModale.vue';
 import filePreviewModale from '../../modale/filePreviewModale.vue';
@@ -380,35 +256,16 @@ defineEmits<{
 const {
   dossier,
   docStore,
-  folderStore,
-  latestDocuments,
-  currentFolderId,
-  subfolders,
-  currentSubfolders,
   currentDocuments,
-  currentFolder,
-  folderBreadcrumbs,
   isEmptyCurrentView,
   isDraggingOver,
   diskFileInputRef,
-  isFolderModalOpen,
-  folderModalMode,
-  folderModalName,
-  openCreateFolder,
-  openRenameFolder,
-  confirmSaveFolder,
-  isDeleteFolderOpen,
-  folderToDelete,
-  openDeleteFolder,
-  confirmDeleteFolder,
   isMoveDocModalOpen,
   docToMove,
-  targetFolderIdForMove,
   otherDossiers,
   isMovingDoc,
   openMoveDocModal,
   confirmMoveDoc,
-  onDocDropOnFolder,
   goBack,
   onDiskFileInputChange,
   onDropFiles,
@@ -460,36 +317,20 @@ const {
   closeUploadDocModal,
   handleUploadDocs,
   isCommentsOpen,
-  openComments,
 } = props.affair;
 
 const currentPage = ref(1);
 const pageSize = 12;
 
-watch([currentFolderId, () => dossier.value?.id], () => {
+watch(() => dossier.value?.id, () => {
   currentPage.value = 1;
 });
 
-const totalCurrentItems = computed(
-  () => currentSubfolders.value.length + currentDocuments.value.length
-);
-
-const paginatedSubfolders = computed(() => {
-  const start = (currentPage.value - 1) * pageSize;
-  const end = start + pageSize;
-  const foldersCount = currentSubfolders.value.length;
-  if (start >= foldersCount) return [];
-  return currentSubfolders.value.slice(start, Math.min(end, foldersCount));
-});
+const totalCurrentItems = computed(() => currentDocuments.value.length);
 
 const paginatedDocuments = computed(() => {
   const start = (currentPage.value - 1) * pageSize;
-  const end = start + pageSize;
-  const foldersCount = currentSubfolders.value.length;
-  if (end <= foldersCount) return [];
-  const docStart = Math.max(0, start - foldersCount);
-  const docEnd = Math.max(0, end - foldersCount);
-  return currentDocuments.value.slice(docStart, docEnd);
+  return currentDocuments.value.slice(start, start + pageSize);
 });
 </script>
 

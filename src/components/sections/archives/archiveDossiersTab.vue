@@ -12,6 +12,7 @@
             :key="d.id"
             :dossier="d"
             :isClientCard="false"
+            :canEdit="authStore.canEdit"
             @goTo="openDossier(d)"
             @open="openDossier(d)"
             @details="openDossierDetails(d)"
@@ -101,6 +102,7 @@ import editDossierModale from '../../modale/editDossierModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
 import { useClientDossierStore, type Dossier } from '../../../stores/dossierStore';
+import { useAuthStore } from '../../../stores/authStore';
 import { sortDossiers } from '../../../helpers/dossierSort';
 
 const props = withDefaults(
@@ -118,6 +120,7 @@ const props = withDefaults(
 
 const router = useRouter();
 const dossierStore = useClientDossierStore();
+const authStore = useAuthStore();
 
 const pageSize = 10;
 const currentPage = ref(1);
@@ -200,6 +203,7 @@ function onDossierDetailsAction() {
 }
 
 function openDossierEdit(d: Dossier) {
+  if (!authStore.canEdit) return;
   editingDossier.value = d;
   isDossierEditOpen.value = true;
 }
@@ -212,6 +216,7 @@ function onDossierUpdated() {
 }
 
 async function handleUnarchive(d: Dossier) {
+  if (!authStore.canEdit) return;
   const ok = await dossierStore.restoreDossier(d.id);
   if (ok) {
     successTitle.value = 'Dossier restauré';
@@ -221,13 +226,14 @@ async function handleUnarchive(d: Dossier) {
 }
 
 function openDossierDelete(d: Dossier) {
+  if (!authStore.canEdit) return;
   dossierToDelete.value = d;
   isDeleteDossierSuccess.value = false;
   isDossierDeleteOpen.value = true;
 }
 
 async function confirmDeleteDossier() {
-  if (!dossierToDelete.value) return;
+  if (!authStore.canEdit || !dossierToDelete.value) return;
   isDeletingDossier.value = true;
   const ok = await dossierStore.deleteDossier(dossierToDelete.value.id);
   isDeletingDossier.value = false;

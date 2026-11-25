@@ -69,7 +69,7 @@
         <button
           type="button"
           class="tree-row"
-          :class="{ active: d.id === currentId && currentFolderId === null }"
+          :class="{ active: d.id === currentId }"
           @click="goTo(d)"
         >
           <svg
@@ -95,25 +95,9 @@
           <span class="row-count">{{ d.id === currentId ? latestDocumentsCount : (d.documents_count ?? 0) }}</span>
         </button>
 
-        <!-- Sous-dossiers et documents du dossier actuellement ouvert -->
+        <!-- Documents du dossier actuellement ouvert -->
         <ul v-if="d.id === currentId" class="tree-children">
-          <!-- Sous-dossiers de la racine (dépliables) -->
-          <affairTreeFolderItem
-            v-for="sf in rootSubfolders"
-            :key="sf.id"
-            :folder="sf"
-            :allSubfolders="subfolders || []"
-            :allDocuments="latestDocuments"
-            :docFolderMap="folderStore.docFolderMap"
-            :currentFolderId="currentFolderId"
-            :expandedFolderIds="expandedFolderIds"
-            @selectFolder="onSelectFolder"
-            @openDocument="emit('openDocument', $event)"
-            @toggleFolder="toggleFolder"
-          />
-
-          <!-- Documents de la racine -->
-          <li v-for="doc in rootDocuments" :key="doc.id" class="tree-child">
+          <li v-for="doc in latestDocuments" :key="doc.id" class="tree-child">
             <button type="button" class="tree-row child" :title="doc.title" @click="emit('openDocument', doc)">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="row-icon" :class="extClass(doc.extension)">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -145,9 +129,7 @@ import { useRouter } from 'vue-router';
 import { useClientDossierStore, type Dossier } from '../../stores/dossierStore';
 import { useClientStore, type ClientListItem } from '../../stores/clientStore';
 import { buildDocumentVersionLineages, type DossierDocument } from '../../stores/documentStore';
-import { useAffairFolderStore, type AffairSubfolder } from '../../stores/affairFolderStore';
 import { useSiraStore } from '../../stores/siraStore';
-import affairTreeFolderItem from './affairTreeFolderItem.vue';
 import affairSiraGitGraph from './affairSiraGitGraph.vue';
 
 const props = withDefaults(
@@ -155,14 +137,10 @@ const props = withDefaults(
     currentId: string;
     currentDossier?: Dossier | null;
     documents: DossierDocument[];
-    subfolders?: AffairSubfolder[];
-    currentFolderId?: string | null;
     activeTab?: 'folders' | 'sira';
   }>(),
   {
     currentDossier: null,
-    subfolders: () => [],
-    currentFolderId: null,
     activeTab: 'folders',
   }
 );
@@ -171,19 +149,16 @@ const emit = defineEmits<{
   (e: 'openDocument', doc: DossierDocument): void;
   (e: 'openDetails', doc: DossierDocument): void;
   (e: 'openVersions', doc: DossierDocument): void;
-  (e: 'selectFolder', folderId: string | null): void;
   (e: 'update:activeTab', tab: 'folders' | 'sira'): void;
 }>();
 
 const router = useRouter();
 const store = useClientDossierStore();
 const clientStore = useClientStore();
-const folderStore = useAffairFolderStore();
 const siraStore = useSiraStore();
 
 const query = ref('');
 const tab = ref<'folders' | 'sira'>(props.activeTab || 'folders');
-const expandedFolderIds = ref<Set<string>>(new Set());
 
 watch(
   () => props.activeTab,
@@ -242,59 +217,15 @@ const filteredClientDossiers = computed(() => {
   );
 });
 
-// Sous-dossiers de premier niveau (racine)
-const rootSubfolders = computed(() => {
-  return (props.subfolders || []).filter((sf) => !sf.parentId);
-});
-
 const latestDocuments = computed(() =>
   buildDocumentVersionLineages(props.documents).map((l) => l.latest)
 );
 
 const latestDocumentsCount = computed(() => latestDocuments.value.length);
 
-// Documents situés à la racine
-const rootDocuments = computed(() => {
-  const subfolderIds = new Set((props.subfolders || []).map((sf) => sf.id));
-  return latestDocuments.value.filter((doc) => {
-    const assignedFolderId = folderStore.docFolderMap[doc.id];
-    return !assignedFolderId || !subfolderIds.has(assignedFolderId);
-  });
-});
-
-// Dépliage automatique du chemin de sous-dossiers
-watch(
-  () => props.currentFolderId,
-  (newId) => {
-    if (newId) {
-      const path = folderStore.getFolderPath(newId);
-      for (const p of path) {
-        expandedFolderIds.value.add(p.id);
-      }
-      expandedFolderIds.value.add(newId);
-    }
-  },
-  { immediate: true }
-);
-
-function toggleFolder(folderId: string) {
-  if (expandedFolderIds.value.has(folderId)) {
-    expandedFolderIds.value.delete(folderId);
-  } else {
-    expandedFolderIds.value.add(folderId);
-  }
-}
-
-function onSelectFolder(folderId: string) {
-  emit('selectFolder', folderId);
-  expandedFolderIds.value.add(folderId);
-}
-
 function goTo(d: Dossier) {
   if (d.id !== props.currentId) {
     router.push(`/dashboard/affairs/${d.id}`);
-  } else {
-    emit('selectFolder', null);
   }
 }
 
@@ -308,7 +239,6 @@ function extClass(ext: string) {
 onMounted(async () => {
   if (store.allDossiers.length === 0) store.fetchAllDossiers();
   if (clientStore.clients.length === 0) clientStore.fetchClients();
-  if (!folderStore.isLoaded) folderStore.loadStore();
   if (tab.value === 'sira' && props.currentId) {
     siraStore.fetchHistory(props.currentId);
   }

@@ -11,6 +11,7 @@
             v-for="client in paginatedClients"
             :key="client.id"
             :client="client"
+            :canEdit="authStore.canEdit"
             @view="viewClient"
             @edit="editClient"
             @folders="openClientFolders"
@@ -104,6 +105,7 @@ import editClientModale from '../../modale/editClientModale.vue';
 import deleteModale from '../../modale/deleteModale.vue';
 import SuccesModale from '../../modale/succesModale.vue';
 import { useClientStore } from '../../../stores/clientStore';
+import { useAuthStore } from '../../../stores/authStore';
 
 const props = withDefaults(
   defineProps<{
@@ -117,6 +119,7 @@ const props = withDefaults(
 );
 
 const clientStore = useClientStore();
+const authStore = useAuthStore();
 
 const pageSize = 12;
 const currentPage = ref(1);
@@ -186,6 +189,7 @@ function openClientFolders(client: any) {
 }
 
 function editClient(client: any) {
+  if (!authStore.canEdit) return;
   selectedClient.value = client;
   isClientEditOpen.value = true;
 }
@@ -198,6 +202,7 @@ function onClientUpdated() {
 }
 
 async function handleUnarchive(client: any) {
+  if (!authStore.canEdit) return;
   const ok = await clientStore.restoreArchivedClient(client.id);
   if (ok) {
     successTitle.value = 'Client restauré';
@@ -207,13 +212,14 @@ async function handleUnarchive(client: any) {
 }
 
 function openClientDelete(client: any) {
+  if (!authStore.canEdit) return;
   clientToDelete.value = client;
   isDeleteClientSuccess.value = false;
   isClientDeleteOpen.value = true;
 }
 
 async function confirmDeleteClient() {
-  if (!clientToDelete.value) return;
+  if (!authStore.canEdit || !clientToDelete.value) return;
   isDeletingClient.value = true;
   const ok = await clientStore.deleteClient(clientToDelete.value.id);
   isDeletingClient.value = false;
