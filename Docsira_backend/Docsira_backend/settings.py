@@ -33,7 +33,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-
+    '.trycloudflare.com',
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -41,7 +41,21 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:1420",
     "http://tauri.localhost",
     "https://tauri.localhost",
+    "tauri://localhost",
 ]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.trycloudflare\.com$",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.trycloudflare.com",
+    "http://tauri.localhost",
+    "https://tauri.localhost",
+    "tauri://localhost",
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition

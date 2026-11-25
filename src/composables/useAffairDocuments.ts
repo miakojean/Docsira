@@ -665,7 +665,6 @@ export function useAffairDocuments() {
     closePreview();
     isCommentsOpen.value = false;
     isCommentNotifDismissed.value = false;
-    commentInitialDocId.value = null;
     const tasks: Promise<unknown>[] = [
       refreshDossier(),
       docStore.fetchDocuments(affairId.value),

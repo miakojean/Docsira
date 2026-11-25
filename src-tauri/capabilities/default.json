@@ -13,7 +13,8 @@
         { "url": "https://*.tauri.app" },
         { "url": "http://localhost:8000/*" },
         { "url": "http://127.0.0.1:8000/*" },
-        { "url": "http://localhost:1420/*" }
+        { "url": "http://localhost:1420/*" },
+        { "url": "https://*.trycloudflare.com/*" }
       ],
       "deny": [{ "url": "https://private.tauri.app" }]
     },
@@ -137,7 +138,11 @@
     },
     {
       "identifier": "opener:allow-open-url",
-      "allow": [{ "url": "https://tauri.app" }, { "url": "custom:*" }]
+      "allow": [
+        { "url": "https://tauri.app" },
+        { "url": "https://*.trycloudflare.com/*" },
+        { "url": "custom:*" }
+      ]
     }
   ]
 }
