@@ -1,3 +1,4 @@
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from .models import CustomUser, Collaborator, CollaboratorInvitation, ActivationCode
 from .permissions import can_edit_firm, get_user_role, is_firm_admin
@@ -32,7 +33,14 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'can_edit',
             'password',
         ]
-        read_only_fields = ['role', 'is_firm_owner', 'can_manage_collaborators', 'can_edit']
+        read_only_fields = [
+            'account_type',
+            'has_changed_password',
+            'role',
+            'is_firm_owner',
+            'can_manage_collaborators',
+            'can_edit',
+        ]
         # On rend le mot de passe invisible en lecture !
         extra_kwargs = {
             'password': {'write_only': True}
@@ -51,8 +59,28 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return can_edit_firm(obj)
 
     def create(self, validated_data):
+        validated_data['account_type'] = CustomUser.AccountType.COMPANY if hasattr(CustomUser.AccountType, 'COMPANY') else CustomUser.AccountType.FIRM
+        password = validated_data.get('password')
+        if password:
+            validate_password(password)
         user = CustomUser.objects.create_user(**validated_data)
         return user
+
+    def update(self, instance, validated_data):
+        validated_data.pop('account_type', None)
+        validated_data.pop('has_changed_password', None)
+        password = validated_data.pop('password', None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if password:
+            validate_password(password, instance)
+            instance.set_password(password)
+            instance.has_changed_password = True
+
+        instance.save()
+        return instance
 
 # 3. MISE À JOUR : Utilisation du sérialiseur allégé
 class CollaboratorSerializer(serializers.ModelSerializer):

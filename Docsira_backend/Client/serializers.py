@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.utils import timezone
 from django.db import models
 from account.models import CustomUser
+from account.permissions import get_user_firm
 from .models import Client
 
 class ClientSerializer(serializers.ModelSerializer):
@@ -99,6 +100,20 @@ class ClientSerializer(serializers.ModelSerializer):
 
         # Propriétaire du client : celui du payload, sinon celui de l'instance, sinon l'utilisateur connecté
         request = self.context.get('request')
+        if (
+            'charge_de_clientele' in data
+            and data['charge_de_clientele'] is not None
+            and request
+            and request.user
+            and request.user.is_authenticated
+        ):
+            user_firm = get_user_firm(request.user)
+            target_firm = get_user_firm(data['charge_de_clientele'])
+            if not user_firm or not target_firm or target_firm.id != user_firm.id:
+                raise serializers.ValidationError({
+                    'charge_de_clientele': "Ce chargé de clientèle n'appartient pas à votre cabinet."
+                })
+
         owner = data.get(
             'charge_de_clientele',
             self.instance.charge_de_clientele if self.instance else (request.user if request else None)

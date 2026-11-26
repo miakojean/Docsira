@@ -39,10 +39,11 @@ const notifPopup = ref({
 
 let intervalId: ReturnType<typeof setInterval> | undefined;
 let bootTimerId: ReturnType<typeof setTimeout> | undefined;
+let notifTimerId: ReturnType<typeof setTimeout> | undefined;
 
 onMounted(async () => {
     const minSplashDelay = new Promise((resolve) => {
-        bootTimerId = setTimeout(resolve, 1500);
+        bootTimerId = setTimeout(resolve, 400);
     });
 
     // Attente parallèle du routeur, de la vérification réseau initiale et du délai d'animation fluide
@@ -60,10 +61,17 @@ onMounted(async () => {
     }
 
     intervalId = watchConnection((enLigne) => {
+        if (notifTimerId) {
+            clearTimeout(notifTimerId);
+            notifTimerId = undefined;
+        }
         notifPopup.value.isVisible = true;
         notifPopup.value.isOnline = enLigne;
         if (enLigne) {
             notifPopup.value.myMessage = "Vous êtes connecté à internet";
+            notifTimerId = setTimeout(() => {
+                notifPopup.value.isVisible = false;
+            }, notifPopup.value.duration);
         } else {
             notifPopup.value.myMessage = "Vous n'êtes pas connecté à internet";
         }
@@ -73,6 +81,7 @@ onMounted(async () => {
 onUnmounted(() => {
     if (intervalId) clearInterval(intervalId);
     if (bootTimerId) clearTimeout(bootTimerId);
+    if (notifTimerId) clearTimeout(notifTimerId);
 });
 </script>
 

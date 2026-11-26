@@ -335,7 +335,6 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { save as saveDialog } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
-import mammoth from 'mammoth';
 import headerNav from '../../navbar/headerNav.vue';
 import emptyCards from '../../cards/emptyCards.vue';
 import viewClientModale from '../../modale/viewClientModale.vue';
@@ -601,7 +600,11 @@ async function previewTrashDoc(doc: DossierDocument) {
     docPreview.value = { title: doc.title, kind: 'pdf', data: await blob.arrayBuffer(), doc };
   } else if (isDocx) {
     try {
-      const result = await mammoth.convertToHtml({ arrayBuffer: await blob.arrayBuffer() });
+      const [{ default: mammoth }, arrayBuffer] = await Promise.all([
+        import('mammoth'),
+        blob.arrayBuffer(),
+      ]);
+      const result = await mammoth.convertToHtml({ arrayBuffer });
       docPreview.value = { title: doc.title, kind: 'docx', html: result.value, doc };
     } catch {
       docPreview.value = {

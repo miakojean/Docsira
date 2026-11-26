@@ -471,7 +471,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import mammoth from 'mammoth';
 import BaseResearchInput from '../../BaseInput/BaseResearchInput.vue';
 import BaseSelectInput from '../../BaseInput/BaseSelectInput.vue';
 import filePreviewModale, { type PreviewData } from '../../modale/filePreviewModale.vue';
@@ -717,6 +716,7 @@ async function handleOpenEntry(entry: LocalEntry) {
   if (isDocx) {
     try {
       const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+      const { default: mammoth } = await import('mammoth');
       const result = await mammoth.convertToHtml({ arrayBuffer });
       preview.value = {
         title: entry.name,

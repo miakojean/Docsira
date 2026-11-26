@@ -268,8 +268,11 @@ class Affair(models.Model):
         if self.statut in ['CLOTURE', 'TERMINE']:
             return 100
 
-        docs = self.documents.filter(is_deleted=False)
-        categories = set(docs.values_list('category', flat=True))
+        if hasattr(self, '_prefetched_active_docs'):
+            categories = {d.category for d in self._prefetched_active_docs}
+        else:
+            docs = self.documents.filter(is_deleted=False)
+            categories = set(docs.values_list('category', flat=True))
 
         if 'CLOTURE' in categories or self.statut == 'CLOTURE':
             return 100
@@ -297,15 +300,38 @@ class Affair(models.Model):
 class DocumentQuerySet(models.QuerySet):
     def delete(self):
         # Couvre queryset.delete() et l'action « supprimer la sélection » de l'admin
+        docs_to_check = [
+            (doc.file.name, resolve_document_file_path(doc))
+            for doc in self.only('id', 'affair_id', 'file')
+            if doc.file and doc.file.name
+        ]
         affair_ids = set(self.values_list('affair_id', flat=True))
         with transaction.atomic():
             result = super().delete()
             for affair in Affair.objects.filter(pk__in=affair_ids):
                 affair.recalculer_progression()
+            for file_name, resolved_path in docs_to_check:
+                transaction.on_commit(
+                    lambda fn=file_name, rp=resolved_path: _remove_file_if_unreferenced(fn, rp)
+                )
         return result
 
 
 ALLOWED_DOCUMENT_EXTENSIONS = {'.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg', '.webp', '.gif'}
+MAX_DOCUMENT_SIZE_BYTES = 25 * 1024 * 1024
+
+
+def _remove_file_if_unreferenced(file_name, resolved_path):
+    """Supprime le fichier physique du disque uniquement si aucun autre Document ne le référence."""
+    if not file_name or not resolved_path:
+        return
+    if Document.objects.filter(file=file_name).exists():
+        return
+    try:
+        if os.path.isfile(resolved_path):
+            os.remove(resolved_path)
+    except OSError:
+        pass
 
 
 def resolve_document_file_path(document):
@@ -487,6 +513,8 @@ class Document(models.Model):
         doc_title = self.title
         doc_category = self.category
         author_name = self._resolve_author_name(actor)
+        file_name = self.file.name if self.file else ''
+        resolved_path = resolve_document_file_path(self) if file_name else None
 
         with transaction.atomic():
             result = super().delete(*args, **kwargs)
@@ -501,6 +529,9 @@ class Document(models.Model):
                 category=doc_category,
                 author=author_name,
                 details=f"Suppression du document '{doc_title}' ({doc_category}) par {author_name}."
+            )
+            transaction.on_commit(
+                lambda fn=file_name, rp=resolved_path: _remove_file_if_unreferenced(fn, rp)
             )
         return result
 

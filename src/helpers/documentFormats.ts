@@ -9,6 +9,8 @@ export const ALLOWED_DOCUMENT_EXTENSIONS = [
   'gif',
 ] as const;
 
+export const MAX_DOCUMENT_SIZE_BYTES = 25 * 1024 * 1024;
+
 export type AllowedDocumentExtension = (typeof ALLOWED_DOCUMENT_EXTENSIONS)[number];
 
 export const ALLOWED_DOCUMENT_ACCEPT =
@@ -51,23 +53,28 @@ export function filterAllowedDocuments(files: File[]): {
 } {
   const valid: File[] = [];
   const rejected: File[] = [];
+  const rejectedReasons: string[] = [];
 
   for (const file of files) {
-    if (isAllowedDocumentName(file.name)) {
-      valid.push(file);
-    } else {
+    if (!isAllowedDocumentName(file.name)) {
       rejected.push(file);
+      rejectedReasons.push(`${file.name} (format non autorisé)`);
+    } else if (file.size === 0) {
+      rejected.push(file);
+      rejectedReasons.push(`${file.name} (fichier vide)`);
+    } else if (file.size > MAX_DOCUMENT_SIZE_BYTES) {
+      rejected.push(file);
+      rejectedReasons.push(`${file.name} (> 25 Mo)`);
+    } else {
+      valid.push(file);
     }
   }
 
   let errorMessage = '';
   if (rejected.length > 0) {
-    const names = rejected
-      .slice(0, 3)
-      .map((f) => f.name)
-      .join(', ');
+    const details = rejectedReasons.slice(0, 3).join(', ');
     const extra = rejected.length > 3 ? ` (+${rejected.length - 3})` : '';
-    errorMessage = `Format non autorisé (${names}${extra}) : seuls les documents PDF (.pdf), Word (.doc, .docx) et images (.png, .jpg, .jpeg, .webp, .gif) sont acceptés.`;
+    errorMessage = `Fichier(s) refusé(s) (${details}${extra}) : formats PDF/Word/images uniquement, 25 Mo max.`;
   }
 
   return { valid, rejected, errorMessage };

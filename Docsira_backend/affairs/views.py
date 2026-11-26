@@ -5,7 +5,7 @@ import os
 import zipfile
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Prefetch
 from django.http import FileResponse
 from django.utils import timezone
 from rest_framework.views import APIView
@@ -61,6 +61,34 @@ def _extract_first_error(errors, default="Données invalides."):
         return default
     return str(errors)
 
+def _with_affair_prefetches(queryset):
+    """Précharge relations, documents actifs et commentaires pour éviter les requêtes N+1."""
+    return queryset.select_related(
+        'client', 'firm', 'collaborator', 'collaborator__user', 'created_by'
+    ).prefetch_related(
+        Prefetch(
+            'documents',
+            queryset=Document.objects.filter(is_deleted=False).order_by('-uploaded_at'),
+            to_attr='_prefetched_active_docs',
+        ),
+        Prefetch(
+            'comments',
+            queryset=AffairComment.objects.only('id', 'affair_id', 'author_id', 'created_at'),
+            to_attr='_prefetched_comments',
+        ),
+    )
+
+
+def _get_comment_reads_map(user, affairs):
+    affair_ids = [a.id for a in affairs]
+    if not affair_ids or not user or not user.is_authenticated:
+        return {}
+    return {
+        r.affair_id: r.last_read_at
+        for r in AffairCommentRead.objects.filter(user=user, affair_id__in=affair_ids)
+    }
+
+
 class BaseFirmView(APIView):
     """Classe utilitaire pour récupérer le véritable compte du cabinet"""
     def get_firm(self, user):
@@ -72,7 +100,7 @@ class AffairView(BaseFirmView):
     permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def post(self, request):
-        serializer = AffairSerializer(data=request.data)
+        serializer = AffairSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             # Assigne l'affaire au vrai compte du cabinet et trace le créateur (cabinet ou collaborateur)
             firm = self.get_firm(request.user)
@@ -99,33 +127,26 @@ class AffairView(BaseFirmView):
 
         if affair_id:
             try:
-                # Filtrage unifié basé sur la Firme[cite: 3]
-                affair = (
-                    Affair.objects
-                    .select_related('client', 'firm', 'collaborator', 'created_by')
-                    .prefetch_related('documents')
-                    .get(id=affair_id, firm=firm, is_deleted=False)
+                affair = _with_affair_prefetches(Affair.objects).get(
+                    id=affair_id, firm=firm, is_deleted=False
                 )
-                serializer = AffairSerializer(affair, context={'request': request})
+                reads_map = _get_comment_reads_map(request.user, [affair])
+                serializer = AffairSerializer(
+                    affair,
+                    context={'request': request, 'comment_reads_map': reads_map},
+                )
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except Affair.DoesNotExist:
                 return Response({"error": "Affair not found."}, status=status.HTTP_404_NOT_FOUND)
         else:
             is_trash = request.query_params.get('trash', 'false').lower() == 'true'
             if is_trash:
-                affairs = (
-                    Affair.objects
-                    .filter(firm=firm, is_deleted=True)
-                    .select_related('client', 'firm', 'collaborator', 'created_by')
-                    .prefetch_related('documents')
-                    .order_by('-deleted_at', '-creation_date')
-                )
+                affairs = _with_affair_prefetches(
+                    Affair.objects.filter(firm=firm, is_deleted=True)
+                ).order_by('-deleted_at', '-creation_date')
             else:
-                affairs = (
-                    Affair.objects
-                    .filter(firm=firm, is_archived=False, is_deleted=False)
-                    .select_related('client', 'firm', 'collaborator', 'created_by')
-                    .prefetch_related('documents')
+                affairs = _with_affair_prefetches(
+                    Affair.objects.filter(firm=firm, is_archived=False, is_deleted=False)
                 )
             client_id = request.query_params.get('client')
             if client_id:
@@ -134,14 +155,21 @@ class AffairView(BaseFirmView):
             paginator = PageNumberPagination()
             paginator.page_size = 10 
             paginated_affairs = paginator.paginate_queryset(affairs, request)
-            serializer = AffairSerializer(paginated_affairs, many=True, context={'request': request})
+            reads_map = _get_comment_reads_map(request.user, paginated_affairs)
+            serializer = AffairSerializer(
+                paginated_affairs,
+                many=True,
+                context={'request': request, 'comment_reads_map': reads_map},
+            )
             return paginator.get_paginated_response(serializer.data)
 
     def patch(self, request, affair_id):
         try:
             firm = self.get_firm(request.user)
             affair = Affair.objects.get(id=affair_id, firm=firm, is_deleted=False)
-            serializer = AffairSerializer(affair, data=request.data, partial=True)
+            serializer = AffairSerializer(
+                affair, data=request.data, partial=True, context={'request': request}
+            )
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_200_OK)
@@ -176,16 +204,16 @@ class ArchivedAffairsView(BaseFirmView):
     permission_classes = [IsAuthenticated, IsFirmEditorOrReadOnly]
 
     def get(self, request):
-        affairs = (
-            Affair.objects
-            .filter(firm=self.get_firm(request.user), is_archived=True, is_deleted=False)
-            .select_related('client', 'firm', 'collaborator', 'created_by')
-            .prefetch_related('documents')
+        affairs = _with_affair_prefetches(
+            Affair.objects.filter(firm=self.get_firm(request.user), is_archived=True, is_deleted=False)
         )
         paginator = PageNumberPagination()
         paginator.page_size = 10
         page = paginator.paginate_queryset(affairs, request)
-        return paginator.get_paginated_response(AffairSerializer(page, many=True, context={'request': request}).data)
+        reads_map = _get_comment_reads_map(request.user, page)
+        return paginator.get_paginated_response(
+            AffairSerializer(page, many=True, context={'request': request, 'comment_reads_map': reads_map}).data
+        )
 
 
 class AffairArchiveView(BaseFirmView):
@@ -244,7 +272,11 @@ class AffairDocumentsView(BaseFirmView):
         if error_response:
             return error_response
 
-        documents = affair.documents.filter(is_deleted=False)
+        documents = (
+            affair.documents
+            .filter(is_deleted=False)
+            .select_related('uploaded_by', 'updated_by', 'parent', 'affair', 'affair__created_by')
+        )
         paginator = PageNumberPagination()
         paginator.page_size = 12
         paginator.page_size_query_param = 'page_size'
@@ -767,12 +799,14 @@ class DocumentDownloadView(BaseFirmView):
         guessed_type, _ = mimetypes.guess_type(file_path)
         content_type = DOCUMENT_MIME_TYPES.get(ext) or guessed_type or 'application/octet-stream'
 
-        return FileResponse(
+        response = FileResponse(
             open(file_path, 'rb'),
             content_type=content_type,
             as_attachment=False,
             filename=os.path.basename(file_path),
         )
+        response['X-Content-Type-Options'] = 'nosniff'
+        return response
 
 
 def _get_document_version_chain(doc):
@@ -1018,6 +1052,9 @@ class PublicDocumentShareView(APIView):
         if not link.is_valid:
             return Response({"error": "Ce lien de partage a expiré ou a été révoqué."}, status=status.HTTP_410_GONE)
 
+        if link.document.is_deleted or link.document.affair.is_deleted:
+            return Response({"error": "Document introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
         file_path = resolve_document_file_path(link.document)
         if not file_path:
             return Response({"error": "Fichier introuvable sur le serveur."}, status=status.HTTP_404_NOT_FOUND)
@@ -1028,12 +1065,14 @@ class PublicDocumentShareView(APIView):
         guessed_type, _ = mimetypes.guess_type(file_path)
         content_type = DOCUMENT_MIME_TYPES.get(ext) or guessed_type or 'application/octet-stream'
 
-        return FileResponse(
+        response = FileResponse(
             open(file_path, 'rb'),
             content_type=content_type,
             as_attachment=False,
             filename=os.path.basename(file_path),
         )
+        response['X-Content-Type-Options'] = 'nosniff'
+        return response
 
 
 class AffairShareLinkView(BaseFirmView):
@@ -1109,7 +1148,10 @@ class PublicAffairShareView(APIView):
         if not link.is_valid:
             return Response({"error": "Ce lien de partage a expiré ou a été révoqué."}, status=status.HTTP_410_GONE)
 
-        docs = list(link.affair.documents.all())
+        if link.affair.is_deleted:
+            return Response({"error": "Dossier introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        docs = list(link.affair.documents.filter(is_deleted=False))
         buffer = io.BytesIO()
         added_files = 0
         used_names = set()

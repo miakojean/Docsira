@@ -21,6 +21,7 @@ from django.utils import timezone
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
+    throttle_scope = 'auth_register'
 
     def post(self, request):
 
@@ -119,6 +120,7 @@ class LogoutView(APIView):
 class LoginView(APIView):
 
     permission_classes = [AllowAny]
+    throttle_scope = 'auth_login'
 
     def post(self, request):
 
@@ -432,8 +434,14 @@ class CollaboratorRoleView(APIView):
 class CollaboratorCodeView(APIView):
 
     permission_classes = [AllowAny] # Permet à un utilisateur non connecté de valider son code
+    throttle_scope = 'auth_code'
 
     def get(self, request):
+        if not request.user or not request.user.is_authenticated:
+            return Response(
+                {"error": "Authentification requise."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         activation_codes = ActivationCode.objects.filter(user=request.user)
         serializer = ActivationCodeSerializer(activation_codes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

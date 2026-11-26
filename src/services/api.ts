@@ -3,6 +3,29 @@ import { load } from "@tauri-apps/plugin-store";
 
 const BASE_URL = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+const UPLOAD_TIMEOUT_MS = 120_000;
+const REFRESH_TIMEOUT_MS = 15_000;
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error: any) {
+    if (error?.name === "AbortError") {
+      throw new Error("Le serveur met trop de temps à répondre. Veuillez réessayer.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 interface ApiOptions {
   requireAuth?: boolean; // true par défaut : la plupart des endpoints sont protégés
   _isRetry?: boolean; // usage interne, évite les boucles infinies de retry
@@ -51,11 +74,15 @@ async function refreshAuthToken(): Promise<string | null> {
       const refreshToken = await store.get<string>("refresh_token");
       if (!refreshToken) return null;
 
-      const response = await fetch(`${BASE_URL}/account/token/refresh/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh: refreshToken }),
-      });
+      const response = await fetchWithTimeout(
+        `${BASE_URL}/account/token/refresh/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh: refreshToken }),
+        },
+        REFRESH_TIMEOUT_MS,
+      );
 
       if (!response.ok) return null;
 
@@ -113,12 +140,16 @@ export async function api(
   }
 
   const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-  const response = await fetch(`${BASE_URL}${normalizedEndpoint}`, {
-    method,
-    headers,
-    body:
-      data === undefined ? undefined : isFormData ? (data as FormData) : JSON.stringify(data),
-  });
+  const response = await fetchWithTimeout(
+    `${BASE_URL}${normalizedEndpoint}`,
+    {
+      method,
+      headers,
+      body:
+        data === undefined ? undefined : isFormData ? (data as FormData) : JSON.stringify(data),
+    },
+    isFormData ? UPLOAD_TIMEOUT_MS : DEFAULT_TIMEOUT_MS,
+  );
 
   // Intercepteur 401 : on tente un refresh puis on relance UNE seule fois
   if (response.status === 401 && requireAuth) {

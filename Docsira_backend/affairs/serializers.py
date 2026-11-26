@@ -2,6 +2,7 @@ import os
 from rest_framework import serializers
 from .models import (
     ALLOWED_DOCUMENT_EXTENSIONS,
+    MAX_DOCUMENT_SIZE_BYTES,
     Affair,
     AffairComment,
     AffairCommentRead,
@@ -13,6 +14,7 @@ from .models import (
 )
 from Client.models import Client
 from account.models import Collaborator
+from account.permissions import get_user_firm
 
 # Imports de tes serializers existants
 from account.serializers import CustomUserSerializer, CollaboratorSerializer
@@ -50,17 +52,24 @@ class AffairSerializer(serializers.ModelSerializer):
         return "Système"
 
     def get_documents_count(self, obj):
+        if hasattr(obj, '_prefetched_active_docs'):
+            return len(obj._prefetched_active_docs)
         return obj.documents.filter(is_deleted=False).count()
 
     def get_documents_preview(self, obj):
         """Extensions (max 3) des derniers documents, pour l'aperçu du dossier."""
-        docs = obj.documents.filter(is_deleted=False).order_by('-uploaded_at')[:3]
+        if hasattr(obj, '_prefetched_active_docs'):
+            docs = obj._prefetched_active_docs[:3]
+        else:
+            docs = obj.documents.filter(is_deleted=False).order_by('-uploaded_at')[:3]
         return [
             os.path.splitext(d.file.name)[1].lstrip('.').lower() if d.file else ''
             for d in docs
         ]
 
     def get_comments_count(self, obj):
+        if hasattr(obj, '_prefetched_comments'):
+            return len(obj._prefetched_comments)
         return obj.comments.count()
 
     def get_unread_comments_count(self, obj):
@@ -68,11 +77,46 @@ class AffairSerializer(serializers.ModelSerializer):
         user = getattr(request, 'user', None)
         if not user or not user.is_authenticated:
             return 0
+        reads_map = self.context.get('comment_reads_map')
+        if hasattr(obj, '_prefetched_comments') and reads_map is not None:
+            last_read_at = reads_map.get(obj.id)
+            return sum(
+                1
+                for c in obj._prefetched_comments
+                if c.author_id != user.id and (last_read_at is None or c.created_at > last_read_at)
+            )
         qs = obj.comments.exclude(author=user)
-        read_state = AffairCommentRead.objects.filter(user=user, affair=obj).first()
+        read_state = (
+            reads_map.get(obj.id)
+            if reads_map is not None
+            else AffairCommentRead.objects.filter(user=user, affair=obj).first()
+        )
         if read_state:
-            qs = qs.filter(created_at__gt=read_state.last_read_at)
+            cutoff = read_state if not hasattr(read_state, 'last_read_at') else read_state.last_read_at
+            qs = qs.filter(created_at__gt=cutoff)
         return qs.count()
+
+    def validate(self, data):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        firm = get_user_firm(user) if (user and user.is_authenticated) else None
+
+        if firm is not None:
+            client = data.get('client')
+            if client is not None:
+                client_firm = get_user_firm(client.charge_de_clientele) if client.charge_de_clientele else None
+                if not client_firm or client_firm.id != firm.id:
+                    raise serializers.ValidationError({
+                        'client_id': "Ce client n'appartient pas à votre cabinet."
+                    })
+
+            collaborator = data.get('collaborator')
+            if collaborator is not None and collaborator.main_account_id != firm.id:
+                raise serializers.ValidationError({
+                    'collaborator_id': "Ce collaborateur n'appartient pas à votre cabinet."
+                })
+
+        return super().validate(data)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -190,6 +234,12 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     def validate_file(self, value):
         if value:
+            if value.size == 0:
+                raise serializers.ValidationError("Le fichier est vide.")
+            if value.size > MAX_DOCUMENT_SIZE_BYTES:
+                raise serializers.ValidationError(
+                    "Le fichier dépasse la taille maximale autorisée (25 Mo)."
+                )
             ext = os.path.splitext(value.name)[1].lower()
             if ext not in ALLOWED_DOCUMENT_EXTENSIONS:
                 raise serializers.ValidationError(
