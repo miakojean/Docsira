@@ -4,7 +4,7 @@
 
         <div v-if="authStore.collaborators.length > 0" class="content-container">
 
-            <div class="cards-grid" v-if="filteredCollaborators.length > 0">
+            <div class="cards-grid" data-tour="collaborators-grid" v-if="filteredCollaborators.length > 0">
                 <template v-for="(collaborator, index) in paginatedCollaborators" :key="collaborator.id || index">
                     <CollaboratorCard
                         v-if="collaborator.status === 'accepted'"

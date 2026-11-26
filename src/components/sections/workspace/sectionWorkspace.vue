@@ -35,7 +35,7 @@
       <div class="workspace-view-container flex-1 flex flex-col gap-3">
         <!-- Grille de tous les dossiers de tous les clients directement -->
         <div v-if="filteredDossiers.length > 0" class="flex-1 flex flex-col justify-between gap-4">
-          <div class="dossiers-grid">
+          <div class="dossiers-grid" data-tour="workspace-dossiers-grid">
             <affairsCards
               v-for="d in paginatedDossiers"
               :key="d.id"
@@ -168,10 +168,12 @@ import Pagination from '../../tools/Pagination.vue';
 import BaseSelectInput from '../../BaseInput/BaseSelectInput.vue';
 import { useClientDossierStore, type AffairShareLink, type Dossier } from '../../../stores/dossierStore';
 import { useAuthStore } from '../../../stores/authStore';
+import { useTutorialStore } from '../../../stores/tutorialStore';
 import { DOSSIER_STATUT_OPTIONS, DOSSIER_SORT_OPTIONS, sortDossiers } from '../../../helpers/dossierSort';
 
 const store = useClientDossierStore();
 const authStore = useAuthStore();
+const tutorialStore = useTutorialStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -270,6 +272,7 @@ function onDetailsAction() {
 
 function onCreated() {
   isAddOpen.value = false;
+  tutorialStore.notifyAction('dossier_created');
   successTitle.value = "Dossier créé avec succès";
   successSubtitle.value = "Le dossier est maintenant disponible dans votre Workspace.";
   isSuccess.value = true;

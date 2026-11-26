@@ -41,6 +41,7 @@
         type="button"
         role="tab"
         class="tab"
+        data-tour="affair-tab-sira"
         :class="{ active: tab === 'sira' }"
         @click="switchTab('sira')"
       >
@@ -130,6 +131,7 @@ import { useClientDossierStore, type Dossier } from '../../stores/dossierStore';
 import { useClientStore, type ClientListItem } from '../../stores/clientStore';
 import { buildDocumentVersionLineages, type DossierDocument } from '../../stores/documentStore';
 import { useSiraStore } from '../../stores/siraStore';
+import { useTutorialStore } from '../../stores/tutorialStore';
 import affairSiraGitGraph from './affairSiraGitGraph.vue';
 
 const props = withDefaults(
@@ -156,6 +158,7 @@ const router = useRouter();
 const store = useClientDossierStore();
 const clientStore = useClientStore();
 const siraStore = useSiraStore();
+const tutorialStore = useTutorialStore();
 
 const query = ref('');
 const tab = ref<'folders' | 'sira'>(props.activeTab || 'folders');
@@ -172,8 +175,11 @@ watch(
 function switchTab(newTab: 'folders' | 'sira') {
   tab.value = newTab;
   emit('update:activeTab', newTab);
-  if (newTab === 'sira' && props.currentId) {
-    siraStore.fetchHistory(props.currentId);
+  if (newTab === 'sira') {
+    tutorialStore.notifyAction('open_sira_tab');
+    if (props.currentId) {
+      siraStore.fetchHistory(props.currentId);
+    }
   }
 }
 

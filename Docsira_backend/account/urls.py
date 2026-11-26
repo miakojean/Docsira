@@ -7,13 +7,15 @@ from .views import (
     ChangePasswordView,
     CollaborateurView,
     CollaboratorRoleView,
-    CollaboratorCodeView
+    CollaboratorCodeView,
+    OnboardingStatusView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('me/', ProfileView.as_view(), name='profile'),
+    path('onboarding/', OnboardingStatusView.as_view(), name='onboarding_status'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('change-password/', ChangePasswordView.as_view(), name='change_password'),

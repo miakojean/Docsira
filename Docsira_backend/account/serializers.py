@@ -27,6 +27,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'last_name',
             'account_type',
             'has_changed_password',
+            'has_completed_onboarding',
+            'has_completed_advanced_onboarding',
             'role',
             'is_firm_owner',
             'can_manage_collaborators',
@@ -36,6 +38,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'account_type',
             'has_changed_password',
+            'has_completed_onboarding',
+            'has_completed_advanced_onboarding',
             'role',
             'is_firm_owner',
             'can_manage_collaborators',
@@ -69,6 +73,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         validated_data.pop('account_type', None)
         validated_data.pop('has_changed_password', None)
+        validated_data.pop('has_completed_onboarding', None)
+        validated_data.pop('has_completed_advanced_onboarding', None)
         password = validated_data.pop('password', None)
 
         for attr, value in validated_data.items():

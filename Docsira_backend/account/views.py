@@ -491,3 +491,27 @@ class CollaboratorCodeView(APIView):
             "user_id": activation.user.id,
             "email": activation.user.email
         }, status=status.HTTP_200_OK)
+
+
+class OnboardingStatusView(APIView):
+    """Enregistre la complétion (ou le passage) du tutoriel de bienvenue et avancé."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        track = request.data.get('track', 'basic')
+        user = request.user
+        if track == 'advanced':
+            user.has_completed_advanced_onboarding = True
+            user.save(update_fields=['has_completed_advanced_onboarding'])
+        else:
+            user.has_completed_onboarding = True
+            user.save(update_fields=['has_completed_onboarding'])
+
+        return Response(
+            {
+                "has_completed_onboarding": user.has_completed_onboarding,
+                "has_completed_advanced_onboarding": user.has_completed_advanced_onboarding,
+            },
+            status=status.HTTP_200_OK,
+        )

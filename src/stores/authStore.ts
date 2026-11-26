@@ -15,6 +15,8 @@ export interface Customer {
   password: string;
   account_type?: string;
   has_changed_password?: boolean;
+  has_completed_onboarding?: boolean;
+  has_completed_advanced_onboarding?: boolean;
   role?: UserRole;
   is_firm_owner?: boolean;
   can_manage_collaborators?: boolean;
@@ -370,6 +372,20 @@ export const useAuthStore = defineStore("auth", () => {
     message.value.succesMessage = "";
   }
 
+  async function updateLocalOnboardingFlags(flags: {
+    has_completed_onboarding?: boolean;
+    has_completed_advanced_onboarding?: boolean;
+  }) {
+    user.value = { ...user.value, ...flags };
+    try {
+      const store = await getAuthStore();
+      await store.set("user", user.value);
+      await store.save();
+    } catch {
+      // ignore local persistence failure
+    }
+  }
+
   return {
     router,
     isLoading,
@@ -395,6 +411,7 @@ export const useAuthStore = defineStore("auth", () => {
     fetchCollaborators,
     removeCollaborator,
     ChangePassword,
-    clearMessages
+    clearMessages,
+    updateLocalOnboardingFlags
   };
 });

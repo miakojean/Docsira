@@ -19,6 +19,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/dashboard/mySpace/:folderPath', component: () => import('../pages/dashboard/mySpaceFolder.vue'), name: 'mySpaceFolder', meta: { requiresAuth: true } },
   { path: '/dashboard/settings', component: () => import('../pages/dashboard/settings.vue'), name: 'settings', meta: { requiresAuth: true } },
   { path: '/dashboard/settings/collaborators', component: () => import('../pages/dashboard/settings/collaborators.vue'), name: 'collaborators', meta: { requiresAuth: true } },
+  { path: '/dashboard/support', alias: ['/profile/Support'], component: () => import('../pages/dashboard/support.vue'), name: 'support', meta: { requiresAuth: true } },
   { path: '/dashboard/Customer', component: () => import('../pages/dashboard/customers/customers.vue'), name: 'customers', meta: { requiresAuth: true } },
   { path: '/dashboard/Customer/trash', component: () => import('../pages/dashboard/customers/trash.vue'), name: 'trash', meta: { requiresAuth: true } },
   { path: '/dashboard/archives', alias: ['/dashboard/Archives'], component: () => import('../pages/dashboard/archives.vue'), name: 'archives', meta: { requiresAuth: true } },

@@ -76,6 +76,41 @@ class AuthSecurityTests(TestCase):
         created = get_user_model().objects.get(username="new-firm")
         self.assertEqual(created.account_type, "firm")
 
+    def test_onboarding_endpoint_and_put_me_protection(self):
+        user = get_user_model().objects.create_user(
+            username="onboard-user",
+            email="onboard@example.com",
+            password="StrongPassword!2026",
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+
+        # PUT /account/me/ ne doit pas pouvoir falsifier les flags d'onboarding
+        put_resp = client.put(
+            "/account/me/",
+            {
+                "first_name": "Test",
+                "has_completed_onboarding": True,
+                "has_completed_advanced_onboarding": True,
+            },
+            format="json",
+        )
+        self.assertEqual(put_resp.status_code, 200)
+        user.refresh_from_db()
+        self.assertFalse(user.has_completed_onboarding)
+        self.assertFalse(user.has_completed_advanced_onboarding)
+
+        # POST /account/onboarding/ marque basic puis advanced
+        basic_resp = client.post("/account/onboarding/", {"track": "basic"}, format="json")
+        self.assertEqual(basic_resp.status_code, 200)
+        self.assertTrue(basic_resp.data["has_completed_onboarding"])
+        self.assertFalse(basic_resp.data["has_completed_advanced_onboarding"])
+
+        adv_resp = client.post("/account/onboarding/", {"track": "advanced"}, format="json")
+        self.assertEqual(adv_resp.status_code, 200)
+        self.assertTrue(adv_resp.data["has_completed_onboarding"])
+        self.assertTrue(adv_resp.data["has_completed_advanced_onboarding"])
+
 
 class LogoutViewTests(TestCase):
     def setUp(self):

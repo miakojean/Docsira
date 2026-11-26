@@ -17,6 +17,7 @@
         :action-text="notifPopup.myMessage"
         :is-online="notifPopup.isOnline"
     />
+    <TutorialManager v-if="!isBooting" />
     <RouterView/>
 </template>
 
@@ -26,6 +27,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { checkConnection, watchConnection } from '../src/services/network';
 import isConnected from '../src/components/tools/isConnected.vue';
 import LogoLoader from '../src/components/tools/LogoLoader.vue';
+import TutorialManager from '../src/components/tutorial/TutorialManager.vue';
 
 const router = useRouter();
 const isBooting = ref(true);

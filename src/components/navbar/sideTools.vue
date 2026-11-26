@@ -30,6 +30,7 @@
 
       <button
         class="nav-item"
+        data-tour="settings-nav-collaborators"
         :class="{ active: route.path.includes('/collaborators') }"
         @click="router.push('/dashboard/settings/collaborators')"
       >
