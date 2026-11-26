@@ -86,6 +86,7 @@ onMounted(async () => {
 
     if (isFirst){
         showOnboarding.value = true;
+        router.push({ name: 'onboarding' });
     }
 
 });

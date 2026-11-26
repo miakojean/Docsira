@@ -23,6 +23,10 @@ const routes: RouteRecordRaw[] = [
   { path: '/dashboard/Customer/trash', component: () => import('../pages/dashboard/customers/trash.vue'), name: 'trash', meta: { requiresAuth: true } },
   { path: '/dashboard/archives', alias: ['/dashboard/Archives'], component: () => import('../pages/dashboard/archives.vue'), name: 'archives', meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
+
+  // Onboarding visite
+  {path: '/onboarding', component:()=>import('../components/sections/onboarding/welcomeUser.vue'), name:'onboarding'},
+  {path: '/onboarding/customer', component:()=>import('../components/sections/onboarding/customerUser.vue')}
 ]
 
 export const router = createRouter({
