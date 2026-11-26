@@ -25,12 +25,15 @@
 import { RouterView, useRouter } from 'vue-router';
 import { ref, onMounted, onUnmounted } from 'vue';
 import { checkConnection, watchConnection } from '../src/services/network';
+import {isFirstDesktopLaunch, markDesktopInitialized} from './stores/desktopOnBoarding'
 import isConnected from '../src/components/tools/isConnected.vue';
 import LogoLoader from '../src/components/tools/LogoLoader.vue';
 import TutorialManager from '../src/components/tutorial/TutorialManager.vue';
 
 const router = useRouter();
 const isBooting = ref(true);
+
+const showOnboarding = ref(false);
 
 const notifPopup = ref({
     isVisible: false,
@@ -78,6 +81,15 @@ onMounted(async () => {
             notifPopup.value.myMessage = "Vous n'êtes pas connecté à internet";
         }
     }, estEnLigne);
+
+    const isFirst = await isFirstDesktopLaunch();
+    
+    console.log("Premier lancement de l'applcation détecté", isFirst);
+
+    if (isFirst){
+        showOnboarding.value = true;
+    }
+
 });
 
 onUnmounted(() => {

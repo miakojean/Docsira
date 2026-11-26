@@ -25,6 +25,7 @@ class CustomUser(AbstractUser):
     has_changed_password = models.BooleanField(default=False)
     has_completed_onboarding = models.BooleanField(default=False)
     has_completed_advanced_onboarding = models.BooleanField(default=False)
+    has_completed_tour = models.BooleanField(default=False)
 
     def __str__(self):
         return self.username

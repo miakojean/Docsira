@@ -34,6 +34,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'can_manage_collaborators',
             'can_edit',
             'password',
+            'has_completed_tour'
         ]
         read_only_fields = [
             'account_type',
