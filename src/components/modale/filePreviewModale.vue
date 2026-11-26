@@ -137,14 +137,22 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue';
-import * as pdfjsLib from 'pdfjs-dist';
+import { nextTick, onUnmounted, ref, watch } from 'vue';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type { DossierDocument } from '../../stores/documentStore';
 import { ALLOWED_DOCUMENT_ACCEPT, filterAllowedDocuments } from '../../helpers/documentFormats';
 import LogoLoader from '../tools/LogoLoader.vue';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+let pdfjsPromise: Promise<typeof import('pdfjs-dist')> | null = null;
+async function loadPdfJs() {
+  if (!pdfjsPromise) {
+    pdfjsPromise = import('pdfjs-dist').then((mod) => {
+      mod.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+      return mod;
+    });
+  }
+  return pdfjsPromise;
+}
 
 export interface PreviewData {
   title: string;
@@ -182,6 +190,19 @@ const pdfError = ref('');
 const pdfPageCount = ref(0);
 const pdfScale = ref(1.2);
 let renderGeneration = 0;
+let activeLoadingTask: { destroy: () => Promise<void> } | null = null;
+
+async function cleanupPdfTask() {
+  const task = activeLoadingTask;
+  activeLoadingTask = null;
+  if (task) {
+    try {
+      await task.destroy();
+    } catch {
+      // ignore cleanup error
+    }
+  }
+}
 
 function triggerReplaceFile() {
   replaceError.value = '';
@@ -216,6 +237,7 @@ async function renderPdf(buffer: ArrayBuffer) {
   isRenderingPdf.value = true;
   pdfError.value = '';
   pdfPageCount.value = 0;
+  await cleanupPdfTask();
 
   await nextTick();
   const container = pdfContainerRef.value;
@@ -226,21 +248,23 @@ async function renderPdf(buffer: ArrayBuffer) {
   container.innerHTML = '';
 
   try {
+    const pdfjsLib = await loadPdfJs();
     const bytes = new Uint8Array(buffer.slice(0));
     const loadingTask = pdfjsLib.getDocument({ data: bytes });
+    activeLoadingTask = loadingTask;
     const pdfDoc = await loadingTask.promise;
 
     if (gen !== renderGeneration) {
-      await loadingTask.destroy();
+      await cleanupPdfTask();
       return;
     }
 
     pdfPageCount.value = pdfDoc.numPages;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
       if (gen !== renderGeneration) {
-        await loadingTask.destroy();
+        await cleanupPdfTask();
         return;
       }
 
@@ -262,12 +286,13 @@ async function renderPdf(buffer: ArrayBuffer) {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         await page.render({ canvasContext: ctx, viewport, canvas }).promise;
       }
+      page.cleanup();
 
       pageWrapper.appendChild(canvas);
       container.appendChild(pageWrapper);
     }
 
-    await loadingTask.destroy();
+    await cleanupPdfTask();
   } catch (err) {
     console.error('Erreur rendu PDF :', err);
     if (gen === renderGeneration) {
@@ -287,6 +312,7 @@ watch(
       void renderPdf(data);
     } else {
       renderGeneration++;
+      void cleanupPdfTask();
       isRenderingPdf.value = false;
       pdfError.value = '';
       pdfPageCount.value = 0;
@@ -295,6 +321,11 @@ watch(
   },
   { immediate: true }
 );
+
+onUnmounted(() => {
+  renderGeneration++;
+  void cleanupPdfTask();
+});
 
 watch(
   () => props.preview?.doc?.id,

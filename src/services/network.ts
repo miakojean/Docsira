@@ -14,6 +14,7 @@ export function watchConnection(
 ) {
   let last: boolean | null = initialOnline;
   return setInterval(async () => {
+    if (typeof document !== "undefined" && document.hidden) return;
     const now = await checkConnection();
     if (now !== last) {
       last = now;

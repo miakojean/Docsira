@@ -1,3 +1,4 @@
+import logging
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -9,6 +10,8 @@ from account.models import CustomUser
 from account.permissions import IsFirmEditorOrReadOnly, is_firm_admin
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
+
+logger = logging.getLogger(__name__)
 
 def get_firm_users(user):
     if user.account_type == CustomUser.AccountType.COLLABORATOR:
@@ -105,11 +108,11 @@ class ManageClient(APIView):
                 'success': False
             }, status=status.HTTP_404_NOT_FOUND)
             
-        except Exception as e:
+        except Exception:
+            logger.exception("Erreur interne dans Client views")
             return Response({
                 'success': False,
-                'message': 'Erreur interne du serveur',
-                'error': str(e)
+                'message': 'Erreur interne du serveur'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def patch(self, request, client_id, *args, **kwargs):
@@ -142,11 +145,11 @@ class ManageClient(APIView):
                 'success': False
             }, status=status.HTTP_404_NOT_FOUND)
             
-        except Exception as e:
+        except Exception:
+            logger.exception("Erreur interne dans Client views")
             return Response({
                 'success': False,
-                'message': 'Erreur interne du serveur',
-                'error': str(e)
+                'message': 'Erreur interne du serveur'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, client_id, *args, **kwargs):
@@ -169,11 +172,11 @@ class ManageClient(APIView):
                 'success': False
             }, status=status.HTTP_404_NOT_FOUND)
             
-        except Exception as e:
+        except Exception:
+            logger.exception("Erreur interne dans Client views")
             return Response({
                 'success': False,
-                'message': 'Erreur interne du serveur',
-                'error': str(e)
+                'message': 'Erreur interne du serveur'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ArchivedClientsView(APIView):
@@ -245,11 +248,11 @@ class RestoreClient(APIView):
                 'success': False
             }, status=status.HTTP_404_NOT_FOUND)
             
-        except Exception as e:
+        except Exception:
+            logger.exception("Erreur interne dans Client views")
             return Response({
                 'success': False,
-                'message': 'Erreur interne du serveur',
-                'error': str(e)
+                'message': 'Erreur interne du serveur'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class PermanentDeleteClient(APIView):
@@ -288,9 +291,9 @@ class PermanentDeleteClient(APIView):
                 'message': 'Impossible de supprimer définitivement ce client car il possède encore des dossiers associés.'
             }, status=status.HTTP_409_CONFLICT)
             
-        except Exception as e:
+        except Exception:
+            logger.exception("Erreur interne dans Client views")
             return Response({
                 'success': False,
-                'message': 'Erreur interne du serveur',
-                'error': str(e)
+                'message': 'Erreur interne du serveur'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

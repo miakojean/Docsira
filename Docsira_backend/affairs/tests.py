@@ -618,3 +618,154 @@ class AffairDocumentsApiTests(APITestCase):
 		self.assertEqual(mark_resp.data["unread_count"], 0)
 		self.assertEqual(self.client.get(unread_url).data["unread_count"], 0)
 		self.assertEqual(self.client.get(reverse("affair-list")).data["results"][0]["unread_comments_count"], 0)
+
+
+class SecurityAndCleanupTests(APITestCase):
+	def setUp(self):
+		self.media_directory = tempfile.TemporaryDirectory()
+		media_settings = override_settings(MEDIA_ROOT=self.media_directory.name)
+		media_settings.enable()
+		self.addCleanup(media_settings.disable)
+		self.addCleanup(self.media_directory.cleanup)
+
+		self.firm_a = CustomUser.objects.create_user(username="firm-a", password="StrongPassword!1")
+		self.firm_b = CustomUser.objects.create_user(username="firm-b", password="StrongPassword!2")
+
+		self.client_a = ClientModel.objects.create(
+			type_client="PERSONNE_PHYSIQUE",
+			nom="ClientA",
+			prenoms="Alice",
+			telephone_1="0700000010",
+			charge_de_clientele=self.firm_a,
+		)
+		self.client_b = ClientModel.objects.create(
+			type_client="PERSONNE_PHYSIQUE",
+			nom="ClientB",
+			prenoms="Bob",
+			telephone_1="0700000020",
+			charge_de_clientele=self.firm_b,
+		)
+		self.collab_b_user = CustomUser.objects.create_user(
+			username="collab-b",
+			password="StrongPassword!3",
+			account_type=CustomUser.AccountType.COLLABORATOR,
+		)
+		self.collab_b = Collaborator.objects.create(
+			main_account=self.firm_b,
+			user=self.collab_b_user,
+			role=Collaborator.Roles.EDITOR,
+		)
+		self.affair_a = Affair.objects.create(
+			title="Dossier Cabinet A",
+			type_affair="AUTRE",
+			firm=self.firm_a,
+			client=self.client_a,
+		)
+
+	def test_cross_firm_client_and_collaborator_association_blocked(self):
+		self.client.force_authenticate(user=self.firm_a)
+		resp_client = self.client.post(
+			reverse("affair-list"),
+			{"title": "IDOR client", "type_affair": "CONTRAT", "client_id": str(self.client_b.pk)},
+			format="json",
+		)
+		self.assertEqual(resp_client.status_code, 400)
+		self.assertIn("client_id", resp_client.data)
+
+		resp_collab = self.client.post(
+			reverse("affair-list"),
+			{
+				"title": "IDOR collab",
+				"type_affair": "CONTRAT",
+				"client_id": str(self.client_a.pk),
+				"collaborator_id": str(self.collab_b.pk),
+			},
+			format="json",
+		)
+		self.assertEqual(resp_collab.status_code, 400)
+		self.assertIn("collaborator_id", resp_collab.data)
+
+		# Patch d'un dossier existant avec client d'un autre cabinet bloqué
+		patch_resp = self.client.patch(
+			reverse("affair-detail", kwargs={"affair_id": self.affair_a.pk}),
+			{"client_id": str(self.client_b.pk)},
+			format="json",
+		)
+		self.assertEqual(patch_resp.status_code, 400)
+
+	def test_cross_firm_isolation_on_documents_comments_and_shares(self):
+		self.client.force_authenticate(user=self.firm_a)
+		upload_resp = self.client.post(
+			reverse("affair-documents", kwargs={"affair_id": self.affair_a.pk}),
+			{"files": [SimpleUploadedFile("secret.pdf", b"%PDF-1.4 secret", content_type="application/pdf")]},
+			format="multipart",
+		)
+		self.assertEqual(upload_resp.status_code, 201)
+		doc_id = upload_resp.data[0]["id"]
+
+		self.client.force_authenticate(user=self.firm_b)
+		self.assertEqual(self.client.get(reverse("affair-detail", kwargs={"affair_id": self.affair_a.pk})).status_code, 404)
+		self.assertEqual(self.client.get(reverse("affair-documents", kwargs={"affair_id": self.affair_a.pk})).status_code, 403)
+		self.assertEqual(self.client.get(reverse("document-download", kwargs={"document_id": doc_id})).status_code, 404)
+		self.assertEqual(self.client.get(reverse("affair-comments", kwargs={"affair_id": self.affair_a.pk})).status_code, 404)
+		self.assertEqual(self.client.post(reverse("document-share-links", kwargs={"document_id": doc_id}), {}).status_code, 404)
+
+	def test_file_validation_rejects_oversized_empty_and_bad_extension(self):
+		self.client.force_authenticate(user=self.firm_a)
+		docs_url = reverse("affair-documents", kwargs={"affair_id": self.affair_a.pk})
+
+		# Extension interdite
+		bad_ext = self.client.post(
+			docs_url,
+			{"files": [SimpleUploadedFile("malware.exe", b"MZ", content_type="application/octet-stream")]},
+			format="multipart",
+		)
+		self.assertEqual(bad_ext.status_code, 400)
+
+		# Fichier vide
+		empty_file = self.client.post(
+			docs_url,
+			{"files": [SimpleUploadedFile("vide.pdf", b"", content_type="application/pdf")]},
+			format="multipart",
+		)
+		self.assertEqual(empty_file.status_code, 400)
+
+		# Fichier > 25 Mo (limite patchée à 50 octets pour tester sans allouer 26 Mo en RAM)
+		from unittest.mock import patch
+		with patch("affairs.serializers.MAX_DOCUMENT_SIZE_BYTES", 50):
+			big_file = SimpleUploadedFile("lourd.pdf", b"%PDF-1.4 " + b"x" * 100, content_type="application/pdf")
+			oversized = self.client.post(docs_url, {"files": [big_file]}, format="multipart")
+		self.assertEqual(oversized.status_code, 400)
+
+	def test_permanent_delete_removes_physical_file_and_share_excludes_deleted(self):
+		self.client.force_authenticate(user=self.firm_a)
+		docs_url = reverse("affair-documents", kwargs={"affair_id": self.affair_a.pk})
+		upload_resp = self.client.post(
+			docs_url,
+			{"files": [SimpleUploadedFile("contrat_nettoyage.pdf", b"%PDF-1.4 body", content_type="application/pdf")]},
+			format="multipart",
+		)
+		self.assertEqual(upload_resp.status_code, 201)
+		doc = Document.objects.get(pk=upload_resp.data[0]["id"])
+		disk_path = doc.file.path
+		self.assertTrue(os.path.isfile(disk_path))
+
+		# Créer un lien de partage document + dossier
+		doc_share = self.client.post(reverse("document-share-links", kwargs={"document_id": doc.pk}), {"expires_in_days": 7}, format="json")
+		self.assertEqual(doc_share.status_code, 201)
+		doc_token = doc_share.data["token"]
+
+		affair_share = self.client.post(reverse("affair-share-links", kwargs={"affair_id": self.affair_a.pk}), {"expires_in_days": 7}, format="json")
+		self.assertEqual(affair_share.status_code, 201)
+		affair_token = affair_share.data["token"]
+
+		# Mettre le document à la corbeille -> les liens publics ne doivent plus le servir
+		self.assertEqual(self.client.delete(reverse("document-id", kwargs={"document_id": doc.pk})).status_code, 200)
+		self.assertEqual(self.client.get(reverse("public-document-share", kwargs={"token": doc_token})).status_code, 404)
+		self.assertEqual(self.client.get(reverse("public-affair-share", kwargs={"token": affair_token})).status_code, 404)
+
+		# Suppression définitive -> supprime le fichier du disque (onCommit exécuté dans captureOnCommitCallbacks)
+		with self.captureOnCommitCallbacks(execute=True):
+			perm_del = self.client.delete(reverse("document-permanent-delete", kwargs={"document_id": doc.pk}))
+		self.assertEqual(perm_del.status_code, 200)
+		self.assertFalse(os.path.isfile(disk_path))

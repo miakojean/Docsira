@@ -2,7 +2,6 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { save as saveDialog } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
-import mammoth from 'mammoth';
 import { useClientDossierStore, type AffairShareLink, type Dossier } from '../stores/dossierStore';
 import {
   buildDocumentVersionLineages,
@@ -234,7 +233,10 @@ export function useAffairDocuments() {
 
     if (isDocx) {
       try {
-        const arrayBuffer = await blob.arrayBuffer();
+        const [{ default: mammoth }, arrayBuffer] = await Promise.all([
+          import('mammoth'),
+          blob.arrayBuffer(),
+        ]);
         const result = await mammoth.convertToHtml({ arrayBuffer });
         preview.value = {
           title: doc.title,
@@ -652,7 +654,7 @@ export function useAffairDocuments() {
     await Promise.all(tasks);
 
     commentPollTimer = window.setInterval(async () => {
-      if (!affairId.value) return;
+      if (!affairId.value || (typeof document !== 'undefined' && document.hidden)) return;
       const state = await commentStore.fetchUnreadStatus(affairId.value);
       if (isCommentsOpen.value && state && state.unreadCount > 0) {
         await commentStore.fetchComments(affairId.value);

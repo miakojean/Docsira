@@ -18,25 +18,63 @@ class CustomUserSerializerTests(TestCase):
             account_type="firm",
         )
 
-    def test_update_profile_keeps_first_and_last_name(self):
+    def test_update_profile_blocks_account_type_and_hashes_password(self):
         payload = {
             "first_name": "Alicia",
             "last_name": "Martin",
             "username": "alice",
             "email": "alice.updated@example.com",
             "account_type": "individual",
+            "has_changed_password": True,
         }
 
         serializer = CustomUserSerializer(self.user, data=payload, partial=True)
-
         self.assertTrue(serializer.is_valid(), serializer.errors)
-
         updated_user = serializer.save()
 
         self.assertEqual(updated_user.first_name, "Alicia")
         self.assertEqual(updated_user.last_name, "Martin")
-        self.assertEqual(updated_user.account_type, "individual")
+        self.assertEqual(updated_user.account_type, "firm")
+        self.assertFalse(updated_user.has_changed_password)
         self.assertEqual(updated_user.email, "alice.updated@example.com")
+
+        # Vérifie également PUT /account/me/ avec un mot de passe (haché, jamais en clair)
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+        resp = client.put(
+            "/account/me/",
+            {"password": "NewStrongPassword!2026", "account_type": "collaborator"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.account_type, "firm")
+        self.assertTrue(self.user.has_changed_password)
+        self.assertTrue(self.user.check_password("NewStrongPassword!2026"))
+        self.assertNotEqual(self.user.password, "NewStrongPassword!2026")
+
+
+class AuthSecurityTests(TestCase):
+    def test_anonymous_get_activation_codes_returns_401(self):
+        client = APIClient()
+        response = client.get("/account/collaboratos/code/")
+        self.assertEqual(response.status_code, 401)
+
+    def test_register_forces_firm_account_type(self):
+        client = APIClient()
+        response = client.post(
+            "/account/register/",
+            {
+                "username": "new-firm",
+                "email": "new-firm@example.com",
+                "password": "StrongPassword!2026",
+                "account_type": "collaborator",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        created = get_user_model().objects.get(username="new-firm")
+        self.assertEqual(created.account_type, "firm")
 
 
 class LogoutViewTests(TestCase):
