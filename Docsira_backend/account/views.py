@@ -483,3 +483,15 @@ class CollaboratorCodeView(APIView):
             "user_id": activation.user.id,
             "email": activation.user.email
         }, status=status.HTTP_200_OK)
+
+class OnboardingTourView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        profile = request.user
+        profile.has_completed_tour = True
+        profile.save(update_fields=['has_completed_tour'])
+        return Response({"has_completed_tour": True}, status=status.HTTP_200_OK)
+        

@@ -31,6 +31,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'can_manage_collaborators',
             'can_edit',
             'password',
+            'has_completed_tour'
         ]
         read_only_fields = ['role', 'is_firm_owner', 'can_manage_collaborators', 'can_edit']
         # On rend le mot de passe invisible en lecture !
