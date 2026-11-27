@@ -14,7 +14,10 @@
         { "url": "http://localhost:8000/*" },
         { "url": "http://127.0.0.1:8000/*" },
         { "url": "http://localhost:1420/*" },
-        { "url": "https://*.trycloudflare.com/*" }
+        { "url": "https://*.trycloudflare.com/*" },
+        { "url": "https://*.ngrok-free.app/*" },
+        { "url": "https://*.ngrok.app/*" },
+        { "url": "https://*.ngrok.io/*" }
       ],
       "deny": [{ "url": "https://private.tauri.app" }]
     },
@@ -141,6 +144,9 @@
       "allow": [
         { "url": "https://tauri.app" },
         { "url": "https://*.trycloudflare.com/*" },
+        { "url": "https://*.ngrok-free.app/*" },
+        { "url": "https://*.ngrok.app/*" },
+        { "url": "https://*.ngrok.io/*" },
         { "url": "custom:*" }
       ]
     }

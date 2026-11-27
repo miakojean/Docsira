@@ -78,7 +78,10 @@ async function refreshAuthToken(): Promise<string | null> {
         `${BASE_URL}/account/token/refresh/`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+          },
           body: JSON.stringify({ refresh: refreshToken }),
         },
         REFRESH_TIMEOUT_MS,
@@ -120,8 +123,8 @@ export async function api(
 
   // Pour un FormData, le Content-Type (avec boundary) doit être posé automatiquement
   const headers: Record<string, string> = isFormData
-    ? {}
-    : { "Content-Type": "application/json" };
+    ? { "ngrok-skip-browser-warning": "true" }
+    : { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" };
 
   if (requireAuth) {
     try {
