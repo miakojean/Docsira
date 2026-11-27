@@ -14,7 +14,11 @@
         { "url": "http://localhost:8000/*" },
         { "url": "http://127.0.0.1:8000/*" },
         { "url": "http://localhost:1420/*" },
-        { "url": "https://*.trycloudflare.com/*" }
+        { "url": "https://*.trycloudflare.com/*" },
+        { "url": "https://*.ngrok-free.app/*" },
+        { "url": "https://*.ngrok-free.dev/*" },
+        { "url": "https://*.ngrok.io/*" },
+        { "url": "https://*.ngrok.app/*" }
       ],
       "deny": [{ "url": "https://private.tauri.app" }]
     },

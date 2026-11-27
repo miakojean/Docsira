@@ -37,6 +37,10 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '.trycloudflare.com',
+    '.ngrok-free.app',
+    '.ngrok-free.dev',
+    '.ngrok.io',
+    '.ngrok.app',
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -49,10 +53,16 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.trycloudflare\.com$",
+    r"^https://.*\.ngrok-free\.(app|dev)$",
+    r"^https://.*\.ngrok\.(io|app)$",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.trycloudflare.com",
+    "https://*.ngrok-free.app",
+    "https://*.ngrok-free.dev",
+    "https://*.ngrok.io",
+    "https://*.ngrok.app",
     "http://tauri.localhost",
     "https://tauri.localhost",
     "tauri://localhost",
