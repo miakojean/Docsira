@@ -144,10 +144,11 @@
 
 <script lang="ts">
 // @ts-ignore Vue is provided by the application's bundler.
-import { ref } from 'vue';
+import { computed, watch } from 'vue';
 // @ts-ignore vue-router is provided by the application's bundler.
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/authStore';
+import { useSidebarStore } from '../../stores/sidebarStore';
 import logoUrl from '../../assets/assets/svg/LOGO2.svg';
 
 
@@ -157,18 +158,25 @@ export default {
     defaultReduced: { type: Boolean, default: false },
   },
   setup(props: { defaultReduced: boolean }) {
-    const isReduced = ref(props.defaultReduced);
     const router = useRouter();
     const route = useRoute();
     const authStore = useAuthStore();
+    const sidebarStore = useSidebarStore();
 
-    const toggleReduce = async() => {
-      isReduced.value = !isReduced.value;
-      if (isReduced.value) {
-        document.body.classList.add('sidebar-reduced');
-      } else {
-        document.body.classList.remove('sidebar-reduced');
-      }
+    const isReduced = computed(() => sidebarStore.getEffectiveReduced(props.defaultReduced));
+
+    watch(
+      isReduced,
+      (reduced) => {
+        if (typeof document !== 'undefined') {
+          document.body.classList.toggle('sidebar-reduced', reduced);
+        }
+      },
+      { immediate: true }
+    );
+
+    const toggleReduce = () => {
+      sidebarStore.toggleReduced(isReduced.value);
     };
 
     async function goToAuth(){
