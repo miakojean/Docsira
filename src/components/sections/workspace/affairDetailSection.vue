@@ -25,6 +25,7 @@
         <button
           type="button"
           class="add-btn"
+          data-tour="affair-add-doc"
           :class="{ 'is-icon-only': isCommentsOpen }"
           :disabled="docStore.isUploading"
           title="Ajouter un document et choisir sa catégorie SIRA"
@@ -76,6 +77,7 @@
             <button
               type="button"
               class="empty-cta-btn"
+              data-tour="affair-empty-add-doc"
               :disabled="docStore.isUploading"
               @click="openUploadDocModal()"
             >
@@ -92,7 +94,7 @@
 
       <!-- LISTE / GRILLE DES FICHIERS -->
       <div v-else class="files-content-area">
-        <div class="file-list--grid">
+        <div class="file-list--grid" data-tour="affair-files-grid">
           <myfileCards 
             v-for="doc in paginatedDocuments"
             :key="doc.id"

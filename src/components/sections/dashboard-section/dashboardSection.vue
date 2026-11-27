@@ -1,7 +1,7 @@
 <template>
   <section class="main-section w-full flex flex-col justify-center items-center gap-4">
 
-    <h3>Bienvenu {{ authStore.user?.username }}, très ravi de vous revoir.</h3>
+    <h3>Bienvenue {{ authStore.user?.username }}, très ravi de vous revoir.</h3>
 
     <BaseInput placeholder="Trouver votre dossier/client">
       <template #prepend>
@@ -23,7 +23,7 @@
       </template>
     </BaseInput>
 
-    <div class="actions">
+    <div class="actions" data-tour="dashboard-cards">
       <features-card
         title="Workspace"
         content="Prenez part aux projets de l'équipe. Consultez la progression et les tâches en cours."

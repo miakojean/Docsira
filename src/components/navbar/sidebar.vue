@@ -25,6 +25,8 @@
     <nav class="nav-menu">
       <button
         class="nav-item"
+        data-tour="nav-dashboard"
+        title="Dashboard"
         :class="{ active: route.path === '/dashboard' || route.path === '/dashboard/' }"
         @click="router.push('/dashboard')"
       >
@@ -36,6 +38,8 @@
 
     <button
         class="nav-item"
+        data-tour="nav-workspace"
+        title="Workspace"
         :class="{ active: route.path.includes('/dashboard/affairs') }"
         @click="router.push('/dashboard/affairs')"
     >
@@ -47,6 +51,8 @@
 
     <button
         class="nav-item"
+        data-tour="nav-myspace"
+        title="Mon espace"
         :class="{ active: route.path.includes('/dashboard/mySpace') }"
         @click="router.push('/dashboard/mySpace')"
     >
@@ -58,6 +64,8 @@
 
     <button
         class="nav-item"
+        data-tour="nav-customers"
+        title="Clients"
         :class="{ active: route.path === '/dashboard/Customer' || route.path === '/dashboard/Customer/' }"
         @click="router.push('/dashboard/Customer')"
     >
@@ -69,6 +77,8 @@
 
       <button
         class="nav-item"
+        data-tour="nav-archives"
+        title="Archives"
         :class="{ active: route.path.toLowerCase().includes('/dashboard/archives') }"
         @click="router.push('/dashboard/archives')"
       >
@@ -80,6 +90,8 @@
 
       <button
         class="nav-item"
+        data-tour="nav-trash"
+        title="Corbeille"
         :class="{ active: route.path.includes('/dashboard/Customer/trash') }"
         @click="router.push('/dashboard/Customer/trash')"
       >
@@ -91,8 +103,10 @@
 
       <button
         class="nav-item"
-        :class="{ active: route.path.includes('/profile/Support') }"
-        @click="router.push('/profile/Support')"
+        data-tour="nav-support"
+        title="Support client"
+        :class="{ active: route.path.includes('/dashboard/support') || route.path.includes('/profile/Support') }"
+        @click="router.push('/dashboard/support')"
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
           <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
@@ -102,6 +116,8 @@
 
       <button
         class="nav-item"
+        data-tour="nav-settings"
+        title="Paramètres"
         :class="{ active: route.path.includes('/dashboard/settings') }"
         @click="router.push('/dashboard/settings')"
       >

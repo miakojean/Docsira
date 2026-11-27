@@ -13,6 +13,7 @@ import {
 import { useCommentStore } from '../stores/commentStore';
 import { useSiraStore } from '../stores/siraStore';
 import { useAuthStore } from '../stores/authStore';
+import { useTutorialStore } from '../stores/tutorialStore';
 import { DOCUMENT_MIME_BY_EXT, filterAllowedDocuments } from '../helpers/documentFormats';
 import type { PreviewData } from '../components/modale/filePreviewModale.vue';
 import type { MoveDocPayload } from '../components/modale/moveDocModale.vue';
@@ -25,6 +26,7 @@ export function useAffairDocuments() {
   const commentStore = useCommentStore();
   const siraStore = useSiraStore();
   const authStore = useAuthStore();
+  const tutorialStore = useTutorialStore();
 
   const affairId = computed(() => String(route.params.id));
   const dossier = ref<Dossier | null>(null);
@@ -118,6 +120,7 @@ export function useAffairDocuments() {
     if (files.length === 0) return;
     const success = await docStore.uploadDocuments(affairId.value, files, category);
     if (success) {
+      tutorialStore.notifyAction('document_uploaded');
       await refreshDossier();
       closeUploadDocModal();
     }
@@ -507,6 +510,7 @@ export function useAffairDocuments() {
     docStore.errorMessage = '';
     versionsModalDoc.value = doc;
     isVersionsModalOpen.value = true;
+    tutorialStore.notifyAction('open_versions');
   }
 
   function closeVersionsModal() {
@@ -531,6 +535,7 @@ export function useAffairDocuments() {
       versionNote: payload.versionNote,
     });
     if (created) {
+      tutorialStore.notifyAction('open_versions');
       versionsModalDoc.value = created;
       if (docForDetails.value?.id === payload.document.id) {
         docForDetails.value = created;
@@ -543,6 +548,7 @@ export function useAffairDocuments() {
     const fallbackDocId = versionsModalDoc.value?.id;
     const restored = await docStore.restoreDocumentVersion(ver.id);
     if (restored) {
+      tutorialStore.notifyAction('open_versions');
       if (docForDetails.value && (docForDetails.value.id === ver.id || docForDetails.value.id === fallbackDocId)) {
         docForDetails.value = restored;
       }
@@ -556,6 +562,7 @@ export function useAffairDocuments() {
       versionNote: '',
     });
     if (created) {
+      tutorialStore.notifyAction('open_versions');
       if (versionsModalDoc.value?.id === payload.doc.id) {
         versionsModalDoc.value = created;
       }
@@ -601,6 +608,7 @@ export function useAffairDocuments() {
   function toggleComments() {
     isCommentsOpen.value = !isCommentsOpen.value;
     if (isCommentsOpen.value) {
+      tutorialStore.notifyAction('open_comments');
       isCommentNotifDismissed.value = true;
       void commentStore.fetchComments(affairId.value);
       void markCommentsAsRead();

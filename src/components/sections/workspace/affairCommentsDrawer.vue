@@ -9,6 +9,7 @@
       <button
         type="button"
         class="comment-icon-btn"
+        data-tour="affair-comments-toggle"
         :class="{ 'has-unread': unreadCount > 0 }"
         :title="unreadCount > 0 ? `${unreadCount} nouveau(x) commentaire(s) — Cliquer pour ouvrir` : 'Ouvrir les commentaires'"
         aria-label="Ouvrir les commentaires"

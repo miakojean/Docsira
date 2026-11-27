@@ -10,7 +10,7 @@
                 :placeholder="resolvedPlaceholder"
                 @update:modelValue="$emit('update:modelValue', $event)" 
             />
-            <toolsButton v-if="showToolsButton" @handleEvent="$emit('handleEvent')"/>
+            <toolsButton v-if="showToolsButton" data-tour="header-add-btn" @handleEvent="$emit('handleEvent')"/>
         </div>
     </nav>
 </template>

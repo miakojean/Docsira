@@ -104,9 +104,11 @@ import LogoLoader from '../../tools/LogoLoader.vue';
 import Pagination from '../../tools/Pagination.vue';
 import { useClientStore } from '../../../stores/clientStore';
 import { useAuthStore } from '../../../stores/authStore';
+import { useTutorialStore } from '../../../stores/tutorialStore';
 
 const clientStore = useClientStore();
 const authStore = useAuthStore();
+const tutorialStore = useTutorialStore();
 const isOpen = ref(false);
 const isViewOpen = ref(false);
 const isFoldersOpen = ref(false);
@@ -144,6 +146,7 @@ const paginatedClients = computed(() => {
 
 function onCreated() {
   isOpen.value = false;
+  tutorialStore.notifyAction('client_created');
   successTitle.value = "Client créé avec succès";
   successSubtitle.value = "Le nouveau client a été ajouté à votre liste.";
   isSuccess.value = true;
